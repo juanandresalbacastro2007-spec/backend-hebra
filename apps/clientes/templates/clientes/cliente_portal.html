@@ -8,8 +8,10 @@
   <title>HebraTech - Portal de Clientes</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&family=Graduate&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'hebratech/staatics/clientes/cliente.css' %}">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&family=Graduate&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
 </head>
 
 <body>
@@ -58,7 +60,9 @@
           </button>
           <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:280px;" aria-labelledby="notifDropdown">
             <li class="dropdown-header">Notificaciones</li>
-            <li><hr class="dropdown-divider"></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
             {% for orden in ordenes_recientes %}
             <li class="px-2 py-2">
               <div class="small">
@@ -68,7 +72,9 @@
               <div class="text-muted small">{{ orden.fechaCreacion }}</div>
             </li>
             {% endfor %}
-            <li><hr class="dropdown-divider"></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
             <li class="text-center">
               <a href="#secMisOrdenes" class="btn btn-link btn-sm text-primary text-decoration-none w-100">Ver todas</a>
             </li>
@@ -81,19 +87,24 @@
         <div class="dropdown">
           <a class="d-flex align-items-center text-white text-decoration-none dropdown-toggle gap-2" href="#"
             id="profileMenu" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="avatar bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold"
+            <div
+              class="avatar bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold"
               style="width:32px;height:32px;font-family:var(--ff-display);font-size:0.9rem;">
               {{ usuario.nombre|first|upper }}
             </div>
             <div class="d-none d-md-block text-start">
-              <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">{{ usuario.nombre }}</div>
-              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">{{ cliente.empresa|default:cliente.nombre }}</div>
+              <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">{{ usuario.nombre
+                }}</div>
+              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">{{
+                cliente.empresa|default:cliente.nombre }}</div>
             </div>
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileMenu">
             <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
                 <i class="bi bi-person me-2"></i>Mi perfil</a></li>
-            <li><hr class="dropdown-divider"></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
             <li><a class="dropdown-item text-danger" href="/login/">
                 <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
           </ul>
@@ -143,7 +154,8 @@
                 </div>
                 <div>
                   <div class="text-muted" style="font-size:0.72rem;">Pendientes</div>
-                  <div class="h5 mb-0 text-warning" style="font-family:var(--ff-display);">{{ ordenes_pendientes }}</div>
+                  <div class="h5 mb-0 text-warning" style="font-family:var(--ff-display);">{{ ordenes_pendientes }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -151,7 +163,8 @@
               {% if proxima_entrega %}
               <div>
                 <div class="text-muted" style="font-size:0.72rem;">Próxima entrega</div>
-                <div class="h5 mb-0" style="font-family:var(--ff-display);">{{ proxima_entrega.fechaEntregaEstimada }}</div>
+                <div class="h5 mb-0" style="font-family:var(--ff-display);">{{ proxima_entrega.fechaEntregaEstimada }}
+                </div>
                 <div class="text-muted" style="font-size:0.72rem;">Orden #{{ proxima_entrega.idOrden }}</div>
               </div>
               {% endif %}
@@ -192,26 +205,26 @@
                     <td>{{ orden.cantidad|default:"—" }}</td>
                     <td>
                       {% if orden.cantidad and orden.precioUnitario %}
-                        ${{ orden.cantidad|floatformat:0 }} × ${{ orden.precioUnitario|floatformat:0 }}
+                      ${{ orden.cantidad|floatformat:0 }} × ${{ orden.precioUnitario|floatformat:0 }}
                       {% else %}—{% endif %}
                     </td>
                     <td>{{ orden.fechaEntregaEstimada|default:"—" }}</td>
                     <td>
                       {% if orden.prioridad == 'Urgente' %}
-                        <span class="badge bg-danger">Urgente</span>
+                      <span class="badge bg-danger">Urgente</span>
                       {% else %}
-                        <span class="badge bg-secondary">Normal</span>
+                      <span class="badge bg-secondary">Normal</span>
                       {% endif %}
                     </td>
                     <td>
                       {% if orden.estado == 'Entregado' %}
-                        <span class="badge bg-success">{{ orden.estado }}</span>
+                      <span class="badge bg-success">{{ orden.estado }}</span>
                       {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' %}
-                        <span class="badge bg-info text-dark">{{ orden.estado }}</span>
+                      <span class="badge bg-info text-dark">{{ orden.estado }}</span>
                       {% elif orden.estado == 'Cancelado' %}
-                        <span class="badge bg-danger">{{ orden.estado }}</span>
+                      <span class="badge bg-danger">{{ orden.estado }}</span>
                       {% else %}
-                        <span class="badge" style="background-color:#A5C9CA;color:#2C3333;">{{ orden.estado }}</span>
+                      <span class="badge" style="background-color:#A5C9CA;color:#2C3333;">{{ orden.estado }}</span>
                       {% endif %}
                     </td>
                   </tr>
@@ -276,7 +289,8 @@
             <h6 class="mb-0">Acciones rápidas</h6>
           </div>
           <div class="card-body d-flex flex-column gap-2">
-            <button class="btn btn-outline-primary w-100 text-start" data-bs-toggle="modal" data-bs-target="#newOrderModal">
+            <button class="btn btn-outline-primary w-100 text-start" data-bs-toggle="modal"
+              data-bs-target="#newOrderModal">
               <i class="bi bi-plus-circle me-2"></i>Nueva orden de producción
             </button>
             <a href="#secMisOrdenes" class="btn btn-outline-secondary w-100 text-start">
@@ -295,7 +309,8 @@
         <!-- Contacto / Soporte -->
         <div class="card mb-4 shadow-sm">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="bi bi-envelope-paper me-2" style="color:var(--primary);"></i>Contactar a HebraTech</h6>
+            <h6 class="mb-0"><i class="bi bi-envelope-paper me-2" style="color:var(--primary);"></i>Contactar a
+              HebraTech</h6>
             <span class="badge" style="background:var(--bg-light);color:var(--primary);font-size:0.68rem;">
               <i class="bi bi-clock me-1"></i>Resp. en &lt; 2 h
             </span>
@@ -334,9 +349,12 @@
             </div>
             <div id="contactConfirm" class="text-center py-3 d-none">
               <div style="font-size:2.5rem;">✅</div>
-              <div style="font-family:var(--ff-display);font-size:1rem;color:var(--primary-dark);margin-top:8px;">¡Mensaje enviado!</div>
-              <div class="small text-muted mt-1">Te responderemos a <strong>{{ usuario.correoElectronico }}</strong> en menos de 2 horas.</div>
-              <button class="btn btn-outline-primary btn-sm mt-3" onclick="resetContactForm()">Enviar otro mensaje</button>
+              <div style="font-family:var(--ff-display);font-size:1rem;color:var(--primary-dark);margin-top:8px;">
+                ¡Mensaje enviado!</div>
+              <div class="small text-muted mt-1">Te responderemos a <strong>{{ usuario.correoElectronico }}</strong> en
+                menos de 2 horas.</div>
+              <button class="btn btn-outline-primary btn-sm mt-3" onclick="resetContactForm()">Enviar otro
+                mensaje</button>
             </div>
           </div>
         </div>
@@ -362,7 +380,8 @@
           </div>
 
           <div class="modal-body">
-            <p class="text-muted small mb-4">Completa los campos para registrar tu orden en el sistema de producción.</p>
+            <p class="text-muted small mb-4">Completa los campos para registrar tu orden en el sistema de producción.
+            </p>
             <div class="row g-3">
 
               <!-- Producto -->
@@ -391,8 +410,8 @@
               <!-- Cantidad -->
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Cantidad (Unidades)</label>
-                <input type="number" class="form-control" name="cantidad" id="modalCantidad"
-                  min="1" placeholder="Ej. 200" required oninput="actualizarSubtotal()">
+                <input type="number" class="form-control" name="cantidad" id="modalCantidad" min="1"
+                  placeholder="Ej. 200" required oninput="actualizarSubtotal()">
                 <div class="invalid-feedback">Ingresa una cantidad válida.</div>
               </div>
 
@@ -410,7 +429,8 @@
               <div class="col-md-6 d-flex align-items-end">
                 <div class="p-3 rounded-3 w-100 d-flex justify-content-between align-items-center"
                   style="background-color:rgba(57,91,100,0.08);border:1px dashed var(--primary);">
-                  <span class="fw-bold text-uppercase" style="font-size:0.8rem;color:var(--primary-dark);">Subtotal:</span>
+                  <span class="fw-bold text-uppercase"
+                    style="font-size:0.8rem;color:var(--primary-dark);">Subtotal:</span>
                   <span class="h5 mb-0 fw-bold text-primary" id="modalSubtotalDisplay">$0</span>
                 </div>
               </div>
@@ -453,8 +473,10 @@
           <div class="d-flex align-items-center gap-3 mb-4">
             <div class="profile-avatar-large">{{ usuario.nombre|first|upper }}</div>
             <div>
-              <div style="font-family:var(--ff-display);font-size:1.1rem;font-weight:600;">{{ usuario.nombre }} {{ usuario.apellido }}</div>
-              <div class="text-muted" style="font-size:0.8rem;">{{ cliente.empresa|default:cliente.nombre }} · Cliente</div>
+              <div style="font-family:var(--ff-display);font-size:1.1rem;font-weight:600;">{{ usuario.nombre }} {{
+                usuario.apellido }}</div>
+              <div class="text-muted" style="font-size:0.8rem;">{{ cliente.empresa|default:cliente.nombre }} · Cliente
+              </div>
             </div>
           </div>
           <div class="row g-3">
@@ -464,7 +486,8 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Empresa</label>
-              <input type="text" class="form-control" value="{{ cliente.empresa|default:'—' }}" disabled style="background:var(--bg-light);">
+              <input type="text" class="form-control" value="{{ cliente.empresa|default:'—' }}" disabled
+                style="background:var(--bg-light);">
             </div>
             <div class="col-12">
               <label class="form-label">Correo electrónico</label>
@@ -472,7 +495,8 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Teléfono</label>
-              <input type="tel" class="form-control" value="{{ usuario.telefono|default:'' }}" placeholder="+57 300 000 0000">
+              <input type="tel" class="form-control" value="{{ usuario.telefono|default:'' }}"
+                placeholder="+57 300 000 0000">
             </div>
             <div class="col-md-6">
               <label class="form-label">Ciudad</label>
@@ -480,7 +504,8 @@
             </div>
             <div class="col-12">
               <label class="form-label">Dirección de entrega</label>
-              <input type="text" class="form-control" value="{{ cliente.direccion|default:'' }}" placeholder="Calle / Carrera / Avenida...">
+              <input type="text" class="form-control" value="{{ cliente.direccion|default:'' }}"
+                placeholder="Calle / Carrera / Avenida...">
             </div>
           </div>
         </div>
@@ -499,23 +524,24 @@
   <script src="{% static 'js/cliente.js' %}"></script>
   <script>
     function actualizarPrecio() {
-  const select = document.getElementById('modalProducto');
-  const option = select.options[select.selectedIndex];
-  const precio = option ? parseFloat(option.getAttribute('data-precio')) || 0 : 0;
-  document.getElementById('modalPrecioDisplay').value = precio ? precio.toLocaleString('es-CO') : '';
-  actualizarSubtotal();
-}
+      const select = document.getElementById('modalProducto');
+      const option = select.options[select.selectedIndex];
+      const precio = option ? parseFloat(option.getAttribute('data-precio')) || 0 : 0;
+      document.getElementById('modalPrecioDisplay').value = precio ? precio.toLocaleString('es-CO') : '';
+      actualizarSubtotal();
+    }
 
-function actualizarSubtotal() {
-  const select = document.getElementById('modalProducto');
-  const option = select.options[select.selectedIndex];
-  const precio = option ? parseFloat(option.getAttribute('data-precio')) || 0 : 0;
-  const cantidad = parseInt(document.getElementById('modalCantidad').value) || 0;
-  const subtotal = precio * cantidad;
-  document.getElementById('modalSubtotalDisplay').textContent =
-    '$' + subtotal.toLocaleString('es-CO');
-}
+    function actualizarSubtotal() {
+      const select = document.getElementById('modalProducto');
+      const option = select.options[select.selectedIndex];
+      const precio = option ? parseFloat(option.getAttribute('data-precio')) || 0 : 0;
+      const cantidad = parseInt(document.getElementById('modalCantidad').value) || 0;
+      const subtotal = precio * cantidad;
+      document.getElementById('modalSubtotalDisplay').textContent =
+        '$' + subtotal.toLocaleString('es-CO');
+    }
   </script>
 
 </body>
+
 </html>

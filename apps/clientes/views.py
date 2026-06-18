@@ -66,7 +66,11 @@ def registrar_orden(request):
             messages.success(request, f'¡Orden #{orden.idOrden} registrada exitosamente!')
             return redirect('orden_exitosa', idOrden=orden.idOrden)
 
+        # clientes/views.py
         except Exception as e:
+            # ── ¡AGREGA ESTA LÍNEA DE ABAJO! ──
+            print("❌ EL ERROR REAL ES:", str(e)) 
+            
             messages.error(request, f'Error al registrar la orden: {str(e)}')
             return redirect('cliente_portal')
 
@@ -76,26 +80,3 @@ def registrar_orden(request):
 def orden_exitosa(request, idOrden):
     orden = Orden.objects.get(idOrden=idOrden)
     return render(request, 'clientes/orden_exitosa.html', {'orden': orden})
-
-
-def login_view(request):
-    if request.method == 'POST':
-        rol_seleccionado = request.POST.get('role')
-        
-        # Esto imprimirá en tu terminal lo que llega del formulario
-        print(f"--- ROL SELECCIONADO EN EL FORMULARIO: '{rol_seleccionado}' ---")
-        
-        # Forzamos a que ignore mayúsculas/minúsculas y espacios
-        if rol_seleccionado and rol_seleccionado.strip().lower() == 'cliente':
-            return redirect('/clientes/portal/')
-            
-        elif rol_seleccionado and rol_seleccionado.strip().lower() == 'administrador':
-            return redirect('vista_admin')
-            
-        elif rol_seleccionado and rol_seleccionado.strip().lower() == 'operario':
-            return redirect('vista_operario')
-            
-        else:
-            print("⚠️ El rol no coincidió con ninguna condición, por eso se reinicia.")
-            
-    return render(request, 'usuarios/login.html')

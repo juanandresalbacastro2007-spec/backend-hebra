@@ -17,10 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from apps.usuarios.views import login_view, recuperar_view, home_view
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', login_view, name='login'),
     path('recuperar/', recuperar_view, name='recuperar'),
-    path('home/', home_view, name='home'),# 👈 Nueva ruta
+    path('home/', home_view, name='home'),
+    path('clientes/', include('clientes.urls')),
 ]

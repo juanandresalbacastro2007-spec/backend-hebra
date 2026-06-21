@@ -93,10 +93,8 @@
               {{ usuario.nombre|first|upper }}
             </div>
             <div class="d-none d-md-block text-start">
-              <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">{{ usuario.nombre
-                }}</div>
-              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">{{
-                cliente.empresa|default:cliente.nombre }}</div>
+              <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">{{ usuario.nombre }}</div>
+              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">{{ cliente.empresa|default:cliente.nombre }}</div>
             </div>
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileMenu">

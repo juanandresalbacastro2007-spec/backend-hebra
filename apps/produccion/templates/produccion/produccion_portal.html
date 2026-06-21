@@ -1,0 +1,386 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Producción | Heebra-Tech</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}" />
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">HT</div>
+    <div>
+      <div class="brand-name">HeebraTech</div>
+      <div class="brand-sub">Mery Jeans</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">General</div>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item active" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Producción
+    </a>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Inventario
+    </a>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Órdenes
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Sistema</div>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      Incidencias
+    </a>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Máquinas
+    </a>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Usuarios
+    </a>
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Reportes
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <a class="nav-item" href="#">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Perfil
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="live-badge">
+        <span class="live-dot"></span>
+        Sistema En Vivo
+      </span>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" title="Notificaciones">
+        <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-5M9 17H4l1.405-1.405A2.032 2.032 0 006 14.158V11a6 6 0 016-6m0 0v1m0 12a2 2 0 01-4 0"/></svg>
+        <span class="badge" id="notif-count">0</span>
+      </button>
+      <button class="btn-logout" onclick="window.location.href='/'">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <div class="page-header">
+      <div class="page-title-wrap">
+        <h1>👕 Módulo de Producción</h1>
+        <p>Control de prendas, órdenes y avance de producción en tiempo real</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" onclick="exportarCSV()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Exportar
+        </button>
+        <button class="btn btn-dark" onclick="abrirModalPrenda()">
+          + Nueva Prenda
+        </button>
+        <button class="btn btn-primary" onclick="abrirModalOrden()">
+          🗒 Nueva Orden
+        </button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon teal">👕</div>
+        <div><div class="kpi-val" id="kpi-prendas">—</div><div class="kpi-lbl">Tipos de Prenda</div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon green">✅</div>
+        <div><div class="kpi-val" id="kpi-unidades">—</div><div class="kpi-lbl">Und. Completadas Hoy</div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon orange">⏳</div>
+        <div><div class="kpi-val" id="kpi-proceso">—</div><div class="kpi-lbl">Órdenes en Proceso</div></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon red">🔖</div>
+        <div><div class="kpi-val" id="kpi-pendientes">—</div><div class="kpi-lbl">Órdenes Pendientes</div></div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('prendas', this)">👕 Catálogo de Prendas</div>
+      <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
+      <div class="tab" onclick="switchTab('kanban', this)">📌 Tablero Kanban</div>
+      <div class="tab" onclick="switchTab('resumen', this)">📈 Resumen</div>
+    </div>
+
+    <!-- TAB Prendas -->
+    <div id="tab-prendas" class="tab-content active">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Prendas Registradas</h3>
+          <div class="toolbar-right">
+            <div class="search-wrap">
+              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input id="search-prendas" type="text" placeholder="Buscar prenda..." oninput="filtrarPrendas()" />
+            </div>
+            <select id="filter-cat" class="filter-select" onchange="filtrarPrendas()">
+              <option value="">Todas las categorías</option>
+              <option>Camisa</option><option>Pantalón</option>
+              <option>Uniforme</option><option>Chaqueta</option><option>Accesorio</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Prenda</th><th>Código</th><th>Categoría</th><th>Talla(s)</th>
+              <th>T. Producción</th><th>Stock Objetivo</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-prendas">
+            <tr><td colspan="8" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB Órdenes -->
+    <div id="tab-ordenes" class="tab-content">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Órdenes de Producción</h3>
+          <div class="toolbar-right">
+            <div class="search-wrap">
+              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
+            </div>
+            <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
+              <option value="">Todos los estados</option>
+              <option>Pendiente</option><option>En Proceso</option>
+              <option>Completado</option><option>Pausado</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>N° Orden</th><th>Prenda</th><th>Cliente</th><th>Cantidad</th>
+              <th>Progreso</th><th>Entrega</th><th>Prioridad</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-ordenes">
+            <tr><td colspan="9" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB Kanban — IDs con guión para coincidir con el JS -->
+    <div id="tab-kanban" class="tab-content">
+      <div class="kanban">
+        <div class="kanban-col">
+          <div class="kanban-col-header">🔖 Pendiente <span id="k-pendiente">0</span></div>
+          <div class="kanban-col-body" id="k-col-Pendiente"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">⚙️ En Proceso <span id="k-proceso">0</span></div>
+          <div class="kanban-col-body" id="k-col-En-Proceso"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">✅ Completado <span id="k-completado">0</span></div>
+          <div class="kanban-col-body" id="k-col-Completado"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header">⏸ Pausado <span id="k-pausado">0</span></div>
+          <div class="kanban-col-body" id="k-col-Pausado"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB Resumen -->
+    <div id="tab-resumen" class="tab-content">
+      <div class="resumen-grid">
+        <div class="resumen-card">
+          <h4>📊 Resumen de Prendas por Categoría</h4>
+          <div id="resumen-cat"></div>
+        </div>
+        <div class="resumen-card">
+          <h4>📋 Resumen de Órdenes por Estado</h4>
+          <div id="resumen-ord"></div>
+        </div>
+        <div class="resumen-card" style="grid-column:1/-1">
+          <h4>📅 Próximas Entregas</h4>
+          <div id="resumen-entregas"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Modal Nueva Prenda -->
+<div class="modal-backdrop" id="modal-prenda">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-prenda-title">➕ Nueva Prenda</h3>
+      <button class="modal-close" onclick="cerrarModalPrenda()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="prenda-id" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input id="p-nombre" type="text" placeholder="Ej: Camisa Oxford" />
+        </div>
+        <div class="form-group">
+          <label>Código *</label>
+          <input id="p-codigo" type="text" placeholder="Ej: CAM-001" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="p-categoria">
+            <option value="">Seleccionar...</option>
+            <option>Camisa</option><option>Pantalón</option>
+            <option>Uniforme</option><option>Chaqueta</option><option>Accesorio</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tallas</label>
+          <input id="p-tallas" type="text" placeholder="Ej: S, M, L, XL" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tiempo de Producción (min)</label>
+          <input id="p-tiempo" type="number" value="30" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Stock Objetivo</label>
+          <input id="p-stock" type="number" value="100" min="1" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="p-estado">
+            <option>Activo</option><option>En pausa</option><option>Descontinuado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Descripción</label>
+          <textarea id="p-descripcion" placeholder="Descripción opcional..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModalPrenda()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPrenda()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva Orden -->
+<div class="modal-backdrop" id="modal-orden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
+      <button class="modal-close" onclick="cerrarModalOrden()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="orden-id" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prenda *</label>
+          <select id="o-prenda"></select>
+        </div>
+        <div class="form-group">
+          <label>Cliente</label>
+          <input id="o-cliente" type="text" placeholder="Nombre del cliente" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cantidad *</label>
+          <input id="o-cantidad" type="number" value="1" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Unidades Producidas</label>
+          <input id="o-producidas" type="number" value="0" min="0" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Operario</label>
+          <input id="o-operario" type="text" placeholder="Nombre del operario" />
+        </div>
+        <div class="form-group">
+          <label>Línea de Producción</label>
+          <input id="o-linea" type="text" placeholder="Ej: Línea A" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de Entrega *</label>
+          <input id="o-fecha" type="date" />
+        </div>
+        <div class="form-group">
+          <label>Prioridad</label>
+          <select id="o-prioridad">
+            <option>Normal</option><option>Alta</option><option>Urgente</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="o-estado">
+            <option>Pendiente</option><option>En Proceso</option>
+            <option>Completado</option><option>Pausado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>Observaciones</label>
+          <textarea id="o-observaciones" placeholder="Observaciones opcionales..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="{% static 'js/produccion.js' %}"></script>
+</body>
+</html>

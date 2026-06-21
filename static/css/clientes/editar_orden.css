@@ -1,0 +1,190 @@
+/* ============================================
+   editar_orden.css — HebraTech Portal de Clientes
+   Estilos para la página de edición de órdenes
+   ============================================ */
+
+:root {
+  --primary:       #395B64;
+  --primary-dark:  #2C3333;
+  --primary-deep:  #1e3540;
+  --accent:        #A5C9CA;
+  --bg-light:      #E7F6F2;
+  --border-solid:  #A5C9CA;
+  --ff-display:    'Fredoka', sans-serif;
+  --ff-body:       'Roboto', sans-serif;
+}
+
+body {
+  font-family: var(--ff-body);
+  background-color: var(--bg-light);
+  color: var(--primary-dark);
+}
+
+/* ── Topbar mínima ── */
+.topbar {
+  background: linear-gradient(90deg, var(--border-solid) 0%, var(--primary-deep) 100%);
+  padding: 0.9rem 0;
+}
+
+.ht-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-title {
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.brand-sub {
+  font-family: var(--ff-body);
+  font-size: 0.7rem;
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+/* ── Card principal de edición ── */
+.edit-order-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-solid);
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(44, 51, 51, 0.08);
+}
+
+.edit-order-card h4 {
+  font-family: var(--ff-display);
+  color: var(--primary-dark);
+  margin: 0;
+}
+
+.edit-order-card .order-status-badge {
+  background-color: var(--accent);
+  color: var(--primary-dark);
+  font-family: var(--ff-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+}
+
+.edit-order-card .form-label {
+  font-family: var(--ff-body);
+  font-weight: 600;
+  color: var(--primary-dark);
+  font-size: 0.88rem;
+}
+
+/* ── Inputs y selects ── */
+.edit-order-card .form-control,
+.edit-order-card .form-select {
+  border: 1px solid var(--border-solid);
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  font-family: var(--ff-body);
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.edit-order-card .form-control:focus,
+.edit-order-card .form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.2rem rgba(57, 91, 100, 0.15);
+}
+
+.edit-order-card textarea.form-control {
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* ── Caja de subtotal ── */
+.subtotal-box {
+  background-color: rgba(57, 91, 100, 0.08);
+  border: 1px dashed var(--primary);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.subtotal-box .subtotal-label {
+  font-family: var(--ff-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: var(--primary-dark);
+  letter-spacing: 0.3px;
+}
+
+.subtotal-box .subtotal-value {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--primary);
+  margin: 0;
+}
+
+/* ── Botones ── */
+.edit-order-card .btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  font-family: var(--ff-display);
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.55rem 1.4rem;
+}
+
+.edit-order-card .btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.edit-order-card .btn-outline-secondary {
+  border-color: var(--border-solid);
+  color: var(--primary-dark);
+  font-family: var(--ff-body);
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 0.55rem 1.4rem;
+}
+
+.edit-order-card .btn-outline-secondary:hover {
+  background-color: var(--bg-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+/* ── Alertas ── */
+.edit-order-card .alert {
+  border-radius: 10px;
+  font-family: var(--ff-body);
+  font-size: 0.88rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 576px) {
+  .edit-order-card {
+    padding: 1.25rem !important;
+  }
+
+  .subtotal-box {
+    margin-top: 0.5rem;
+  }
+}

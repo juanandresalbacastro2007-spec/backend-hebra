@@ -195,6 +195,7 @@
                     <th>Entrega est.</th>
                     <th>Prioridad</th>
                     <th>Estado</th>
+                    <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,6 +226,41 @@
                       <span class="badge bg-danger">{{ orden.estado }}</span>
                       {% else %}
                       <span class="badge" style="background-color:#A5C9CA;color:#2C3333;">{{ orden.estado }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center">
+                      {% if orden.estado == 'Pendiente' %}
+                      <a href="{% url 'editar_orden' orden.idOrden %}" class="btn btn-sm btn-outline-primary me-1"
+                        title="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                        data-bs-target="#deleteModal{{ orden.idOrden }}" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                      </button>
+
+                      <!-- Modal de confirmación de eliminación -->
+                      <div class="modal fade" id="deleteModal{{ orden.idOrden }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                          <div class="modal-content" style="border-radius:14px;">
+                            <div class="modal-body text-center p-4">
+                              <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2.5rem;"></i>
+                              <h5 class="mt-3">¿Eliminar orden #{{ orden.idOrden }}?</h5>
+                              <p class="text-muted small">Esta acción no se puede deshacer.</p>
+                              <form method="POST" action="{% url 'eliminar_orden' orden.idOrden %}">
+                                {% csrf_token %}
+                                <div class="d-flex gap-2 justify-content-center mt-3">
+                                  <button type="button" class="btn btn-outline-secondary"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                                  <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                                </div>
+                              </form>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {% else %}
+                      <span class="text-muted small">—</span>
                       {% endif %}
                     </td>
                   </tr>

@@ -3,228 +3,182 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HebraTech | Acceder</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{% static 'css/usuarios/inicio.css' %}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HebraTech | Acceder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/usuarios/login.css' %}">
 </head>
 
 <body>
 
-    <main class="auth-container d-flex" style="min-height: 100vh;">
+  <main class="auth-container d-flex" style="min-height: 100vh;">
 
-        <!-- ── FORM SIDE ── -->
-        <section class="form-side d-flex align-items-center justify-content-center p-4 p-md-5">
-            <div class="form-wrapper w-100" style="max-width: 420px;">
+    <!-- ── FORM SIDE ── -->
+    <section class="form-side d-flex align-items-center justify-content-center p-4 p-md-5">
+      <div class="form-wrapper w-100" style="max-width: 420px;">
 
-                <a href="{% url 'login' %}"
-                    class="logo d-inline-flex align-items-center gap-2 text-decoration-none mb-4">
-                    <div class="logo-icon">
-                        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;" />
-                    </div>
-                    Iniciar Sesión
-                </a>
+        <a href="#" class="logo d-inline-flex align-items-center gap-2 text-decoration-none mb-4">
+          <div class="logo-icon">
+            <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;" />
+          </div>
+          Iniciar Sesión
+        </a>
 
-                <!-- LOGIN VIEW -->
-                <div id="login-view">
-                    <h1 class="mb-4">¡Bienvenido/a de nuevo!</h1>
-
-                    <div class="social-auth d-flex flex-column gap-2 mb-3">
-                        <button class="btn-social d-flex align-items-center justify-content-center gap-2 w-100">
-                            <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google" width="18">
-                            Continuar con Google
-                        </button>
-                        <button class="btn-social d-flex align-items-center justify-content-center gap-2 w-100">
-                            <i class="fab fa-apple"></i> Continuar con Apple
-                        </button>
-                        <button class="btn-social d-flex align-items-center justify-content-center gap-2 w-100">
-                            <i class="fab fa-facebook-f" style="color: #1877f2;"></i> Continuar con Facebook
-                        </button>
-                    </div>
-
-                    <div class="divider d-flex align-items-center gap-2 my-3">
-                        <span>o usa tu email</span>
-                    </div>
-
-                    <form id="login-form" class="auth-form" method="POST" action="{% url 'login' %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="correo" class="form-control" placeholder="ejemplo@correo.com"
-                                required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="role-select" class="form-label">Selecciona rol</label>
-                            <select id="role-select" name="role" class="form-select" required>
-                                <option value="" disabled selected>Elige un rol</option>
-                                <option value="administrador">Administrador</option>
-                                <option value="operario">Operario</option>
-                                <option value="cliente">Cliente</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="form-label">Contraseña</label>
-                            <div class="password-wrapper position-relative">
-                                <input type="password" id="login-pass" name="contraseña" class="form-control"
-                                    placeholder="Mínimo 8 caracteres" required>
-                                <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
-                                    onclick="togglePass('login-pass')" style="cursor:pointer;"></i>
-                            </div>
-                        </div>
-
-                        <a href="{% url 'recuperar' %}" class="forgot-link d-block text-end mb-3">¿Olvidaste tu
-                            contraseña?</a>
-                        <button type="submit" class="btn-primary w-100">Iniciar sesión</button>
-                    </form>
-
-                    <p class="legal text-center mt-3 small">
-                        Al continuar, aceptas nuestros <a href="#">Términos de servicio</a> y <a href="#">Política de
-                            privacidad</a>.
-                    </p>
-                    <p class="switch-text text-center mt-2">
-                        ¿No tienes cuenta? <a href="javascript:void(0)" onclick="switchAuth()">Regístrate</a>
-                    </p>
-                </div>
-
-                <!-- REGISTER VIEW -->
-                <div id="register-view" style="display: none;">
-                    <h1 class="mb-4">Crea tu cuenta</h1>
-
-                    <form class="auth-form">
-                        <div class="mb-3">
-                            <label class="form-label">Nombre completo</label>
-                            <input type="text" class="form-control" placeholder="Tu nombre">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" placeholder="ejemplo@correo.com" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Contraseña</label>
-                            <div class="password-wrapper position-relative">
-                                <input type="password" id="reg-pass" class="form-control"
-                                    placeholder="Crea una contraseña segura" required>
-                                <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
-                                    onclick="togglePass('reg-pass')" style="cursor:pointer;"></i>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Confirmar contraseña</label>
-                            <input type="password" class="form-control" placeholder="Repite tu contraseña" required>
-                        </div>
-                        <button type="submit" class="btn-primary w-100">Crear cuenta</button>
-                    </form>
-
-                    <p class="switch-text text-center mt-3">
-                        ¿Ya tienes cuenta? <a href="javascript:void(0)" onclick="switchAuth()">Inicia sesión</a>
-                    </p>
-                </div>
-
+        <!-- Mensajes de error/éxito Django -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} py-2 small mb-3">
+              {{ message }}
             </div>
-        </section>
+          {% endfor %}
+        {% endif %}
 
-        <!-- ── VISUAL SIDE ── -->
-        <section
-            class="visual-side d-none d-lg-flex flex-column align-items-center justify-content-center p-5 position-relative">
-            <div class="cards-container mb-4">
-                <div class="task-card card-1 d-flex align-items-center gap-2">
-                    <i class="far fa-circle"></i>
-                    <span>Asignar las tareas</span>
-                    <span class="tag ms-auto">Finanzas</span>
-                </div>
-                <div class="task-card card-2 d-flex align-items-center gap-2">
-                    <i class="far fa-circle"></i>
-                    <span>Programar reunión de personal</span>
-                    <span class="tag ms-auto">Trabajo</span>
-                </div>
-                <div class="task-card card-3 d-flex align-items-center gap-2">
-                    <i class="far fa-circle"></i>
-                    <span>Comprar Materiales</span>
-                    <span class="tag ms-auto">Compras</span>
-                </div>
+        <!-- LOGIN VIEW -->
+        <div id="login-view">
+          <h1 class="mb-4">¡Bienvenido/a de nuevo!</h1>
+
+          <div class="divider d-flex align-items-center gap-2 my-3">
+            <span>o usa tu email</span>
+          </div>
+
+          <!-- Formulario LOGIN conectado a Django -->
+          <form method="POST" action="{% url 'login' %}" class="auth-form">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" name="correo" class="form-control"
+                placeholder="ejemplo@correo.com" required>
             </div>
-
-            <div class="promo-text text-center position-relative" style="z-index: 2;">
-                <h3>Organiza tu empresa y tu trabajo, finalmente.</h3>
-                <p>Únete a millones de personas que confían en HebraTech para mantener la calma y el orden.</p>
+            <div class="mb-2">
+              <label class="form-label">Contraseña</label>
+              <div class="password-wrapper position-relative">
+                <input type="password" name="contrasena" id="login-pass" class="form-control"
+                  placeholder="Mínimo 8 caracteres" required>
+                <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+                  onclick="togglePass('login-pass')" style="cursor:pointer;"></i>
+              </div>
             </div>
+            <a href="{% url 'recuperar' %}" class="forgot-link d-block text-end mb-3">
+              ¿Olvidaste tu contraseña?
+            </a>
+            <button type="submit" class="btn-primary w-100">Iniciar sesión</button>
+          </form>
 
-            <div class="blob"></div>
-        </section>
+          <p class="legal text-center mt-3 small">
+            Al continuar, aceptas nuestros <a href="#">Términos de servicio</a> y
+            <a href="#">Política de privacidad</a>.
+          </p>
+          <p class="switch-text text-center mt-2">
+            ¿No tienes cuenta?
+            <a href="javascript:void(0)" onclick="switchAuth()">Regístrate</a>
+          </p>
+        </div>
 
-    </main>
+        <!-- REGISTER VIEW -->
+        <div id="register-view" style="display: none;">
+          <h1 class="mb-4">Crea tu cuenta</h1>
 
-    <!-- Back arrow -->
-    <a href="../index.html" class="back-arrow position-fixed">
-        <i class="fas fa-arrow-left"></i>
-    </a>
+          <!-- Formulario REGISTRO conectado a Django -->
+          <form method="POST" action="{% url 'registro' %}" class="auth-form">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">Nombre</label>
+              <input type="text" name="nombre" class="form-control"
+                placeholder="Tu nombre" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Apellido</label>
+              <input type="text" name="apellido" class="form-control"
+                placeholder="Tu apellido" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" name="correo" class="form-control"
+                placeholder="ejemplo@correo.com" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Contraseña</label>
+              <div class="password-wrapper position-relative">
+                <input type="password" name="contrasena" id="reg-pass" class="form-control"
+                  placeholder="Mínimo 8 caracteres" required>
+                <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+                  onclick="togglePass('reg-pass')" style="cursor:pointer;"></i>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Confirmar contraseña</label>
+              <input type="password" name="confirmar" class="form-control"
+                placeholder="Repite tu contraseña" required>
+            </div>
+            <button type="submit" class="btn-primary w-100">Crear cuenta</button>
+          </form>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
+          <p class="switch-text text-center mt-3">
+            ¿Ya tienes cuenta?
+            <a href="javascript:void(0)" onclick="switchAuth()">Inicia sesión</a>
+          </p>
+        </div>
 
-            function switchAuth() {
-                const login = document.getElementById('login-view');
-                const register = document.getElementById('register-view');
-                const isLoginVisible = window.getComputedStyle(login).display !== 'none';
-                if (isLoginVisible) {
-                    login.style.display = 'none';
-                    register.style.display = 'block';
-                } else {
-                    login.style.display = 'block';
-                    register.style.display = 'none';
-                }
-            }
-            window.switchAuth = switchAuth;
+      </div>
+    </section>
 
-            function togglePass(id) {
-                const input = document.getElementById(id);
-                if (!input) return;
-                input.type = input.type === 'password' ? 'text' : 'password';
-            }
-            window.togglePass = togglePass;
+    <!-- ── VISUAL SIDE ── -->
+    <section class="visual-side d-none d-lg-flex flex-column align-items-center justify-content-center p-5 position-relative">
+      <div class="cards-container mb-4">
+        <div class="task-card card-1 d-flex align-items-center gap-2">
+          <i class="far fa-circle"></i>
+          <span>Asignar las tareas</span>
+          <span class="tag ms-auto">Finanzas</span>
+        </div>
+        <div class="task-card card-2 d-flex align-items-center gap-2">
+          <i class="far fa-circle"></i>
+          <span>Programar reunión de personal</span>
+          <span class="tag ms-auto">Trabajo</span>
+        </div>
+        <div class="task-card card-3 d-flex align-items-center gap-2">
+          <i class="far fa-circle"></i>
+          <span>Comprar Materiales</span>
+          <span class="tag ms-auto">Compras</span>
+        </div>
+      </div>
 
+      <div class="promo-text text-center position-relative" style="z-index: 2;">
+        <h3>Organiza tu empresa y tu trabajo, finalmente.</h3>
+        <p>Únete a millones de personas que confían en HebraTech para mantener la calma y el orden.</p>
+      </div>
 
-            const isGitHubPages = window.location.hostname.includes('github.io');
-            const basePath = isGitHubPages
-                ? `${window.location.origin}/Hebra-Tech/usuarios`
-                : '../usuarios';
+      <div class="blob"></div>
+    </section>
 
-            const roleMap = {
-                administrador: `${basePath}/Admin.html`,
-                operario: `${basePath}/Operario.html`,
-                cliente: `${basePath}/Cliente.html`
-            };
+  </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/login.js' %}"></script>
+  <script>
+    function switchAuth() {
+      const login = document.getElementById('login-view');
+      const register = document.getElementById('register-view');
+      const isLoginVisible = window.getComputedStyle(login).display !== 'none';
+      if (isLoginVisible) {
+        login.style.display = 'none';
+        register.style.display = 'block';
+      } else {
+        login.style.display = 'block';
+        register.style.display = 'none';
+      }
+    }
 
+    function togglePass(id) {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+  </script>
 
-            /* El código viejo de JavaScript se comenta para que Django maneje el formulario:
-            const form = document.getElementById('login-form');
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const role = document.getElementById('role-select').value;
-                    if (!role) { alert('Por favor selecciona un rol.'); return; }
-                    const target = roleMap[role];
-                    if (target) { window.location.href = target; }
-                    else { alert('Rol no válido'); }
-                });
-            }
-            */
-
-        }); // Este cierre pertenece al DOMContentLoaded, déjalo libre.
-
-    </script>
 </body>
-
 </html>

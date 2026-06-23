@@ -6,7 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Producción | Heebra-Tech</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{% static 'produccion/produccion.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}" />
+  <style>
+    .live-datetime {
+      color: #4a6070;
+      font-size: 12.5px;
+      font-weight: 500;
+      margin-left: 14px;
+      padding-left: 14px;
+      border-left: 1px solid #1e4158;
+      white-space: nowrap;
+    }
+  </style>
 </head>
 <body>
 
@@ -14,16 +25,11 @@
 
   <header class="topbar">
     <div class="topbar-left">
-      <div class="brand-inline">
-        <div class="brand-icon-sm">HT</div>
-        <span class="brand-name-sm">HeebraTech</span>
-        <span class="brand-sep">/</span>
-        <span class="brand-module">Producción</span>
-      </div>
       <span class="live-badge">
         <span class="live-dot"></span>
         Sistema En Vivo
       </span>
+      <span class="live-datetime" id="live-datetime"></span>
     </div>
     <div class="topbar-right">
       <button class="icon-btn" title="Notificaciones">
@@ -42,15 +48,15 @@
     <div class="page-header">
       <div class="page-title-wrap">
         <h1>👕 Módulo de Producción</h1>
-        <p>Control de prendas, órdenes y avance de producción en tiempo real</p>
+        <p>Control de productos, órdenes y avance de producción en tiempo real</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-outline" onclick="exportarCSV()">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           Exportar
         </button>
-        <button class="btn btn-dark" onclick="abrirModalPrenda()">
-          + Nueva Prenda
+        <button class="btn btn-dark" onclick="abrirModalProducto()">
+          + Nuevo Producto
         </button>
         <button class="btn btn-primary" onclick="abrirModalOrden()">
           🗒 Nueva Orden
@@ -58,43 +64,45 @@
       </div>
     </div>
 
+    <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-icon teal">👕</div>
-        <div><div class="kpi-val" id="kpi-prendas">—</div><div class="kpi-lbl">Tipos de Prenda</div></div>
+        <div><div class="kpi-val" id="kpi-productos">—</div><div class="kpi-lbl">Tipos de Producto</div></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon green">✅</div>
-        <div><div class="kpi-val" id="kpi-unidades">—</div><div class="kpi-lbl">Und. Completadas Hoy</div></div>
+        <div><div class="kpi-val" id="kpi-completadas">—</div><div class="kpi-lbl">Órdenes Completadas</div></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon orange">⏳</div>
-        <div><div class="kpi-val" id="kpi-proceso">—</div><div class="kpi-lbl">Órdenes en Proceso</div></div>
+        <div><div class="kpi-val" id="kpi-proceso">—</div><div class="kpi-lbl">En Progreso</div></div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon red">🔖</div>
-        <div><div class="kpi-val" id="kpi-pendientes">—</div><div class="kpi-lbl">Órdenes Pendientes</div></div>
+        <div><div class="kpi-val" id="kpi-pendientes">—</div><div class="kpi-lbl">Pendientes</div></div>
       </div>
     </div>
 
+    <!-- TABS -->
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('prendas', this)">👕 Catálogo de Prendas</div>
+      <div class="tab active" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
       <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
       <div class="tab" onclick="switchTab('kanban', this)">📌 Tablero Kanban</div>
       <div class="tab" onclick="switchTab('resumen', this)">📈 Resumen</div>
     </div>
 
-    <!-- TAB Prendas -->
-    <div id="tab-prendas" class="tab-content active">
+    <!-- TAB Productos -->
+    <div id="tab-productos" class="tab-content active">
       <div class="table-card">
         <div class="table-toolbar">
-          <h3>Prendas Registradas</h3>
+          <h3>Productos Registrados</h3>
           <div class="toolbar-right">
             <div class="search-wrap">
               <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              <input id="search-prendas" type="text" placeholder="Buscar prenda..." oninput="filtrarPrendas()" />
+              <input id="search-productos" type="text" placeholder="Buscar producto..." oninput="filtrarProductos()" />
             </div>
-            <select id="filter-cat" class="filter-select" onchange="filtrarPrendas()">
+            <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
               <option value="">Todas las categorías</option>
               <option>Camisa</option><option>Pantalón</option>
               <option>Uniforme</option><option>Chaqueta</option><option>Accesorio</option>
@@ -104,12 +112,11 @@
         <table>
           <thead>
             <tr>
-              <th>Prenda</th><th>Código</th><th>Categoría</th><th>Talla(s)</th>
-              <th>T. Producción</th><th>Stock Objetivo</th><th>Estado</th><th>Acciones</th>
+              <th>Nombre</th><th>Categoría</th><th>Precio</th><th>Descripción</th><th>Acciones</th>
             </tr>
           </thead>
-          <tbody id="tbody-prendas">
-            <tr><td colspan="8" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+          <tbody id="tbody-productos">
+            <tr><td colspan="5" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -127,20 +134,20 @@
             </div>
             <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
               <option value="">Todos los estados</option>
-              <option>Pendiente</option><option>En Proceso</option>
-              <option>Completado</option><option>Pausado</option>
+              <option>Pendiente</option><option>En Progreso</option>
+              <option>Completado</option><option>Detenido</option>
             </select>
           </div>
         </div>
         <table>
           <thead>
             <tr>
-              <th>N° Orden</th><th>Prenda</th><th>Cliente</th><th>Cantidad</th>
-              <th>Progreso</th><th>Entrega</th><th>Prioridad</th><th>Estado</th><th>Acciones</th>
+              <th>ID</th><th>Producto</th><th>Descripción</th><th>Cantidad</th>
+              <th>Fecha Inicio</th><th>Fecha Est. Fin</th><th>Estado</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tbody-ordenes">
-            <tr><td colspan="9" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -154,16 +161,16 @@
           <div class="kanban-col-body" id="k-col-Pendiente"></div>
         </div>
         <div class="kanban-col">
-          <div class="kanban-col-header">⚙️ En Proceso <span id="k-proceso">0</span></div>
-          <div class="kanban-col-body" id="k-col-En-Proceso"></div>
+          <div class="kanban-col-header">⚙️ En Progreso <span id="k-proceso">0</span></div>
+          <div class="kanban-col-body" id="k-col-En-Progreso"></div>
         </div>
         <div class="kanban-col">
           <div class="kanban-col-header">✅ Completado <span id="k-completado">0</span></div>
           <div class="kanban-col-body" id="k-col-Completado"></div>
         </div>
         <div class="kanban-col">
-          <div class="kanban-col-header">⏸ Pausado <span id="k-pausado">0</span></div>
-          <div class="kanban-col-body" id="k-col-Pausado"></div>
+          <div class="kanban-col-header">⏸ Detenido <span id="k-detenido">0</span></div>
+          <div class="kanban-col-body" id="k-col-Detenido"></div>
         </div>
       </div>
     </div>
@@ -172,11 +179,11 @@
     <div id="tab-resumen" class="tab-content">
       <div class="resumen-grid">
         <div class="resumen-card">
-          <h4>📊 Resumen de Prendas por Categoría</h4>
+          <h4>📊 Productos por Categoría</h4>
           <div id="resumen-cat"></div>
         </div>
         <div class="resumen-card">
-          <h4>📋 Resumen de Órdenes por Estado</h4>
+          <h4>📋 Órdenes por Estado</h4>
           <div id="resumen-ord"></div>
         </div>
         <div class="resumen-card" style="grid-column:1/-1">
@@ -189,72 +196,54 @@
   </div><!-- /content -->
 </div><!-- /main -->
 
-<!-- Modal Nueva Prenda -->
-<div class="modal-backdrop" id="modal-prenda">
+<!-- ═══════════════════════════════════════════════ -->
+<!-- Modal Nuevo Producto                            -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-producto">
   <div class="modal">
     <div class="modal-header">
-      <h3 id="modal-prenda-title">➕ Nueva Prenda</h3>
-      <button class="modal-close" onclick="cerrarModalPrenda()">×</button>
+      <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
+      <button class="modal-close" onclick="cerrarModalProducto()">×</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="prenda-id" />
+      <input type="hidden" id="producto-id" />
       <div class="form-row">
         <div class="form-group">
           <label>Nombre *</label>
-          <input id="p-nombre" type="text" placeholder="Ej: Camisa Oxford" />
+          <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
         </div>
-        <div class="form-group">
-          <label>Código *</label>
-          <input id="p-codigo" type="text" placeholder="Ej: CAM-001" />
-        </div>
-      </div>
-      <div class="form-row">
         <div class="form-group">
           <label>Categoría *</label>
-          <select id="p-categoria">
+          <select id="prod-categoria">
             <option value="">Seleccionar...</option>
             <option>Camisa</option><option>Pantalón</option>
             <option>Uniforme</option><option>Chaqueta</option><option>Accesorio</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Tallas</label>
-          <input id="p-tallas" type="text" placeholder="Ej: S, M, L, XL" />
-        </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Tiempo de Producción (min)</label>
-          <input id="p-tiempo" type="number" value="30" min="1" />
-        </div>
-        <div class="form-group">
-          <label>Stock Objetivo</label>
-          <input id="p-stock" type="number" value="100" min="1" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Estado</label>
-          <select id="p-estado">
-            <option>Activo</option><option>En pausa</option><option>Descontinuado</option>
-          </select>
+          <label>Precio</label>
+          <input id="prod-precio" type="number" value="0" min="0" step="0.01" />
         </div>
       </div>
       <div class="form-row">
         <div class="form-group full">
-          <label>Descripción</label>
-          <textarea id="p-descripcion" placeholder="Descripción opcional..."></textarea>
+          <label>Descripción *</label>
+          <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="cerrarModalPrenda()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarPrenda()">💾 Guardar</button>
+      <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Nueva Orden -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- Modal Nueva Orden de Producción                 -->
+<!-- ═══════════════════════════════════════════════ -->
 <div class="modal-backdrop" id="modal-orden">
   <div class="modal">
     <div class="modal-header">
@@ -265,59 +254,43 @@
       <input type="hidden" id="orden-id" />
       <div class="form-row">
         <div class="form-group">
-          <label>Prenda *</label>
-          <select id="o-prenda"></select>
+          <label>Producto *</label>
+          <select id="o-producto"></select>
         </div>
         <div class="form-group">
-          <label>Cliente</label>
-          <input id="o-cliente" type="text" placeholder="Nombre del cliente" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Cantidad *</label>
+          <label>Cantidad Requerida *</label>
           <input id="o-cantidad" type="number" value="1" min="1" />
-        </div>
-        <div class="form-group">
-          <label>Unidades Producidas</label>
-          <input id="o-producidas" type="number" value="0" min="0" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Operario</label>
-          <input id="o-operario" type="text" placeholder="Nombre del operario" />
-        </div>
-        <div class="form-group">
-          <label>Línea de Producción</label>
-          <input id="o-linea" type="text" placeholder="Ej: Línea A" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Fecha de Entrega *</label>
-          <input id="o-fecha" type="date" />
-        </div>
-        <div class="form-group">
-          <label>Prioridad</label>
-          <select id="o-prioridad">
-            <option>Normal</option><option>Alta</option><option>Urgente</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Estado</label>
-          <select id="o-estado">
-            <option>Pendiente</option><option>En Proceso</option>
-            <option>Completado</option><option>Pausado</option>
-          </select>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group full">
-          <label>Observaciones</label>
-          <textarea id="o-observaciones" placeholder="Observaciones opcionales..."></textarea>
+          <label>Descripción *</label>
+          <input id="o-descripcion" type="text" placeholder="Ej: Lote camisetas básicas — orden Éxito" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha Inicio *</label>
+          <input id="o-fecha-inicio" type="date" />
+        </div>
+        <div class="form-group">
+          <label>Fecha Estimada Fin *</label>
+          <input id="o-fecha-fin" type="date" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Costo Estimado</label>
+          <input id="o-costo-estimado" type="number" value="" min="0" step="0.01" placeholder="Opcional" />
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="o-estado">
+            <option>Pendiente</option>
+            <option>En Progreso</option>
+            <option>Completado</option>
+            <option>Detenido</option>
+          </select>
         </div>
       </div>
     </div>
@@ -330,6 +303,116 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="{% static 'produccion/produccion.js' %}"></script>
+<script src="{% static 'js/produccion.js' %}"></script>
+
+<script>
+  // ── Fecha/Hora en vivo ────────────────────────────
+  function actualizarFechaHora() {
+    const ahora = new Date();
+    const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const horas   = ahora.getHours().toString().padStart(2, '0');
+    const minutos = ahora.getMinutes().toString().padStart(2, '0');
+    document.getElementById('live-datetime').textContent =
+      `${dias[ahora.getDay()]} ${ahora.getDate()} ${meses[ahora.getMonth()]} — ${horas}:${minutos}`;
+  }
+  actualizarFechaHora();
+  setInterval(actualizarFechaHora, 60000);
+
+  // ── Helpers ───────────────────────────────────────
+  const BASE = '';   // el JS externo construye URLs relativas
+
+  // ── Modal Producto ────────────────────────────────
+  function abrirModalProducto(prod = null) {
+    document.getElementById('modal-producto-title').textContent = prod ? '✏️ Editar Producto' : '➕ Nuevo Producto';
+    document.getElementById('producto-id').value       = prod?.idProducto ?? '';
+    document.getElementById('prod-nombre').value       = prod?.nombre ?? '';
+    document.getElementById('prod-categoria').value    = prod?.categoria ?? '';
+    document.getElementById('prod-precio').value       = prod?.precio ?? 0;
+    document.getElementById('prod-descripcion').value  = prod?.descripcion ?? '';
+    document.getElementById('modal-producto').classList.add('open');
+  }
+  function cerrarModalProducto() {
+    document.getElementById('modal-producto').classList.remove('open');
+  }
+
+  async function guardarProducto() {
+    const id = document.getElementById('producto-id').value;
+    const payload = {
+      nombre:      document.getElementById('prod-nombre').value.trim(),
+      categoria:   document.getElementById('prod-categoria').value,
+      precio:      parseFloat(document.getElementById('prod-precio').value) || 0,
+      descripcion: document.getElementById('prod-descripcion').value.trim(),
+    };
+    if (!payload.nombre || !payload.categoria || !payload.descripcion) {
+      mostrarToast('Completa los campos obligatorios.', 'error'); return;
+    }
+    const url    = id ? `/produccion/productos/${id}/` : '/produccion/productos/';
+    const method = id ? 'PUT' : 'POST';
+    const res    = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (res.ok) {
+      cerrarModalProducto();
+      cargarProductos();
+      mostrarToast(id ? 'Producto actualizado ✓' : 'Producto creado ✓');
+    } else {
+      const err = await res.json();
+      mostrarToast('Error: ' + JSON.stringify(err), 'error');
+    }
+  }
+
+  // ── Modal Orden ───────────────────────────────────
+  function abrirModalOrden(orden = null) {
+    document.getElementById('modal-orden-title').textContent = orden ? '✏️ Editar Orden' : '🗒 Nueva Orden de Producción';
+    document.getElementById('orden-id').value         = orden?.idProduccion ?? '';
+    document.getElementById('o-producto').value       = orden?.idProducto ?? '';
+    document.getElementById('o-cantidad').value       = orden?.cantidadRequerida ?? 1;
+    document.getElementById('o-descripcion').value    = orden?.descripcion ?? '';
+    document.getElementById('o-fecha-inicio').value   = orden?.fechaInicio ?? '';
+    document.getElementById('o-fecha-fin').value      = orden?.fechaEstimadaFin ?? '';
+    document.getElementById('o-costo-estimado').value = orden?.costoEstimado ?? '';
+    document.getElementById('o-estado').value         = orden?.estado ?? 'Pendiente';
+    document.getElementById('modal-orden').classList.add('open');
+  }
+  function cerrarModalOrden() {
+    document.getElementById('modal-orden').classList.remove('open');
+  }
+
+  async function guardarOrden() {
+    const id = document.getElementById('orden-id').value;
+    const payload = {
+      idProducto:       parseInt(document.getElementById('o-producto').value),
+      cantidadRequerida:parseInt(document.getElementById('o-cantidad').value),
+      descripcion:      document.getElementById('o-descripcion').value.trim(),
+      fechaInicio:      document.getElementById('o-fecha-inicio').value,
+      fechaEstimadaFin: document.getElementById('o-fecha-fin').value,
+      costoEstimado:    parseFloat(document.getElementById('o-costo-estimado').value) || null,
+      estado:           document.getElementById('o-estado').value,
+    };
+    if (!payload.idProducto || !payload.descripcion || !payload.fechaInicio || !payload.fechaEstimadaFin) {
+      mostrarToast('Completa los campos obligatorios.', 'error'); return;
+    }
+    const url    = id ? `/produccion/ordenes/${id}/` : '/produccion/ordenes/';
+    const method = id ? 'PUT' : 'POST';
+    const res    = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (res.ok) {
+      cerrarModalOrden();
+      cargarOrdenes();
+      cargarKPIs();
+      mostrarToast(id ? 'Orden actualizada ✓' : 'Orden de producción creada ✓');
+    } else {
+      const err = await res.json();
+      mostrarToast('Error: ' + JSON.stringify(err), 'error');
+    }
+  }
+
+  // ── Toast ─────────────────────────────────────────
+  function mostrarToast(msg, tipo = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + tipo + ' show';
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+</script>
+
 </body>
 </html>

@@ -1,0 +1,147 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HebraTech — Órdenes</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
+</head>
+<body>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
+      </div>
+      <div>
+        <div class="brand-title">HebraTech</div>
+        <div class="brand-sub">Administración</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="{% url 'admin_portal' %}" class="nav-item"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <div class="nav-section-label">Gestión</div>
+      <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="{% url 'admin_ordenes' %}" class="nav-item active"><i class="bi bi-bag-fill"></i> Órdenes</a>
+      <a href="{% url 'admin_tareas' %}" class="nav-item"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <div class="nav-section-label">Módulos</div>
+      <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
+      <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
+      <div class="sidebar-footer">
+        <div class="admin-info">
+          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
+          <div>
+            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
+            <div class="admin-role">Administrador</div>
+          </div>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list fs-4"></i></button>
+      <div>
+        <h5 class="topbar-title">Órdenes de clientes</h5>
+        <small class="topbar-sub">Todas las órdenes registradas en el sistema</small>
+      </div>
+      <!-- Filtro por estado -->
+      <div class="ms-auto">
+        <form method="GET" class="d-flex gap-2 align-items-center">
+          <select name="estado" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente" {% if estado_filtro == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="Procesando" {% if estado_filtro == 'Procesando' %}selected{% endif %}>Procesando</option>
+            <option value="Enviado" {% if estado_filtro == 'Enviado' %}selected{% endif %}>Enviado</option>
+            <option value="Entregado" {% if estado_filtro == 'Entregado' %}selected{% endif %}>Entregado</option>
+            <option value="Cancelado" {% if estado_filtro == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+          </select>
+        </form>
+      </div>
+    </header>
+
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="content-wrap">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h6><i class="bi bi-bag me-2"></i>
+            {% if estado_filtro %}Órdenes — {{ estado_filtro }}{% else %}Todas las órdenes{% endif %}
+            ({{ ordenes|length }})
+          </h6>
+        </div>
+        <div class="section-card-body p-0">
+          <table class="ht-table">
+            <thead>
+              <tr>
+                <th># Orden</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Cantidad</th>
+                <th>Subtotal</th>
+                <th>Entrega est.</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for orden in ordenes %}
+              <tr>
+                <td><strong>#{{ orden.idOrden }}</strong></td>
+                <td>{{ orden.idCliente.empresa|default:orden.idCliente.nombre|default:"—" }}</td>
+                <td>{{ orden.fechaCreacion }}</td>
+                <td>{{ orden.cantidad|default:"—" }}</td>
+                <td>
+                  {% if orden.cantidad and orden.precioUnitario %}
+                    ${{ orden.cantidad|floatformat:0 }} × ${{ orden.precioUnitario|floatformat:0 }}
+                  {% else %}—{% endif %}
+                </td>
+                <td>{{ orden.fechaEntregaEstimada|default:"—" }}</td>
+                <td>
+                  {% if orden.prioridad == 'Urgente' %}
+                    <span class="badge-ht badge-danger">Urgente</span>
+                  {% else %}
+                    <span class="badge-ht" style="background:#eee;color:#555;">Normal</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if orden.estado == 'Entregado' %}
+                    <span class="badge-ht badge-success">{{ orden.estado }}</span>
+                  {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' %}
+                    <span class="badge-ht badge-info">{{ orden.estado }}</span>
+                  {% elif orden.estado == 'Cancelado' %}
+                    <span class="badge-ht badge-danger">{{ orden.estado }}</span>
+                  {% else %}
+                    <span class="badge-ht badge-pending">{{ orden.estado }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-4">No hay órdenes registradas</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/admin.js' %}"></script>
+</body>
+</html>

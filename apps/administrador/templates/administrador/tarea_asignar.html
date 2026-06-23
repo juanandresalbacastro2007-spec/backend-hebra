@@ -1,0 +1,149 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HebraTech — Asignar Tarea</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
+</head>
+<body>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
+      </div>
+      <div>
+        <div class="brand-title">HebraTech</div>
+        <div class="brand-sub">Administración</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="{% url 'admin_portal' %}" class="nav-item"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <div class="nav-section-label">Gestión</div>
+      <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
+      <a href="{% url 'admin_tareas' %}" class="nav-item active"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <div class="nav-section-label">Módulos</div>
+      <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
+      <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
+      <div class="sidebar-footer">
+        <div class="admin-info">
+          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
+          <div>
+            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
+            <div class="admin-role">Administrador</div>
+          </div>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list fs-4"></i></button>
+      <div>
+        <h5 class="topbar-title">Asignar tarea</h5>
+        <small class="topbar-sub">Asigna una tarea a un operario activo</small>
+      </div>
+    </header>
+
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="content-wrap">
+      <div class="row justify-content-center">
+        <div class="col-md-8">
+          <div class="section-card">
+            <div class="section-card-header">
+              <h6><i class="bi bi-clipboard2-plus me-2"></i>Nueva asignación</h6>
+            </div>
+            <div class="section-card-body">
+              <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+
+                  <div class="col-md-6">
+                    <label class="form-label">Tarea</label>
+                    <select name="tarea" class="form-select" required>
+                      <option value="">Seleccionar tarea...</option>
+                      {% for tarea in tareas %}
+                      <option value="{{ tarea.idTarea }}">
+                        {{ tarea.nombreTarea }} — {{ tarea.proceso }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Operario</label>
+                    <select name="operario" class="form-select" required>
+                      <option value="">Seleccionar operario...</option>
+                      {% for op in operarios %}
+                      <option value="{{ op.idOperario }}">
+                        {{ op.idUsuario.nombre }} {{ op.idUsuario.apellido }} — {{ op.especialidad }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Fecha de inicio</label>
+                    <input type="date" name="fechaInicio" class="form-control" required>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Prioridad</label>
+                    <select name="prioridad" class="form-select" required>
+                      <option value="Baja">Baja</option>
+                      <option value="Media" selected>Media</option>
+                      <option value="Alta">Alta</option>
+                      <option value="Urgente">Urgente</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-3">
+                    <label class="form-label">Horas estimadas</label>
+                    <input type="number" name="horasEstimadas" class="form-control"
+                      min="0.5" step="0.5" placeholder="Ej. 8" required>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Descripción / instrucciones</label>
+                    <textarea name="descripcion" class="form-control" rows="3"
+                      placeholder="Detalla las instrucciones para el operario..." required></textarea>
+                  </div>
+
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end mt-4">
+                  <a href="{% url 'admin_tareas' %}" class="btn btn-outline-secondary">Cancelar</a>
+                  <button type="submit" class="btn btn-primary-ht">
+                    <i class="bi bi-send me-1"></i>Asignar tarea
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/admin.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HebraTech — Tareas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
+</head>
+<body>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
+      </div>
+      <div>
+        <div class="brand-title">HebraTech</div>
+        <div class="brand-sub">Administración</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="{% url 'admin_portal' %}" class="nav-item"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <div class="nav-section-label">Gestión</div>
+      <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
+      <a href="{% url 'admin_tareas' %}" class="nav-item active"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <div class="nav-section-label">Módulos</div>
+      <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
+      <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
+      <div class="sidebar-footer">
+        <div class="admin-info">
+          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
+          <div>
+            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
+            <div class="admin-role">Administrador</div>
+          </div>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list fs-4"></i></button>
+      <div>
+        <h5 class="topbar-title">Tareas asignadas</h5>
+        <small class="topbar-sub">Control de asignaciones a operarios</small>
+      </div>
+      <div class="ms-auto">
+        <a href="{% url 'admin_tarea_asignar' %}" class="btn btn-primary-ht">
+          <i class="bi bi-clipboard2-plus me-1"></i>Asignar nueva tarea
+        </a>
+      </div>
+    </header>
+
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="content-wrap">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h6><i class="bi bi-clipboard2-check me-2"></i>Asignaciones ({{ asignaciones|length }})</h6>
+        </div>
+        <div class="section-card-body p-0">
+          <table class="ht-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Tarea</th>
+                <th>Operario</th>
+                <th>Descripción</th>
+                <th>Fecha inicio</th>
+                <th>Horas est.</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for asig in asignaciones %}
+              <tr>
+                <td><strong>{{ asig.idAsignacion }}</strong></td>
+                <td>{{ asig.idTarea.nombreTarea }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="admin-avatar" style="width:26px;height:26px;font-size:0.72rem;">
+                      {{ asig.idOperario.idUsuario.nombre|first|upper }}
+                    </div>
+                    {{ asig.idOperario.idUsuario.nombre }}
+                  </div>
+                </td>
+                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  {{ asig.descripcion }}
+                </td>
+                <td>{{ asig.fechaInicio }}</td>
+                <td>{{ asig.horasEstimadas }} h</td>
+                <td>
+                  {% if asig.prioridad == 'Urgente' %}
+                    <span class="badge-ht badge-danger">Urgente</span>
+                  {% elif asig.prioridad == 'Alta' %}
+                    <span class="badge-ht badge-warning">Alta</span>
+                  {% elif asig.prioridad == 'Media' %}
+                    <span class="badge-ht badge-info">Media</span>
+                  {% else %}
+                    <span class="badge-ht" style="background:#eee;color:#555;">Baja</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if asig.estado == 'Completada' %}
+                    <span class="badge-ht badge-success">Completada</span>
+                  {% elif asig.estado == 'En Progreso' %}
+                    <span class="badge-ht badge-info">En Progreso</span>
+                  {% elif asig.estado == 'Cancelada' %}
+                    <span class="badge-ht badge-danger">Cancelada</span>
+                  {% else %}
+                    <span class="badge-ht badge-pending">Pendiente</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-4">No hay tareas asignadas aún</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/admin.js' %}"></script>
+</body>
+</html>

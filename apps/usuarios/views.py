@@ -24,13 +24,22 @@ def login_view(request):
                 request.session['usuario_nombre'] = usuario.nombre
                 request.session['usuario_rol'] = usuario.rol
 
+                # Si es operario, guardar también su idOperario en sesión
+                if usuario.rol == 'operario':
+                    try:
+                        from apps.operarios.models import Operario
+                        operario = Operario.objects.get(idUsuario=usuario.idUsuario)
+                        request.session['idOperario'] = operario.idOperario
+                    except Exception:
+                        pass
+
                 # Redirigir según el rol real guardado en la BD
                 if usuario.rol == 'cliente':
                     return redirect('cliente_portal')
                 elif usuario.rol == 'administrador':
                     return redirect('admin_portal')
                 elif usuario.rol == 'operario':
-                    return redirect('home')  # placeholder hasta que exista el panel operario
+                    return redirect('operarios:tablero')
                 else:
                     messages.error(request, 'Rol de usuario no reconocido.')
             else:

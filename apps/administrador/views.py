@@ -244,3 +244,79 @@ def produccion_placeholder(request):
 @admin_required
 def proveedores_placeholder(request):
     return redirect('proveedores')
+
+# ── Nuevas vistas para la Gestión de Órdenes ──────────────────
+@admin_required
+def orden_editar(request, idOrden):
+    from django.shortcuts import get_object_or_404
+    if request.method == 'POST':
+        orden = get_object_or_404(Orden, pk=idOrden)
+        
+        # Captura de todos los parámetros enviados por el modal
+        cantidad = request.POST.get('cantidad')
+        precio_unitario = request.POST.get('precio_unitario')
+        fecha_entrega = request.POST.get('fecha_entrega')
+        prioridad = request.POST.get('prioridad')
+        estado = request.POST.get('estado')
+        
+        # Guardar condicionalmente si vienen vacíos o con datos
+        orden.cantidad = int(cantidad) if cantidad else None
+        orden.precioUnitario = float(precio_unitario) if precio_unitario else None
+        orden.fechaEntregaEstimada = fecha_entrega if fecha_entrega else None
+        orden.prioridad = prioridad
+        orden.estado = estado
+        
+        orden.save()
+        messages.success(request, f'La orden #{idOrden} se ha modificado detalladamente con éxito.')
+        
+    return redirect('admin_ordenes')
+
+
+@admin_required
+def orden_eliminar(request, idOrden):
+    from django.shortcuts import get_object_or_404
+    try:
+        orden = get_object_or_404(Orden, pk=idOrden)
+        orden.delete()
+        messages.success(request, f'La orden #{idOrden} se eliminó correctamente.')
+    except Exception as e:
+        messages.error(request, f'Error al intentar eliminar la orden: {str(e)}')
+        
+    return redirect('admin_ordenes')
+# ── Nuevas vistas para la Gestión de Tareas ──────────────────
+@admin_required
+def tarea_editar(request, idAsignacion):
+    from django.shortcuts import get_object_or_404
+    if request.method == 'POST':
+        asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
+        
+        # Captura de todos los datos modificables del modal
+        descripcion = request.POST.get('descripcion')
+        fecha_inicio = request.POST.get('fecha_inicio')
+        horas_estimadas = request.POST.get('horas_estimadas')
+        prioridad = request.POST.get('prioridad')
+        estado = request.POST.get('estado')
+        
+        # Asignación y guardado en la base de datos
+        asignacion.descripcion = descripcion
+        asignacion.fechaInicio = fecha_inicio if fecha_inicio else None
+        asignacion.horasEstimadas = horas_estimadas if horas_estimadas else None
+        asignacion.prioridad = prioridad
+        asignacion.estado = estado
+        
+        asignacion.save()
+        messages.success(request, f'La asignación de tarea #{idAsignacion} ha sido modificada con éxito.')
+        
+    return redirect('admin_tareas')
+
+@admin_required
+def tarea_eliminar(request, idAsignacion):
+    from django.shortcuts import get_object_or_404
+    try:
+        asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
+        asignacion.delete()
+        messages.success(request, f'La asignación de tarea #{idAsignacion} se eliminó correctamente.')
+    except Exception as e:
+        messages.error(request, f'Error al intentar eliminar la asignación: {str(e)}')
+        
+    return redirect('admin_tareas')

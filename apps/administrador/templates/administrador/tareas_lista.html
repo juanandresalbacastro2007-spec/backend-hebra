@@ -86,10 +86,11 @@
                 <th>Horas est.</th>
                 <th>Prioridad</th>
                 <th>Estado</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {% for asig in asignaciones %}
+             {% for asig in asignaciones %}
               <tr>
                 <td><strong>{{ asig.idAsignacion }}</strong></td>
                 <td>{{ asig.idTarea.nombreTarea }}</td>
@@ -128,9 +129,74 @@
                     <span class="badge-ht badge-pending">Pendiente</span>
                   {% endif %}
                 </td>
+                <td>
+                  <button type="button" class="btn btn-sm text-primary p-0 border-0 me-2" data-bs-toggle="modal" data-bs-target="#modalEditarTarea{{ asig.idAsignacion }}" title="Editar asignación">
+                    <i class="bi bi-pencil-fill"></i>
+                  </button>
+
+                  <a href="{% url 'admin_eliminar_tarea' asig.idAsignacion %}" class="btn btn-sm text-danger p-0 border-0" onclick="return confirm('¿Estás seguro de que deseas eliminar la asignación #{{ asig.idAsignacion }}?');" title="Eliminar asignación">
+                    <i class="bi bi-trash-fill"></i>
+                  </a>
+                </td>
               </tr>
+
+              <div class="modal fade" id="modalEditarTarea{{ asig.idAsignacion }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
+                    <form action="{% url 'admin_editar_tarea' asig.idAsignacion %}" method="POST">
+                      {% csrf_token %}
+                      <div class="modal-header bg-light">
+                        <h5 class="modal-title" style="font-family: 'Fredoka', sans-serif;"><i class="bi bi-pencil me-2 text-primary"></i>Editar Asignación #{{ asig.idAsignacion }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body text-start" style="color: #333;">
+                        <p class="text-muted small">Modifica los detalles de control y asignación para el operario.</p>
+                        
+                        <div class="mb-3">
+                          <label class="form-label fw-medium small">Descripción / Notas</label>
+                          <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles de la asignación...">{{ asig.descripcion }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-medium small">Fecha de Inicio</label>
+                          <input type="date" name="fecha_inicio" class="form-control" value="{{ asig.fechaInicio|date:'Y-m-d' }}">
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-medium small">Horas Estimadas</label>
+                          <input type="number" name="horas_estimadas" class="form-control" value="{{ asig.horasEstimadas }}" placeholder="Ej: 8">
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-medium small">Prioridad</label>
+                          <select name="prioridad" class="form-select">
+                            <option value="Baja" {% if asig.prioridad == 'Baja' %}selected{% endif %}>Baja</option>
+                            <option value="Media" {% if asig.prioridad == 'Media' %}selected{% endif %}>Media</option>
+                            <option value="Alta" {% if asig.prioridad == 'Alta' %}selected{% endif %}>Alta</option>
+                            <option value="Urgente" {% if asig.prioridad == 'Urgente' %}selected{% endif %}>Urgente</option>
+                          </select>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-medium small">Estado actual</label>
+                          <select name="estado" class="form-select">
+                            <option value="Pendiente" {% if asig.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                            <option value="En Progreso" {% if asig.estado == 'En Progreso' %}selected{% endif %}>En Progreso</option>
+                            <option value="Completada" {% if asig.estado == 'Completada' %}selected{% endif %}>Completada</option>
+                            <option value="Cancelada" {% if asig.estado == 'Cancelada' %}selected{% endif %}>Cancelada</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-3">Guardar Cambios</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
               {% empty %}
-              <tr><td colspan="8" class="text-center text-muted py-4">No hay tareas asignadas aún</td></tr>
+              <tr><td colspan="9" class="text-center text-muted py-4">No hay tareas asignadas aún</td></tr>
               {% endfor %}
             </tbody>
           </table>

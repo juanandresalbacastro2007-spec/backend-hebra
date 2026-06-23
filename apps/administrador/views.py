@@ -234,21 +234,13 @@ def tarea_asignar(request):
 
 
 # ── Placeholders ─────────────────────────────────────────────
-@admin_required
 def produccion_placeholder(request):
-    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    return render(request, 'administrador/placeholder.html', {
-        'usuario': usuario,
-        'seccion': 'Producción',
-        'icono': 'bi-gear-wide-connected',
-    })
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id or request.session.get('usuario_rol') != 'administrador':
+        return redirect('login')
+    return redirect('produccion_portal')
 
 
 @admin_required
 def proveedores_placeholder(request):
-    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    return render(request, 'administrador/placeholder.html', {
-        'usuario': usuario,
-        'seccion': 'Proveedores',
-        'icono': 'bi-truck',
-    })
+    return redirect('proveedores')

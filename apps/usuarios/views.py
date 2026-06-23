@@ -28,7 +28,7 @@ def login_view(request):
                 if usuario.rol == 'cliente':
                     return redirect('cliente_portal')
                 elif usuario.rol == 'administrador':
-                    return redirect('home')  # placeholder hasta que exista el panel admin
+                    return redirect('admin_portal')
                 elif usuario.rol == 'operario':
                     return redirect('home')  # placeholder hasta que exista el panel operario
                 else:

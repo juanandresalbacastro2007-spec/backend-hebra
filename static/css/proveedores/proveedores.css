@@ -1,0 +1,24 @@
+/* Esto asegura que la fila principal no se desborde */
+.contenedor-principal {
+    height: 75vh; /* Ajusta según lo que necesites */
+    display: flex;
+    overflow: hidden; /* Esto evita que el scroll se salga */
+}
+
+/* El menú lateral tendrá scroll propio */
+.lista-proveedores {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin; /* Estilo para navegadores modernos */
+}
+
+/* El panel derecho se mantendrá visible */
+.panel-detalle {
+    height: 100%;
+    overflow-y: auto;
+    background: white;
+    border-radius: 1rem;
+}
+.ocultar-elemento {
+    display: none !important;
+}

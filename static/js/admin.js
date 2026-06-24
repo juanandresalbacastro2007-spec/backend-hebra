@@ -45,3 +45,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 });
+
+       document.addEventListener("DOMContentLoaded", function() {
+            const buscarInput = document.getElementById('buscarInput');
+            const searchForm = document.getElementById('searchForm');
+
+            if (buscarInput && searchForm) {
+                buscarInput.addEventListener('input', function() {
+                    // Si el usuario vacía el input por completo, envía el form automáticamente para traer todo
+                    if (this.value.trim() === "") {
+                        searchForm.submit();
+                    }
+                });
+            }
+        });

@@ -32,10 +32,6 @@
       <span class="live-datetime" id="live-datetime"></span>
     </div>
     <div class="topbar-right">
-      <button class="icon-btn" title="Notificaciones">
-        <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-5M9 17H4l1.405-1.405A2.032 2.032 0 006 14.158V11a6 6 0 016-6m0 0v1m0 12a2 2 0 01-4 0"/></svg>
-        <span class="badge" id="notif-count">0</span>
-      </button>
       <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         Volver
@@ -64,7 +60,6 @@
       </div>
     </div>
 
-    <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-icon teal">👕</div>
@@ -84,15 +79,11 @@
       </div>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
       <div class="tab active" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
       <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
-      <div class="tab" onclick="switchTab('kanban', this)">📌 Tablero Kanban</div>
-      <div class="tab" onclick="switchTab('resumen', this)">📈 Resumen</div>
     </div>
 
-    <!-- TAB Productos -->
     <div id="tab-productos" class="tab-content active">
       <div class="table-card">
         <div class="table-toolbar">
@@ -122,7 +113,6 @@
       </div>
     </div>
 
-    <!-- TAB Órdenes -->
     <div id="tab-ordenes" class="tab-content">
       <div class="table-card">
         <div class="table-toolbar">
@@ -153,53 +143,7 @@
       </div>
     </div>
 
-    <!-- TAB Kanban -->
-    <div id="tab-kanban" class="tab-content">
-      <div class="kanban">
-        <div class="kanban-col">
-          <div class="kanban-col-header">🔖 Pendiente <span id="k-pendiente">0</span></div>
-          <div class="kanban-col-body" id="k-col-Pendiente"></div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-header">⚙️ En Progreso <span id="k-proceso">0</span></div>
-          <div class="kanban-col-body" id="k-col-En-Progreso"></div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-header">✅ Completado <span id="k-completado">0</span></div>
-          <div class="kanban-col-body" id="k-col-Completado"></div>
-        </div>
-        <div class="kanban-col">
-          <div class="kanban-col-header">⏸ Detenido <span id="k-detenido">0</span></div>
-          <div class="kanban-col-body" id="k-col-Detenido"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB Resumen -->
-    <div id="tab-resumen" class="tab-content">
-      <div class="resumen-grid">
-        <div class="resumen-card">
-          <h4>📊 Productos por Categoría</h4>
-          <div id="resumen-cat"></div>
-        </div>
-        <div class="resumen-card">
-          <h4>📋 Órdenes por Estado</h4>
-          <div id="resumen-ord"></div>
-        </div>
-        <div class="resumen-card" style="grid-column:1/-1">
-          <h4>📅 Próximas Entregas</h4>
-          <div id="resumen-entregas"></div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /content -->
-</div><!-- /main -->
-
-<!-- ═══════════════════════════════════════════════ -->
-<!-- Modal Nuevo Producto                            -->
-<!-- ═══════════════════════════════════════════════ -->
-<div class="modal-backdrop" id="modal-producto">
+  </div></div><div class="modal-backdrop" id="modal-producto">
   <div class="modal">
     <div class="modal-header">
       <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
@@ -241,9 +185,6 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════ -->
-<!-- Modal Nueva Orden de Producción                 -->
-<!-- ═══════════════════════════════════════════════ -->
 <div class="modal-backdrop" id="modal-orden">
   <div class="modal">
     <div class="modal-header">
@@ -304,115 +245,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="{% static 'js/produccion.js' %}"></script>
-
-<script>
-  // ── Fecha/Hora en vivo ────────────────────────────
-  function actualizarFechaHora() {
-    const ahora = new Date();
-    const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    const horas   = ahora.getHours().toString().padStart(2, '0');
-    const minutos = ahora.getMinutes().toString().padStart(2, '0');
-    document.getElementById('live-datetime').textContent =
-      `${dias[ahora.getDay()]} ${ahora.getDate()} ${meses[ahora.getMonth()]} — ${horas}:${minutos}`;
-  }
-  actualizarFechaHora();
-  setInterval(actualizarFechaHora, 60000);
-
-  // ── Helpers ───────────────────────────────────────
-  const BASE = '';   // el JS externo construye URLs relativas
-
-  // ── Modal Producto ────────────────────────────────
-  function abrirModalProducto(prod = null) {
-    document.getElementById('modal-producto-title').textContent = prod ? '✏️ Editar Producto' : '➕ Nuevo Producto';
-    document.getElementById('producto-id').value       = prod?.idProducto ?? '';
-    document.getElementById('prod-nombre').value       = prod?.nombre ?? '';
-    document.getElementById('prod-categoria').value    = prod?.categoria ?? '';
-    document.getElementById('prod-precio').value       = prod?.precio ?? 0;
-    document.getElementById('prod-descripcion').value  = prod?.descripcion ?? '';
-    document.getElementById('modal-producto').classList.add('open');
-  }
-  function cerrarModalProducto() {
-    document.getElementById('modal-producto').classList.remove('open');
-  }
-
-  async function guardarProducto() {
-    const id = document.getElementById('producto-id').value;
-    const payload = {
-      nombre:      document.getElementById('prod-nombre').value.trim(),
-      categoria:   document.getElementById('prod-categoria').value,
-      precio:      parseFloat(document.getElementById('prod-precio').value) || 0,
-      descripcion: document.getElementById('prod-descripcion').value.trim(),
-    };
-    if (!payload.nombre || !payload.categoria || !payload.descripcion) {
-      mostrarToast('Completa los campos obligatorios.', 'error'); return;
-    }
-    const url    = id ? `/produccion/productos/${id}/` : '/produccion/productos/';
-    const method = id ? 'PUT' : 'POST';
-    const res    = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    if (res.ok) {
-      cerrarModalProducto();
-      cargarProductos();
-      mostrarToast(id ? 'Producto actualizado ✓' : 'Producto creado ✓');
-    } else {
-      const err = await res.json();
-      mostrarToast('Error: ' + JSON.stringify(err), 'error');
-    }
-  }
-
-  // ── Modal Orden ───────────────────────────────────
-  function abrirModalOrden(orden = null) {
-    document.getElementById('modal-orden-title').textContent = orden ? '✏️ Editar Orden' : '🗒 Nueva Orden de Producción';
-    document.getElementById('orden-id').value         = orden?.idProduccion ?? '';
-    document.getElementById('o-producto').value       = orden?.idProducto ?? '';
-    document.getElementById('o-cantidad').value       = orden?.cantidadRequerida ?? 1;
-    document.getElementById('o-descripcion').value    = orden?.descripcion ?? '';
-    document.getElementById('o-fecha-inicio').value   = orden?.fechaInicio ?? '';
-    document.getElementById('o-fecha-fin').value      = orden?.fechaEstimadaFin ?? '';
-    document.getElementById('o-costo-estimado').value = orden?.costoEstimado ?? '';
-    document.getElementById('o-estado').value         = orden?.estado ?? 'Pendiente';
-    document.getElementById('modal-orden').classList.add('open');
-  }
-  function cerrarModalOrden() {
-    document.getElementById('modal-orden').classList.remove('open');
-  }
-
-  async function guardarOrden() {
-    const id = document.getElementById('orden-id').value;
-    const payload = {
-      idProducto:       parseInt(document.getElementById('o-producto').value),
-      cantidadRequerida:parseInt(document.getElementById('o-cantidad').value),
-      descripcion:      document.getElementById('o-descripcion').value.trim(),
-      fechaInicio:      document.getElementById('o-fecha-inicio').value,
-      fechaEstimadaFin: document.getElementById('o-fecha-fin').value,
-      costoEstimado:    parseFloat(document.getElementById('o-costo-estimado').value) || null,
-      estado:           document.getElementById('o-estado').value,
-    };
-    if (!payload.idProducto || !payload.descripcion || !payload.fechaInicio || !payload.fechaEstimadaFin) {
-      mostrarToast('Completa los campos obligatorios.', 'error'); return;
-    }
-    const url    = id ? `/produccion/ordenes/${id}/` : '/produccion/ordenes/';
-    const method = id ? 'PUT' : 'POST';
-    const res    = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    if (res.ok) {
-      cerrarModalOrden();
-      cargarOrdenes();
-      cargarKPIs();
-      mostrarToast(id ? 'Orden actualizada ✓' : 'Orden de producción creada ✓');
-    } else {
-      const err = await res.json();
-      mostrarToast('Error: ' + JSON.stringify(err), 'error');
-    }
-  }
-
-  // ── Toast ─────────────────────────────────────────
-  function mostrarToast(msg, tipo = 'success') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast ' + tipo + ' show';
-    setTimeout(() => t.className = 'toast', 3000);
-  }
-</script>
 
 </body>
 </html>

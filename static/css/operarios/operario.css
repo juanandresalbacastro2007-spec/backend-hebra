@@ -649,7 +649,7 @@ html, body {
   text-align: center;
 }
 .ht-col-empty i { font-size: 1.6rem; opacity: .35; }
-.ht-col-empty.hidden { display: none; }
+.ht-col-empty.hidden { display: none !important; }
 
 /* ================================================================ KANBAN CARD */
 .ht-card {

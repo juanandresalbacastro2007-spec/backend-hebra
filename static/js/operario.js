@@ -1,30 +1,31 @@
 /**
- * HEBRATECH — MÓDULO OPERARIO (FRONTEND JS)
- * Funcionalidades:
- *   - Tablero Kanban con Drag & Drop
- *   - Registro, edición y eliminación de incidencias
- *   - Toggle para ocultar/mostrar tareas completadas
- *   - Columna "Completada" colapsable
+ * HEBRATECH — MÓDULO OPERARIO
+ * Bugs corregidos:
+ *   - Empty state se oculta/muestra correctamente
+ *   - Botón ojo abre el modal de detalle
+ *   - Contadores top bar se actualizan al arrastrar
  */
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // ─── Endpoints ───────────────────────────────────────────────────
     const ENDPOINTS = {
-        tareas:           '/operarios/api/tareas/',
-        cambiarEstado:    (id) => `/operarios/api/tarea/${id}/estado/`,
-        guardarReporte:   '/operarios/api/reporte/',
-        editarReporte:    (id) => `/operarios/api/reporte/${id}/editar/`,
-        eliminarReporte:  (id) => `/operarios/api/reporte/${id}/eliminar/`,
+        tareas:            '/operarios/api/tareas/',
+        cambiarEstado:     (id) => `/operarios/api/tarea/${id}/estado/`,
+        guardarReporte:    '/operarios/api/reporte/',
+        editarReporte:     (id) => `/operarios/api/reporte/${id}/editar/`,
+        eliminarReporte:   (id) => `/operarios/api/reporte/${id}/eliminar/`,
         historialReportes: '/operarios/api/reportes/',
     };
 
     // ─── Estado local ────────────────────────────────────────────────
     let completadasOcultas = false;
     let pendingDeleteId    = null;
+    // Cache de objetos tarea para el modal de detalle
+    const cacheTareas = {};
 
-    // ─── Selectores del DOM ──────────────────────────────────────────
-    const contadores = {
+    // ─── Selectores ──────────────────────────────────────────────────
+    const contadoresColumna = {
         'Pendiente':   document.getElementById('count-Pendiente'),
         'En Progreso': document.getElementById('count-En Progreso'),
         'Completada':  document.getElementById('count-Completada'),
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         errPeriodo:   document.getElementById('err-periodo'),
     };
 
-    // ─── Inicialización ───────────────────────────────────────────────
+    // ─── Init ────────────────────────────────────────────────────────
     function init() {
         obtenerTareas();
         obtenerHistorialReportes();
@@ -69,11 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loading) loading.style.display = 'flex';
         try {
             const res  = await fetch(ENDPOINTS.tareas);
-            if (!res.ok) throw new Error('No se pudo cargar el listado de tareas.');
+            if (!res.ok) throw new Error('Error al cargar tareas');
             const data = await res.json();
             renderizarTareas(data.tareas);
         } catch (err) {
-            console.error('Error al cargar el Kanban:', err);
+            console.error(err);
             mostrarToast('No se pudieron cargar las tareas', 'err');
         } finally {
             if (loading) loading.style.display = 'none';
@@ -81,34 +82,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderizarTareas(tareas) {
-        // Limpiar columnas
+        // Limpiar zonas y cache
+        Object.keys(cacheTareas).forEach(k => delete cacheTareas[k]);
+
         ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
             const zona = document.getElementById(`list-${estado}`);
             if (!zona) return;
-            const empty = zona.querySelector('.ht-col-empty');
-            zona.innerHTML = '';
-            if (empty) zona.appendChild(empty);
+            // Quitar solo las cards, conservar el empty state en el DOM
+            zona.querySelectorAll('.ht-card').forEach(c => c.remove());
         });
 
         tareas.forEach(tarea => {
+            // Guardar en cache para el modal de detalle
+            cacheTareas[tarea.idAsignacion] = tarea;
             const card = crearTarjetaTarea(tarea);
             const zona = document.getElementById(`list-${tarea.estado}`);
-            if (zona) zona.appendChild(card);
+            if (zona) {
+                // ✅ FIX 1: insertar ANTES del empty state para que quede arriba
+                const emptyEl = zona.querySelector('.ht-col-empty');
+                if (emptyEl) {
+                    zona.insertBefore(card, emptyEl);
+                } else {
+                    zona.appendChild(card);
+                }
+            }
         });
 
-        actualizarContadoresVisuales(tareas);
+        // Actualizar visibilidad del empty state en cada columna
+        actualizarEmptyStates();
+        actualizarTodosLosContadores(tareas);
         actualizarNavTareas(tareas);
         aplicarVisibilidadCompletadas();
 
         const total = document.getElementById('totalTasks');
         if (total) total.textContent = tareas.length;
+    }
 
-        const sp = document.getElementById('statPendiente');
-        const sc = document.getElementById('statProceso');
-        const sf = document.getElementById('statFinalizado');
-        if (sp) sp.textContent = tareas.filter(t => t.estado === 'Pendiente').length;
-        if (sc) sc.textContent = tareas.filter(t => t.estado === 'En Progreso').length;
-        if (sf) sf.textContent = tareas.filter(t => t.estado === 'Completada').length;
+    // ✅ FIX 1: controla el empty state por columna
+    function actualizarEmptyStates() {
+        ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
+            const zona    = document.getElementById(`list-${estado}`);
+            const emptyEl = document.getElementById(`empty-${estado}`);
+            if (!zona || !emptyEl) return;
+            const tieneCards = zona.querySelectorAll('.ht-card').length > 0;
+            emptyEl.classList.toggle('hidden', tieneCards);
+        });
     }
 
     function crearTarjetaTarea(tarea) {
@@ -137,10 +155,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;">
                     <span class="ht-card-hours"><i class="bi bi-clock"></i>${tarea.horasEstimadas}h</span>
-                    <button class="ht-card-btn-detail btn-ver-detalle" title="Ver detalle">
+                    <button class="ht-card-btn-detail" data-action="ver" title="Ver detalle">
                         <i class="bi bi-eye"></i>
                     </button>
-                    <button class="ht-card-btn-detail btn-reportar-tarea" title="Reportar incidencia" style="color:var(--warn);">
+                    <button class="ht-card-btn-detail" data-action="reportar" title="Reportar incidencia" style="color:var(--warn);">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                     </button>
                 </div>
@@ -149,21 +167,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Drag
         div.addEventListener('dragstart', e => {
-            e.dataTransfer.setData('text/plain', tarea.idAsignacion);
+            e.dataTransfer.setData('text/plain', String(tarea.idAsignacion));
             div.classList.add('dragging');
         });
         div.addEventListener('dragend', () => div.classList.remove('dragging'));
 
-        // Botón detalle
-        div.querySelector('.btn-ver-detalle').addEventListener('click', e => {
+        // ✅ FIX 2: delegación directa, sin buscar clase — usa data-action
+        div.addEventListener('click', e => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
             e.stopPropagation();
-            abrirModalDetalle(tarea);
-        });
-
-        // Botón reportar
-        div.querySelector('.btn-reportar-tarea').addEventListener('click', e => {
-            e.stopPropagation();
-            abrirModalReporte(null, tarea);
+            if (btn.dataset.action === 'ver')      abrirModalDetalle(tarea);
+            if (btn.dataset.action === 'reportar') abrirModalReporte(null, tarea);
         });
 
         return div;
@@ -228,14 +243,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Botón "Generar reporte sobre esta tarea" en el footer del modal
-        const btnOpen = document.getElementById('btnOpenReport');
-        if (btnOpen) {
-            const clone = btnOpen.cloneNode(true);
-            btnOpen.parentNode.replaceChild(clone, clone.parentNode.querySelector('#btnOpenReport') || btnOpen);
-            clone.addEventListener('click', () => {
+        // ✅ FIX 2: reemplazar el botón del footer con uno limpio para evitar listeners duplicados
+        const btnOld = document.getElementById('btnOpenReport');
+        if (btnOld) {
+            const btnNew = btnOld.cloneNode(true);
+            btnOld.replaceWith(btnNew);
+            btnNew.addEventListener('click', () => {
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('taskDetailModal')).hide();
-                setTimeout(() => abrirModalReporte(null, tarea), 300);
+                setTimeout(() => abrirModalReporte(null, tarea), 320);
             });
         }
 
@@ -254,24 +269,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 zona.classList.add('drag-over');
             });
-            zona.addEventListener('dragleave', () => zona.classList.remove('drag-over'));
+            zona.addEventListener('dragleave', e => {
+                // Solo quitar si el cursor sale de la zona real (no de un hijo)
+                if (!zona.contains(e.relatedTarget)) zona.classList.remove('drag-over');
+            });
             zona.addEventListener('drop', async e => {
                 e.preventDefault();
                 zona.classList.remove('drag-over');
+
                 const idAsignacion = e.dataTransfer.getData('text/plain');
-                const tarjeta = document.querySelector(`[data-id-asignacion="${idAsignacion}"]`);
-                if (tarjeta && estadoTarget) {
-                    tarjeta.setAttribute('data-estado', estadoTarget);
-                    zona.appendChild(tarjeta);
-                    await actualizarEstadoEnServidor(idAsignacion, estadoTarget);
-                    // Si se mueve a Completada y el toggle está activo, ocultar
-                    if (estadoTarget === 'Completada' && completadasOcultas) {
-                        tarjeta.classList.add('hidden-completed');
-                    } else {
-                        tarjeta.classList.remove('hidden-completed');
-                    }
-                    actualizarContadoresDesdeDOM();
+                const tarjeta      = document.querySelector(`[data-id-asignacion="${idAsignacion}"]`);
+                if (!tarjeta || !estadoTarget) return;
+
+                const estadoAnterior = tarjeta.getAttribute('data-estado');
+                if (estadoAnterior === estadoTarget) return; // sin cambio
+
+                // Mover card al DOM — insertarla antes del empty state
+                tarjeta.setAttribute('data-estado', estadoTarget);
+                // Actualizar cache
+                if (cacheTareas[idAsignacion]) cacheTareas[idAsignacion].estado = estadoTarget;
+
+                const emptyEl = zona.querySelector('.ht-col-empty');
+                if (emptyEl) zona.insertBefore(tarjeta, emptyEl);
+                else zona.appendChild(tarjeta);
+
+                // Visibilidad si es Completada
+                if (estadoTarget === 'Completada' && completadasOcultas) {
+                    tarjeta.classList.add('hidden-completed');
+                } else {
+                    tarjeta.classList.remove('hidden-completed');
                 }
+
+                // ✅ FIX 3: actualizar TODOS los contadores desde el DOM
+                actualizarEmptyStates();
+                actualizarContadoresDesdeDOM();
+
+                await actualizarEstadoEnServidor(idAsignacion, estadoTarget);
             });
         });
     }
@@ -282,30 +315,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': obtenerCsrfToken(),
+                    'X-CSRFToken':  obtenerCsrfToken(),
                 },
                 body: JSON.stringify({ estado: nuevoEstado }),
             });
-            if (!res.ok) throw new Error('Error al actualizar estado.');
+            if (!res.ok) throw new Error('Error al actualizar estado');
         } catch (err) {
-            console.error('No se pudo guardar el estado:', err);
-            mostrarToast('Error al cambiar el estado de la tarea', 'err');
-            obtenerTareas(); // revertir
+            console.error(err);
+            mostrarToast('Error al cambiar el estado. Recargando…', 'err');
+            obtenerTareas(); // revertir desde servidor
         }
     }
 
+    // ✅ FIX 3: lee los data-estado actuales del DOM y actualiza los 6 contadores
     function actualizarContadoresDesdeDOM() {
-        const tareasFake = Array.from(document.querySelectorAll('.ht-card')).map(c => ({
-            estado: c.getAttribute('data-estado') || ''
-        }));
-        actualizarContadoresVisuales(tareasFake);
+        const cards = Array.from(document.querySelectorAll('.ht-card'));
+        const pendiente  = cards.filter(c => c.getAttribute('data-estado') === 'Pendiente').length;
+        const enProgreso = cards.filter(c => c.getAttribute('data-estado') === 'En Progreso').length;
+        const completada = cards.filter(c => c.getAttribute('data-estado') === 'Completada').length;
+
+        // Contadores de columna (círculo junto al título)
+        if (contadoresColumna['Pendiente'])   contadoresColumna['Pendiente'].textContent   = pendiente;
+        if (contadoresColumna['En Progreso']) contadoresColumna['En Progreso'].textContent = enProgreso;
+        if (contadoresColumna['Completada'])  contadoresColumna['Completada'].textContent  = completada;
+
+        // Contadores top bar (barra de controles)
+        const sp = document.getElementById('statPendiente');
+        const sc = document.getElementById('statProceso');
+        const sf = document.getElementById('statFinalizado');
+        if (sp) sp.textContent = pendiente;
+        if (sc) sc.textContent = enProgreso;
+        if (sf) sf.textContent = completada;
+
+        // Total
+        const total = document.getElementById('totalTasks');
+        if (total) total.textContent = cards.length;
     }
 
-    function actualizarContadoresVisuales(tareas = []) {
-        ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
-            const el = contadores[estado];
-            if (el) el.textContent = tareas.filter(t => t.estado === estado).length;
-        });
+    function actualizarTodosLosContadores(tareas) {
+        const pendiente  = tareas.filter(t => t.estado === 'Pendiente').length;
+        const enProgreso = tareas.filter(t => t.estado === 'En Progreso').length;
+        const completada = tareas.filter(t => t.estado === 'Completada').length;
+
+        if (contadoresColumna['Pendiente'])   contadoresColumna['Pendiente'].textContent   = pendiente;
+        if (contadoresColumna['En Progreso']) contadoresColumna['En Progreso'].textContent = enProgreso;
+        if (contadoresColumna['Completada'])  contadoresColumna['Completada'].textContent  = completada;
+
+        const sp = document.getElementById('statPendiente');
+        const sc = document.getElementById('statProceso');
+        const sf = document.getElementById('statFinalizado');
+        if (sp) sp.textContent = pendiente;
+        if (sc) sc.textContent = enProgreso;
+        if (sf) sf.textContent = completada;
+
+        const total = document.getElementById('totalTasks');
+        if (total) total.textContent = tareas.length;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -318,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             completadasOcultas = !completadasOcultas;
             btn.classList.toggle('active', completadasOcultas);
-            btn.querySelector('i').className = completadasOcultas ? 'bi bi-eye' : 'bi bi-eye-slash';
+            btn.querySelector('i').className   = completadasOcultas ? 'bi bi-eye' : 'bi bi-eye-slash';
             btn.querySelector('span').textContent = completadasOcultas ? 'Mostrar completadas' : 'Ocultar completadas';
             aplicarVisibilidadCompletadas();
         });
@@ -338,9 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const header = document.getElementById('headerCompletada');
         const col    = document.getElementById('col-Completada');
         if (!header || !col) return;
-        header.addEventListener('click', () => {
-            col.classList.toggle('collapsed');
-        });
+        header.addEventListener('click', () => col.classList.toggle('collapsed'));
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -350,16 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function configurarBotonesExteriores() {
         const btnGenerar = document.getElementById('btnGenerateReport');
         if (btnGenerar) btnGenerar.addEventListener('click', () => abrirModalReporte());
-
-        const btnOpen = document.getElementById('btnOpenReport');
-        if (btnOpen) btnOpen.addEventListener('click', () => abrirModalReporte());
     }
 
-    /**
-     * Abre el modal en modo CREAR o EDITAR.
-     * @param {object|null} reporte  - Reporte existente para editar (tiene idIncidencia)
-     * @param {object|null} tarea    - Tarea vinculada (nuevo reporte desde una tarjeta)
-     */
     function abrirModalReporte(reporte = null, tarea = null) {
         limpiarErroresFormulario();
         resetearFormularioReporte();
@@ -368,21 +422,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const tareaName = document.getElementById('reportTareaName');
 
         if (reporte) {
-            // ── MODO EDICIÓN ──
-            formReporte.editId.value          = reporte.idIncidencia;
-            formReporte.tipo.value            = reporte.tipoIncidencia || '';
-            formReporte.descripcion.value     = reporte.descripcionCompleta || reporte.descripcion || '';
-            formReporte.periodo.value         = reporte.periodoEvaluado || '';
-            formReporte.eyebrow.textContent   = 'Editar Incidencia';
+            // Modo edición
+            formReporte.editId.value           = reporte.idIncidencia;
+            formReporte.tipo.value             = reporte.tipoIncidencia || '';
+            formReporte.descripcion.value      = reporte.descripcionCompleta || reporte.descripcion || '';
+            formReporte.periodo.value          = reporte.periodoEvaluado || '';
+            formReporte.eyebrow.textContent    = 'Editar Incidencia';
             formReporte.modalTitle.textContent = 'Editar Reporte';
             formReporte.btnLabel.textContent   = 'Guardar cambios';
-            // Actualizar contadores
             if (formReporte.tipoCount)    formReporte.tipoCount.textContent    = formReporte.tipo.value.length;
             if (formReporte.descCount)    formReporte.descCount.textContent    = formReporte.descripcion.value.length;
             if (formReporte.periodoCount) formReporte.periodoCount.textContent = formReporte.periodo.value.length;
             if (tareaRef) tareaRef.style.display = 'none';
         } else {
-            // ── MODO CREAR ──
+            // Modo crear
             formReporte.editId.value           = '';
             formReporte.eyebrow.textContent    = 'Nueva Incidencia';
             formReporte.modalTitle.textContent = 'Generar Reporte';
@@ -404,7 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function configurarFormularioReportes() {
         if (!formReporte.btnGuardar) return;
 
-        // Contadores de caracteres
         if (formReporte.tipo) {
             formReporte.tipo.addEventListener('input', e => {
                 if (formReporte.tipoCount) formReporte.tipoCount.textContent = e.target.value.length;
@@ -421,10 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        formReporte.btnGuardar.addEventListener('click', enviarReporteIncidencia);
+        formReporte.btnGuardar.addEventListener('click', enviarReporte);
     }
 
-    async function enviarReporteIncidencia() {
+    async function enviarReporte() {
         limpiarErroresFormulario();
 
         const payload = {
@@ -433,21 +485,17 @@ document.addEventListener('DOMContentLoaded', () => {
             periodoEvaluado: formReporte.periodo     ? formReporte.periodo.value.trim()     : '',
         };
 
-        const editId = formReporte.editId ? formReporte.editId.value : '';
+        const editId   = formReporte.editId ? formReporte.editId.value : '';
         const esEdicion = !!editId;
-        const url    = esEdicion ? ENDPOINTS.editarReporte(editId) : ENDPOINTS.guardarReporte;
+        const url      = esEdicion ? ENDPOINTS.editarReporte(editId) : ENDPOINTS.guardarReporte;
 
         try {
             formReporte.btnGuardar.disabled = true;
             const res  = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken':  obtenerCsrfToken(),
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': obtenerCsrfToken() },
                 body: JSON.stringify(payload),
             });
-
             const data = await res.json();
 
             if (res.status === 400 && data.errores) {
@@ -457,33 +505,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (!res.ok) throw new Error(data.error || 'Error del servidor.');
+            if (!res.ok) throw new Error(data.error || 'Error del servidor');
 
             bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).hide();
             resetearFormularioReporte();
             obtenerHistorialReportes();
-            mostrarToast(esEdicion ? '✏️ Reporte actualizado correctamente' : '✅ Reporte enviado correctamente', 'ok');
+            mostrarToast(esEdicion ? '✏️ Reporte actualizado' : '✅ Reporte enviado correctamente', 'ok');
 
         } catch (err) {
-            console.error('Error al guardar incidencia:', err);
-            mostrarToast('❌ No se pudo guardar el reporte. Intenta de nuevo.', 'err');
+            console.error(err);
+            mostrarToast('❌ No se pudo guardar el reporte', 'err');
         } finally {
             formReporte.btnGuardar.disabled = false;
         }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 7. HISTORIAL DE REPORTES (con acciones editar / eliminar)
+    // 7. HISTORIAL DE REPORTES
     // ═══════════════════════════════════════════════════════════════
 
     async function obtenerHistorialReportes() {
         try {
             const res  = await fetch(ENDPOINTS.historialReportes);
-            if (!res.ok) throw new Error('No se pudo consultar el historial.');
+            if (!res.ok) throw new Error('Error historial');
             const data = await res.json();
             renderizarHistorialReportes(data.reportes);
         } catch (err) {
-            console.error('Error cargando historial:', err);
+            console.error(err);
         }
     }
 
@@ -528,23 +576,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>`).join('');
 
-        // Eventos botones editar
         contenedor.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
                 const reporte = {
-                    idIncidencia:       btn.dataset.id,
-                    tipoIncidencia:     decodeURIComponent(btn.dataset.tipo),
+                    idIncidencia:        btn.dataset.id,
+                    tipoIncidencia:      decodeURIComponent(btn.dataset.tipo),
                     descripcionCompleta: decodeURIComponent(btn.dataset.desc),
-                    periodoEvaluado:    decodeURIComponent(btn.dataset.periodo),
+                    periodoEvaluado:     decodeURIComponent(btn.dataset.periodo),
                 };
-                // Cerrar dropdown antes de abrir modal
                 document.activeElement?.blur();
                 setTimeout(() => abrirModalReporte(reporte), 150);
             });
         });
 
-        // Eventos botones eliminar
         contenedor.querySelectorAll('.ht-report-action-btn--delete').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
@@ -558,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 8. MODAL CONFIRMAR ELIMINACIÓN
+    // 8. MODAL ELIMINAR
     // ═══════════════════════════════════════════════════════════════
 
     function configurarModalEliminar() {
@@ -569,17 +614,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!pendingDeleteId) return;
             try {
                 btnConfirm.disabled = true;
-                const res = await fetch(ENDPOINTS.eliminarReporte(pendingDeleteId), {
+                const res  = await fetch(ENDPOINTS.eliminarReporte(pendingDeleteId), {
                     method: 'POST',
                     headers: { 'X-CSRFToken': obtenerCsrfToken() },
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Error al eliminar.');
+                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).hide();
                 obtenerHistorialReportes();
-                mostrarToast('🗑️ Reporte eliminado correctamente', 'ok');
+                mostrarToast('🗑️ Reporte eliminado', 'ok');
             } catch (err) {
-                console.error('Error al eliminar:', err);
+                console.error(err);
                 mostrarToast('❌ No se pudo eliminar el reporte', 'err');
             } finally {
                 btnConfirm.disabled = false;
@@ -589,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 9. BUSCADOR Y FILTRO DE PRIORIDAD
+    // 9. BUSCADOR Y FILTRO
     // ═══════════════════════════════════════════════════════════════
 
     function configurarBuscadorYFiltro() {
@@ -604,17 +649,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const prio  = document.getElementById('filterPrio')?.value || '';
 
         document.querySelectorAll('.ht-card').forEach(card => {
-            const nombre = card.querySelector('.ht-card-name')?.textContent.toLowerCase() || '';
-            const cardPrio = card.getAttribute('data-prio') || '';
+            const nombre     = card.querySelector('.ht-card-name')?.textContent.toLowerCase() || '';
+            const cardPrio   = card.getAttribute('data-prio') || '';
+            const cardEstado = card.getAttribute('data-estado') || '';
+
             const coincideTexto = !texto || nombre.includes(texto);
             const coincidePrio  = !prio  || cardPrio === prio;
-            // No interferir con el toggle de completadas
-            const estaCompletada = card.getAttribute('data-estado') === 'Completada';
-            if (estaCompletada && completadasOcultas) {
-                card.style.display = 'none';
-            } else {
-                card.style.display = (coincideTexto && coincidePrio) ? '' : 'none';
-            }
+
+            const ocultaPorToggle = completadasOcultas && cardEstado === 'Completada';
+
+            card.style.display = (coincideTexto && coincidePrio && !ocultaPorToggle) ? '' : 'none';
         });
     }
 
@@ -661,6 +705,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
     }
 
-    // ─── Arrancar ────────────────────────────────────────────────
+    // ── Arrancar ─────────────────────────────────────────────────
     init();
 });

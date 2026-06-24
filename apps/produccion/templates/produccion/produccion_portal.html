@@ -33,7 +33,9 @@
     </div>
     <div class="topbar-right">
       <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
-        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
         Volver
       </button>
     </div>
@@ -48,7 +50,9 @@
       </div>
       <div class="header-actions">
         <button class="btn btn-outline" onclick="exportarCSV()">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
           Exportar
         </button>
         <button class="btn btn-dark" onclick="abrirModalProducto()">
@@ -63,19 +67,31 @@
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-icon teal">👕</div>
-        <div><div class="kpi-val" id="kpi-productos">—</div><div class="kpi-lbl">Tipos de Producto</div></div>
+        <div>
+          <div class="kpi-val" id="kpi-productos">—</div>
+          <div class="kpi-lbl">Tipos de Producto</div>
+        </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon green">✅</div>
-        <div><div class="kpi-val" id="kpi-completadas">—</div><div class="kpi-lbl">Órdenes Completadas</div></div>
+        <div>
+          <div class="kpi-val" id="kpi-completadas">—</div>
+          <div class="kpi-lbl">Órdenes Completadas</div>
+        </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon orange">⏳</div>
-        <div><div class="kpi-val" id="kpi-proceso">—</div><div class="kpi-lbl">En Progreso</div></div>
+        <div>
+          <div class="kpi-val" id="kpi-proceso">—</div>
+          <div class="kpi-lbl">En Progreso</div>
+        </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-icon red">🔖</div>
-        <div><div class="kpi-val" id="kpi-pendientes">—</div><div class="kpi-lbl">Pendientes</div></div>
+        <div>
+          <div class="kpi-val" id="kpi-pendientes">—</div>
+          <div class="kpi-lbl">Pendientes</div>
+        </div>
       </div>
     </div>
 
@@ -90,24 +106,37 @@
           <h3>Productos Registrados</h3>
           <div class="toolbar-right">
             <div class="search-wrap">
-              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
               <input id="search-productos" type="text" placeholder="Buscar producto..." oninput="filtrarProductos()" />
             </div>
             <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
               <option value="">Todas las categorías</option>
-              <option>Camisa</option><option>Pantalón</option>
-              <option>Uniforme</option><option>Chaqueta</option><option>Accesorio</option>
+              <option>Camisa</option>
+              <option>Pantalón</option>
+              <option>Uniforme</option>
+              <option>Chaqueta</option>
+              <option>Accesorio</option>
             </select>
           </div>
         </div>
         <table>
           <thead>
             <tr>
-              <th>Nombre</th><th>Categoría</th><th>Precio</th><th>Descripción</th><th>Acciones</th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Descripción</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tbody-productos">
-            <tr><td colspan="5" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+            <tr>
+              <td colspan="5" style="text-align:center;padding:30px">
+                <span class="spinner"></span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -119,31 +148,45 @@
           <h3>Órdenes de Producción</h3>
           <div class="toolbar-right">
             <div class="search-wrap">
-              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
               <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
             </div>
             <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
               <option value="">Todos los estados</option>
-              <option>Pendiente</option><option>En Progreso</option>
-              <option>Completado</option><option>Detenido</option>
+              <option>Pendiente</option>
+              <option>En Progreso</option>
+              <option>Completado</option>
+              <option>Detenido</option>
             </select>
           </div>
         </div>
         <table>
           <thead>
             <tr>
-              <th>ID</th><th>Producto</th><th>Descripción</th><th>Cantidad</th>
-              <th>Fecha Inicio</th><th>Fecha Est. Fin</th><th>Estado</th><th>Acciones</th>
+              <th>ID</th>
+              <th>Producto</th>
+              <th>Descripción</th>
+              <th>Cantidad</th>
+              <th>Fecha Inicio</th>
+              <th>Fecha Est. Fin</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tbody-ordenes">
-            <tr><td colspan="8" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+            <tr>
+              <td colspan="8" style="text-align:center;padding:30px">
+                <span class="spinner"></span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-  </div></div><div class="modal-backdrop" id="modal-producto">
+  </div> </div> <div class="modal-backdrop" id="modal-producto">
   <div class="modal">
     <div class="modal-header">
       <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
@@ -160,8 +203,11 @@
           <label>Categoría *</label>
           <select id="prod-categoria">
             <option value="">Seleccionar...</option>
-            <option>Camisa</option><option>Pantalón</option>
-            <option>Uniforme</option><option>Chaqueta</option><option>Accesorio</option>
+            <option>Camisa</option>
+            <option>Pantalón</option>
+            <option>Uniforme</option>
+            <option>Chaqueta</option>
+            <option>Accesorio</option>
           </select>
         </div>
       </div>
@@ -184,6 +230,7 @@
     </div>
   </div>
 </div>
+
 
 <div class="modal-backdrop" id="modal-orden">
   <div class="modal">

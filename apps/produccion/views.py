@@ -33,8 +33,6 @@ def produccion_to_dict(o):
         'fechaInicio':       str(o.fechaInicio),
         'fechaEstimadaFin':  str(o.fechaEstimadaFin),
         'fechaRealFin':      str(o.fechaRealFin) if o.fechaRealFin else None,
-        'costoEstimado':     float(o.costoEstimado) if o.costoEstimado else None,
-        'costoReal':         float(o.costoReal) if o.costoReal else None,
         'estado':            o.estado,
     }
 
@@ -102,8 +100,6 @@ def ordenes(request):
         fechaInicio       = data['fechaInicio'],
         fechaEstimadaFin  = data['fechaEstimadaFin'],
         fechaRealFin      = data.get('fechaRealFin', None),
-        costoEstimado     = data.get('costoEstimado', None),
-        costoReal         = data.get('costoReal', None),
         estado            = data.get('estado', 'Pendiente'),
     )
     return JsonResponse(produccion_to_dict(o), status=201)
@@ -123,8 +119,7 @@ def orden_detalle(request, id):
     if request.method == 'PUT':
         data = json.loads(request.body)
         for campo in ['idOrden', 'descripcion', 'cantidadRequerida',
-                      'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin',
-                      'costoEstimado', 'costoReal', 'estado']:
+                      'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin', 'estado']:
             if campo in data:
                 setattr(o, campo, data[campo])
         o.save()

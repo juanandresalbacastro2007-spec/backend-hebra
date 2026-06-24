@@ -86,9 +86,6 @@ function renderProductos(lista) {
       <tr>
         <td colspan="5">
           <div class="empty-state">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
             <p>No hay productos registrados</p>
           </div>
         </td>
@@ -100,7 +97,6 @@ function renderProductos(lista) {
     <tr>
       <td>
         <div class="prenda-cell">
-          <div class="prenda-avatar">${iconos[p.categoria] || '👕'}</div>
           <div class="prenda-name">${p.nombre}</div>
         </div>
       </td>
@@ -109,16 +105,8 @@ function renderProductos(lista) {
       <td style="color:var(--muted);font-size:13px">${p.descripcion || '—'}</td>
       <td>
         <div class="action-btns">
-          <button class="action-btn edit" title="Editar" onclick="editarProducto(${p.idProducto})">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-          </button>
-          <button class="action-btn del" title="Eliminar" onclick="eliminarProducto(${p.idProducto})">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-          </button>
+          <button class="action-btn edit" title="Editar" onclick="editarProducto(${p.idProducto})">✏️</button>
+          <button class="action-btn del" title="Eliminar" onclick="eliminarProducto(${p.idProducto})">🗑️</button>
         </div>
       </td>
     </tr>`).join('');
@@ -132,31 +120,98 @@ function filtrarProductos() {
   ));
 }
 
+function poblarSelectProductos() {
+  const select = document.getElementById('o-producto');
+  if (!select) return;
+  select.innerHTML = '<option value="">Seleccionar producto...</option>' + 
+    allProductos.map(p => `<option value="${p.idProducto}">${p.nombre}</option>`).join('');
+}
+
+// ── CONTROL DEL MODAL DE PRODUCTOS ────────────────
+function abrirModalProducto() {
+  document.getElementById('modal-producto-title').textContent = '➕ Nuevo Producto';
+  document.getElementById('producto-id').value = '';
+  document.getElementById('prod-nombre').value = '';
+  document.getElementById('prod-categoria').value = '';
+  document.getElementById('prod-precio').value = 0;
+  document.getElementById('prod-descripcion').value = '';
+  document.getElementById('modal-producto').style.display = 'flex';
+}
+
+function cerrarModalProducto() {
+  document.getElementById('modal-producto').style.display = 'none';
+}
+
+function editarProducto(id) {
+  const p = allProductos.find(prod => prod.idProducto === id);
+  if (!p) return;
+  
+  document.getElementById('modal-producto-title').textContent = '✏️ Editar Producto';
+  document.getElementById('producto-id').value = p.idProducto;
+  document.getElementById('prod-nombre').value = p.nombre;
+  document.getElementById('prod-categoria').value = p.categoria;
+  document.getElementById('prod-precio').value = p.precio;
+  document.getElementById('prod-descripcion').value = p.descripcion;
+  document.getElementById('modal-producto').style.display = 'flex';
+}
+
+async function guardarProducto() {
+  const id = document.getElementById('producto-id').value;
+  const data = {
+    nombre: document.getElementById('prod-nombre').value,
+    categoria: document.getElementById('prod-categoria').value,
+    precio: parseFloat(document.getElementById('prod-precio').value) || 0,
+    descripcion: document.getElementById('prod-descripcion').value
+  };
+
+  if (!data.nombre || !data.categoria) {
+    showToast('Por favor, llena los campos obligatorios (*)', 'error');
+    return;
+  }
+
+  try {
+    const url = id ? `${BASE}/productos/${id}/` : `${BASE}/productos/`;
+    const method = id ? 'PUT' : 'POST';
+    
+    const r = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!r.ok) throw new Error('Error al guardar el producto');
+    
+    showToast(id ? 'Producto actualizado con éxito' : 'Producto creado con éxito', 'success');
+    cerrarModalProducto();
+    cargarProductos();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function eliminarProducto(id) {
+  if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+  try {
+    const r = await fetch(`${BASE}/productos/${id}/`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Error al eliminar');
+    showToast('Producto eliminado', 'success');
+    cargarProductos();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
 // ── ÓRDENES DE PRODUCCIÓN ─────────────────────────
 async function cargarOrdenes() {
   try {
     const r = await fetch(`${BASE}/ordenes/`);
-    if (!r.ok) throw new Error(`Error en el servidor: ${r.status}`);
-    
     const data = await r.json();
-    
-    // Protección por si Django envía un objeto en lugar de una lista directa
-    if (data && !Array.isArray(data)) {
-      console.warn("Estructura de datos inesperada desde el backend:", data);
-      allOrdenes = data.ordenes || data.data || [];
-    } else {
-      allOrdenes = data || [];
-    }
-
+    allOrdenes = Array.isArray(data) ? data : (data.ordenes || []);
     renderOrdenes(allOrdenes);
   } catch (e) {
-    console.error('Error crítico en cargarOrdenes:', e);
-    const tb = document.getElementById('tbody-ordenes');
-    if (tb) {
-      tb.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red; padding:20px; font-weight:600;">
-        ⚠️ Error al cargar datos: ${e.message}. Revisa la consola del navegador (F12).
-      </td></tr>`;
-    }
+    console.error('Error cargando órdenes:', e);
   }
 }
 
@@ -164,62 +219,137 @@ function renderOrdenes(lista) {
   const tb = document.getElementById('tbody-ordenes');
   if (!tb) return;
 
-  if (!lista || !lista.length) {
-    tb.innerHTML = `
+  if (!lista.length) {
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px">No hay órdenes registradas</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = lista.map(o => {
+    const clsEst = 'estado-ord-' + (o.estado || 'Pendiente').replace(/\s+/g, '-');
+    return `
       <tr>
-        <td colspan="8">
-          <div class="empty-state">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            <p>No hay órdenes registradas o el filtro no coincide</p>
+        <td><strong>${o.idProduccion}</strong></td>
+        <td>${o.producto || 'Sin producto'}</td>
+        <td>${o.descripcion || '—'}</td>
+        <td style="text-align:center">${o.cantidadRequerida}</td>
+        <td>${o.fechaInicio}</td>
+        <td>${o.fechaEstimadaFin}</td>
+        <td><span class="estado-badge ${clsEst}">${o.estado}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="action-btn edit" onclick="editarOrden(${o.idProduccion})">✏️</button>
+            <button class="action-btn del" onclick="eliminarOrden(${o.idProduccion})">🗑️</button>
           </div>
         </td>
       </tr>`;
+  }).join('');
+}
+
+function filtrarOrdenes() {
+  const q = document.getElementById('search-ordenes').value.toLowerCase();
+  const st = document.getElementById('filter-estado-ord').value;
+  
+  renderOrdenes(allOrdenes.filter(o => {
+    const matchQ = (o.descripcion && o.descripcion.toLowerCase().includes(q)) || (o.producto && o.producto.toLowerCase().includes(q));
+    const matchSt = !st || o.estado === st;
+    return matchQ && matchSt;
+  }));
+}
+
+// ── CONTROL DEL MODAL DE ÓRDENES ──────────────────
+function abrirModalOrden() {
+  document.getElementById('modal-orden-title').textContent = '🗒 Nueva Orden de Producción';
+  document.getElementById('orden-id').value = '';
+  document.getElementById('o-producto').value = '';
+  document.getElementById('o-cantidad').value = 1;
+  document.getElementById('o-descripcion').value = '';
+  document.getElementById('o-fecha-inicio').value = new Date().toISOString().split('T')[0];
+  document.getElementById('o-fecha-fin').value = '';
+  document.getElementById('o-costo-estimado').value = '';
+  document.getElementById('o-estado').value = 'Pendiente';
+  document.getElementById('modal-orden').style.display = 'flex';
+}
+
+function cerrarModalOrden() {
+  document.getElementById('modal-orden').style.display = 'none';
+}
+
+function editarOrden(id) {
+  const o = allOrdenes.find(ord => ord.idProduccion === id);
+  if (!o) return;
+
+  document.getElementById('modal-orden-title').textContent = '✏️ Editar Orden';
+  document.getElementById('orden-id').value = o.idProduccion;
+  document.getElementById('o-producto').value = o.idProducto;
+  document.getElementById('o-cantidad').value = o.cantidadRequerida;
+  document.getElementById('o-descripcion').value = o.descripcion;
+  document.getElementById('o-fecha-inicio').value = o.fechaInicio;
+  document.getElementById('o-fecha-fin').value = o.fechaEstimadaFin;
+  document.getElementById('o-costo-estimado').value = o.costoEstimado || '';
+  document.getElementById('o-estado').value = o.estado;
+  document.getElementById('modal-orden').style.display = 'flex';
+}
+
+async function guardarOrden() {
+  const id = document.getElementById('orden-id').value;
+  const data = {
+    idProducto: parseInt(document.getElementById('o-producto').value),
+    cantidadRequerida: parseInt(document.getElementById('o-cantidad').value),
+    descripcion: document.getElementById('o-descripcion').value,
+    fechaInicio: document.getElementById('o-fecha-inicio').value,
+    fechaEstimadaFin: document.getElementById('o-fecha-fin').value,
+    costoEstimado: document.getElementById('o-costo-estimado').value ? parseFloat(document.getElementById('o-costo-estimado').value) : null,
+    estado: document.getElementById('o-estado').value
+  };
+
+  if (!data.idProducto || !data.cantidadRequerida || !data.fechaInicio || !data.fechaEstimadaFin) {
+    showToast('Por favor, llena los campos obligatorios (*)', 'error');
     return;
   }
 
   try {
-    tb.innerHTML = lista.map(o => {
-      const estadoSeguro = o.estado ? String(o.estado) : 'Pendiente';
-      const clsEst = 'estado-ord-' + estadoSeguro.replace(/\s+/g, '-');
-      
-      return `
-        <tr>
-          <td><strong>${o.idProduccion ?? '—'}</strong></td>
-          <td>${o.producto ?? 'Sin producto'}</td>
-          <td style="color:var(--muted);font-size:13px">${o.descripcion || '—'}</td>
-          <td style="text-align:center;font-weight:600">${o.cantidadRequerida ?? 0}</td>
-          <td style="color:var(--muted);font-size:12.5px">${o.fechaInicio ?? '—'}</td>
-          <td style="color:var(--muted);font-size:12.5px">${o.fechaEstimadaFin ?? '—'}</td>
-          <td><span class="estado-badge ${clsEst}">${estadoSeguro}</span></td>
-          <td>
-            <div class="action-btns">
-              <button class="action-btn edit" title="Editar" onclick="editarOrden(${o.idProduccion})">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-              </button>
-              <button class="action-btn del" title="Eliminar" onclick="eliminarOrden(${o.idProduccion})">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-              </button>
-            </div>
-          </td>
-        </tr>`;
-    }).join('');
-  } catch (renderError) {
-    console.error("Error al renderizar las filas de órdenes:", renderError);
-    tb.innerHTML = `<tr><td colspan="8" style="text-align:center; color:orange; padding:20px;">
-      ⚠️ Error de renderizado. Los datos del backend tienen formatos incompatibles.
-    </td></tr>`;
+    const url = id ? `${BASE}/ordenes/${id}/` : `${BASE}/ordenes/`;
+    const method = id ? 'PUT' : 'POST';
+
+    const r = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!r.ok) throw new Error('Error al guardar la orden');
+
+    showToast(id ? 'Orden actualizada con éxito' : 'Orden creada con éxito', 'success');
+    cerrarModalOrden();
+    cargarOrdenes();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
   }
 }
 
-function filtrarOrdenes() {
-  const searchInput = document.getElementById('search-ordenes');
-  const filterSelect = document.getElementById('filter-estado-ord');
-  
-  const q = searchInput ? searchInput.value.toLowerCase() : '';
-  const st = filterSelect ? filterSelect.value
+async function eliminarOrden(id) {
+  if (!confirm('¿Estás seguro de eliminar esta orden?')) return;
+  try {
+    const r = await fetch(`${BASE}/ordenes/${id}/`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Error al eliminar');
+    showToast('Orden de producción eliminada', 'success');
+    cargarOrdenes();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── UTILERÍAS / TOAST ─────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.classList.remove('show'); }, 3000);
+}
+
+function exportarCSV() {
+  showToast('Función de exportación lista para programar', 'info');
+}

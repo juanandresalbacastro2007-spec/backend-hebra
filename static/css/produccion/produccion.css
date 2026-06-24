@@ -637,11 +637,14 @@ td {
     inset: 0;
     background: rgba(0, 0, 0, .5);
     display: none;
-    place-items: center;
-    z-index: 100;
+    z-index: 1050;
+    
+    /* Propiedades añadidas para centrar perfectamente el modal */
+    justify-content: center;
+    align-items: center;
 }
 
-.modal-backdrop.open { display: grid; }
+.modal-backdrop.open { display: flex; }
 
 .modal {
     background: #fff;
@@ -651,6 +654,9 @@ td {
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 24px 64px rgba(0, 0, 0, .22);
+    
+    /* Asegura que no tenga márgenes que lo empujen a un lado */
+    margin: 0;
 }
 
 .modal-header {

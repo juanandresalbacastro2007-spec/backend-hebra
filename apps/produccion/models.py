@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Producto(models.Model):
     CATEGORIA_CHOICES = [
         ('Camisa',    'Camisa'),
@@ -30,24 +29,14 @@ class Produccion(models.Model):
     ]
 
     idProduccion       = models.AutoField(primary_key=True)
-    idOrden            = models.IntegerField(null=True, blank=True,
-                             db_column='idOrden')
-    idProducto         = models.ForeignKey(
-                             Producto,
-                             on_delete=models.CASCADE,
-                             db_column='idProducto'
-                         )
+    idOrden            = models.IntegerField(null=True, blank=True, db_column='idOrden')
+    idProducto         = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='idProducto')
     descripcion        = models.CharField(max_length=255)
     cantidadRequerida  = models.IntegerField()
     fechaInicio        = models.DateField()
     fechaEstimadaFin   = models.DateField()
-    fechaRealFin       = models.DateField(null=True, blank=True)
-    costoEstimado      = models.DecimalField(max_digits=12, decimal_places=2,
-                             null=True, blank=True)
-    costoReal          = models.DecimalField(max_digits=12, decimal_places=2,
-                             null=True, blank=True)
-    estado             = models.CharField(max_length=20,
-                             choices=ESTADO_CHOICES, default='Pendiente')
+    fechaRealFin       = models.DateField(null=True, blank=True) # ◄ Ya existe en la BD
+    estado             = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
 
     class Meta:
         db_table = 'produccion'

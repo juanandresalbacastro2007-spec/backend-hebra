@@ -1,3 +1,5 @@
+# apps/proveedores/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -10,11 +12,14 @@ import json
 @require_POST
 def cambiar_estado_proveedor(request, id):
     try:
-        import json
         proveedor = Proveedor.objects.get(idProveedor=id)
         data = json.loads(request.body)
-        proveedor.estado = data.get('estado', 'ACTIVO')
+        
+        # ✅ CORRECCIÓN: Forzamos minúsculas para que coincida con los CHOICES del modelo
+        estado_input = data.get('estado', 'activo').lower()
+        proveedor.estado = estado_input
         proveedor.save()
+        
         return JsonResponse({'success': True, 'estado': proveedor.estado})
     except Proveedor.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Proveedor no encontrado'}, status=404)
@@ -65,7 +70,10 @@ def editar_proveedor(request, id):
 
 def eliminar_proveedor(request, id):
     proveedor = get_object_or_404(Proveedor, idProveedor=id)
-    proveedor.estado = 'INACTIVO'
+    
+    # ✅ CORRECCIÓN: Cambiado a minúsculas
+    proveedor.estado = 'inactivo'
     proveedor.save()
+    
     messages.warning(request, f'🗑️ {proveedor.nombreEmpresa} desactivado correctamente')
     return redirect('proveedores')

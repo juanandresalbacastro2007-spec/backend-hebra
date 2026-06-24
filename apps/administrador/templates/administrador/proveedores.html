@@ -189,8 +189,8 @@
                   <div class="col-md-6">
                     <label class="form-label">Estado</label>
                     <select name="estado" class="form-select" required>
-                      <option value="ACTIVO" {% if p.estado == "ACTIVO" %}selected{% endif %}>ACTIVO</option>
-                      <option value="INACTIVO" {% if p.estado == "INACTIVO" %}selected{% endif %}>INACTIVO</option>
+                      <option value="activo" {% if p.estado == "activo" %}selected{% endif %}>ACTIVO</option>
+                      <option value="inactivo" {% if p.estado == "inactivo" %}selected{% endif %}>INACTIVO</option>
                     </select>
                   </div>
                 </div>
@@ -246,8 +246,8 @@
                   <label class="form-label">Estado</label>
                   <select name="estado" class="form-select" required>
                     <option value="">Selecciona estado</option>
-                    <option value="ACTIVO">ACTIVO</option>
-                    <option value="INACTIVO">INACTIVO</option>
+                    <option value="activo">ACTIVO</option>
+                    <option value="inactivo">INACTIVO</option>
                   </select>
                 </div>
               </div>

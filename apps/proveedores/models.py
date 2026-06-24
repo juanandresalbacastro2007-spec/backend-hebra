@@ -5,6 +5,7 @@ from apps.administrador.models import Usuario
 
 
 class Proveedor(models.Model):
+    # Definición de opciones estandarizadas en minúsculas
     ESTADO_CHOICES = [
         ('activo', 'Activo'),
         ('inactivo', 'Inactivo'),

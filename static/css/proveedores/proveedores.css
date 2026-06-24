@@ -22,3 +22,30 @@
 .ocultar-elemento {
     display: none !important;
 }
+
+.btn-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: #1A2F3B;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+
+    /* ✅ Posición fija esquina superior izquierda */
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 9999;
+}
+
+.btn-logout:hover {
+    background: #395B64;
+    color: #fff;
+}

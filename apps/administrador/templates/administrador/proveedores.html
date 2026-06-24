@@ -10,6 +10,17 @@
     <link rel="stylesheet" href="{% static 'css/proveedores/proveedores.css' %}">
   </head>
   <body style="background-color: #A5C9CA;">
+    <body style="background-color: #A5C9CA;">
+
+  <!-- ✅ Botón volver fijo esquina superior izquierda -->
+  <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+    </svg>
+    Volver
+  </button>
+
+  <div class="w-100 min-vh-100" style="background-color: #A5C9CA;">
     <div class="w-100 min-vh-100" style="background-color: #A5C9CA;">
       <header class="container mt-4 mb-4">
         <div class="row justify-content-center">

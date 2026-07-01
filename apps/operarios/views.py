@@ -1,12 +1,24 @@
 import json
 import logging
-from datetime import date
+import io
+from datetime import date, datetime
 
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+
+# --- Imports nuevos para el PDF (ReportLab) ---
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer,
+    Table, TableStyle, HRFlowable
+)
+from reportlab.lib.enums import TA_CENTER
 
 from .models import Operario, AsignacionTarea, Incidencia
 
@@ -14,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 ESTADOS_VALIDOS_ASIGNACION = ['Pendiente', 'En Progreso', 'Completada', 'Cancelada']
 TIPO_INCIDENCIA_MAX_LEN = 50
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -262,9 +273,6 @@ def api_actualizar_estado(request, id_asignacion):
         'fecha':  str(asignacion.fechaFinalizacion) if asignacion.fechaFinalizacion else None,
     })
 
-    # ─── AGREGAR estos dos endpoints al views.py existente ───────────────────────
-# Pegalos al final del archivo, antes de api_actualizar_estado o después.
-
 
 @csrf_exempt
 @require_POST
@@ -369,3 +377,158 @@ def api_eliminar_reporte(request, id_incidencia):
         return JsonResponse({'ok': False, 'error': 'No se pudo eliminar el reporte'}, status=500)
 
     return JsonResponse({'ok': True, 'mensaje': 'Reporte eliminado correctamente'})
+
+
+# ── PDF — Generar y descargar incidencia ────────────────────────────────
+def generar_pdf_reporte(request, id_incidencia):
+    incidencia = get_object_or_404(Incidencia, idIncidencia=id_incidencia)
+
+    operario        = incidencia.idUsuario            # instancia Operario
+    usuario         = operario.idUsuario              # instancia Usuario
+    nombre_completo = f"{usuario.nombre} {usuario.apellido}"
+    especialidad    = operario.especialidad or '—'
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        rightMargin=2*cm, leftMargin=2*cm,
+        topMargin=3*cm,   bottomMargin=2*cm,  # AJUSTE 1: Más margen superior (3*cm)
+    )
+    story  = []
+    styles = getSampleStyleSheet()
+
+    # AJUSTE 2: Agregar un poco de espacio en blanco inicial
+    story.append(Spacer(1, 0.5*cm))
+
+    # ── Paleta HebraTech ──────────────────────────────────────────────
+    C_PURPLE = colors.HexColor('#7c3aed')
+    C_PINK   = colors.HexColor('#db2777')
+    C_LIGHT  = colors.HexColor('#f5f0ff')
+    C_BORDER = colors.HexColor('#c4b5fd')
+    C_GRAY   = colors.HexColor('#6b7280')
+    C_DARK   = colors.HexColor('#111827')
+
+    def st(nombre, **kw):
+        return ParagraphStyle(nombre, parent=styles['Normal'], **kw)
+
+    lbl = st('Lbl', fontSize=9,  fontName='Helvetica-Bold', textColor=C_GRAY)
+    val = st('Val', fontSize=10, fontName='Helvetica',      textColor=C_DARK)
+
+    def bloque_encabezado(texto, color):
+        t = Table(
+            [[Paragraph(texto, st('Th', fontSize=10, fontName='Helvetica-Bold',
+                                  textColor=colors.white, alignment=TA_CENTER))]],
+            colWidths=[16*cm]
+        )
+        t.setStyle(TableStyle([
+            ('BACKGROUND',    (0,0), (-1,-1), color),
+            ('TOPPADDING',    (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING',   (0,0), (-1,-1), 12),
+        ]))
+        return t
+
+    def bloque_filas(filas):
+        t = Table(filas, colWidths=[4.5*cm, 11.5*cm])
+        t.setStyle(TableStyle([
+            ('ROWBACKGROUNDS', (0,0), (-1,-1), [C_LIGHT, colors.white]),
+            ('BOX',            (0,0), (-1,-1), 1, C_BORDER),
+            ('LINEBELOW',      (0,0), (-1,-2), 0.5, C_BORDER),
+            ('TOPPADDING',     (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING',  (0,0), (-1,-1), 8),
+            ('LEFTPADDING',    (0,0), (-1,-1), 12),
+            ('VALIGN',         (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        return t
+
+    # ── Fecha ─────────────────────────────────────────────────────────
+    if incidencia.fechaGeneracion and hasattr(incidencia.fechaGeneracion, 'strftime'):
+        fecha_str = incidencia.fechaGeneracion.strftime('%d/%m/%Y')
+    else:
+        fecha_str = str(incidencia.fechaGeneracion) if incidencia.fechaGeneracion else datetime.now().strftime('%d/%m/%Y')
+
+    # ── ENCABEZADO ────────────────────────────────────────────────────
+    story.append(Paragraph(
+        "HebraTech",
+        # AJUSTE 3: Añadir leading=32 para que el texto grande tenga espacio
+        st('Brand', fontSize=26, leading=32, fontName='Helvetica-Bold',
+           textColor=C_PURPLE, alignment=TA_CENTER, spaceAfter=2)
+    ))
+    story.append(Paragraph(
+        "Sistema de Gestión de Incidencias Operativas",
+        st('Sub', fontSize=10, textColor=C_GRAY, alignment=TA_CENTER, spaceAfter=6)
+    ))
+    story.append(HRFlowable(width='100%', thickness=2, color=C_PURPLE, spaceAfter=10))
+    story.append(Paragraph(
+        f"REPORTE DE INCIDENCIA  #<b>{incidencia.idIncidencia:04d}</b>",
+        st('RID', fontSize=13, textColor=C_PURPLE,
+           fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=4)
+    ))
+    story.append(Paragraph(
+        f"Generado el {fecha_str}",
+        st('Fecha', fontSize=9, textColor=C_GRAY, alignment=TA_CENTER, spaceAfter=18)
+    ))
+
+    # ── INFORMACIÓN DEL OPERARIO ──────────────────────────────────────
+    story.append(bloque_encabezado('INFORMACIÓN DEL OPERARIO', C_PURPLE))
+    story.append(bloque_filas([
+        [Paragraph('Nombre:',       lbl), Paragraph(nombre_completo, val)],
+        [Paragraph('Especialidad:', lbl), Paragraph(especialidad,    val)],
+    ]))
+    story.append(Spacer(1, 0.5*cm))
+
+    # ── DETALLE DE LA INCIDENCIA ──────────────────────────────────────
+    story.append(bloque_encabezado('DETALLE DE LA INCIDENCIA', C_PINK))
+    story.append(bloque_filas([
+        [Paragraph('Tipo de incidencia:', lbl), Paragraph(incidencia.tipoIncidencia or '—', val)],
+        [Paragraph('Período evaluado:',   lbl), Paragraph(incidencia.periodoEvaluado or '—', val)],
+        [Paragraph('Estado:',             lbl), Paragraph(incidencia.estado or '—', val)],
+        [Paragraph('Fecha generación:',   lbl), Paragraph(fecha_str, val)],
+    ]))
+    story.append(Spacer(1, 0.4*cm))
+
+    # ── DESCRIPCIÓN ───────────────────────────────────────────────────
+    story.append(bloque_encabezado('DESCRIPCIÓN DE LA INCIDENCIA', C_PURPLE))
+    t_desc = Table(
+        [[Paragraph(incidencia.descripcion or 'Sin descripción.',
+                    st('Body', fontSize=10, leading=16, textColor=C_DARK))]],
+        colWidths=[16*cm]
+    )
+    t_desc.setStyle(TableStyle([
+        ('BOX',           (0,0), (-1,-1), 1, C_BORDER),
+        ('TOPPADDING',    (0,0), (-1,-1), 12),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+        ('LEFTPADDING',   (0,0), (-1,-1), 12),
+        ('RIGHTPADDING',  (0,0), (-1,-1), 12),
+    ]))
+    # AJUSTE 4: Sangría corregida aquí abajo
+    story.append(t_desc)
+    story.append(Spacer(1, 1.2*cm))
+
+    # ── FIRMA ─────────────────────────────────────────────────────────
+    story.append(Table([
+        [Paragraph('_______________________________',
+                   st('Ln', fontSize=10, alignment=TA_CENTER))],
+        [Paragraph(nombre_completo,
+                   st('FN', fontSize=9, fontName='Helvetica-Bold',
+                      textColor=C_DARK, alignment=TA_CENTER))],
+        [Paragraph('Firma del Operario',
+                   st('FL', fontSize=8, textColor=C_GRAY, alignment=TA_CENTER))],
+    ], colWidths=[16*cm]))
+    story.append(Spacer(1, 0.8*cm))
+
+    # ── PIE DE PÁGINA ─────────────────────────────────────────────────
+    story.append(HRFlowable(width='100%', thickness=1, color=C_BORDER, spaceAfter=6))
+    story.append(Paragraph(
+        f"HebraTech  ·  Reporte #{incidencia.idIncidencia:04d}  ·  "
+        f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}  ·  Documento de uso interno",
+        st('Foot', fontSize=8, textColor=C_GRAY, alignment=TA_CENTER)
+    ))
+
+    doc.build(story)
+    buffer.seek(0)
+
+    filename = f"HebraTech_Incidencia_{incidencia.idIncidencia:04d}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

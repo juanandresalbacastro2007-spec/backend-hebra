@@ -8,7 +8,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ─── Endpoints ───────────────────────────────────────────────────
+// ─── Endpoints ───────────────────────────────────────────────────
     const ENDPOINTS = {
         tareas:            '/operarios/api/tareas/',
         cambiarEstado:     (id) => `/operarios/api/tarea/${id}/estado/`,
@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editarReporte:     (id) => `/operarios/api/reporte/${id}/editar/`,
         eliminarReporte:   (id) => `/operarios/api/reporte/${id}/eliminar/`,
         historialReportes: '/operarios/api/reportes/',
+        pdfReporte:        (id) => `/operarios/api/reporte/${id}/pdf/`,
     };
 
     // ─── Estado local ────────────────────────────────────────────────
@@ -512,6 +513,11 @@ document.addEventListener('DOMContentLoaded', () => {
             obtenerHistorialReportes();
             mostrarToast(esEdicion ? '✏️ Reporte actualizado' : '✅ Reporte enviado correctamente', 'ok');
 
+            // — Descarga automática del PDF al crear (no al editar) —
+            if (!esEdicion && data.idIncidencia) {
+                descargarPDF(data.idIncidencia);
+            }
+
         } catch (err) {
             console.error(err);
             mostrarToast('❌ No se pudo guardar el reporte', 'err');
@@ -566,6 +572,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 title="Eliminar reporte">
                             <i class="bi bi-trash"></i>
                         </button>
+                        <button class="ht-report-action-btn ht-report-action-btn--pdf"
+                                data-id="${rep.idIncidencia}"
+                                title="Descargar PDF">
+                            <i class="bi bi-file-earmark-pdf-fill"></i>
+                        </button>
                     </div>
                 </div>
                 <p class="ht-report-card-desc">${rep.descripcion}</p>
@@ -598,6 +609,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
                 }, 150);
+            });
+        });
+
+        contenedor.querySelectorAll('.ht-report-action-btn--pdf').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                descargarPDF(btn.dataset.id);
             });
         });
     }
@@ -703,6 +721,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (c.startsWith('csrftoken=')) return decodeURIComponent(c.substring(10));
         }
         return '';
+    }
+
+    function descargarPDF(idIncidencia) {
+        const link = document.createElement('a');
+        link.href  = ENDPOINTS.pdfReporte(idIncidencia);
+        link.setAttribute('download', `HebraTech_Incidencia_${String(idIncidencia)}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     // ── Arrancar ─────────────────────────────────────────────────

@@ -71,5 +71,14 @@ urlpatterns = [
         name='api_eliminar_reporte'
     ),
  
+    # ------------------------------------------------------------------
+    # PDF — Descargar reporte como PDF
+    # GET /operarios/api/reporte/<id>/pdf/
+    # ------------------------------------------------------------------
+    path(
+        'api/reporte/<int:id_incidencia>/pdf/',
+        views.generar_pdf_reporte,
+        name='generar_pdf_reporte'
+    ),
 
 ]

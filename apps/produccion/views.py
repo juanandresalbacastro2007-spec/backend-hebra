@@ -6,8 +6,15 @@ import json
 from .models import Producto, Produccion
 from datetime import date
 
+from apps.core.decorators import login_required_rol, login_required_api
+
+# ── Decoradores de protección (solo administrador) ──────────────────
+admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
+admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
+
 
 # ── PORTAL (Template HTML) ───────────────────────────
+@admin_required
 def produccion_portal(request):
     return render(request, 'produccion/produccion_portal.html')
 
@@ -38,6 +45,7 @@ def produccion_to_dict(o):
 
 
 # ── PRODUCTOS ────────────────────────────────────────
+@admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def productos(request):
@@ -55,6 +63,7 @@ def productos(request):
     return JsonResponse(producto_to_dict(p), status=201)
 
 
+@admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def producto_detalle(request, id):
@@ -79,6 +88,7 @@ def producto_detalle(request, id):
 
 
 # ── PRODUCCIÓN ────────────────────────────────────────
+@admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def ordenes(request):
@@ -105,6 +115,7 @@ def ordenes(request):
     return JsonResponse(produccion_to_dict(o), status=201)
 
 
+@admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def orden_detalle(request, id):
@@ -130,6 +141,7 @@ def orden_detalle(request, id):
 
 
 # ── KPIs ─────────────────────────────────────────────
+@admin_required_api
 def kpis(request):
     total_productos = Producto.objects.count()
     en_progreso     = Produccion.objects.filter(estado='En Progreso').count()

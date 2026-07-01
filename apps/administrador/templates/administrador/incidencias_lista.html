@@ -1,0 +1,237 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HebraTech — Incidencias</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
+</head>
+<body>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
+      </div>
+      <div>
+        <div class="brand-title">HebraTech</div>
+        <div class="brand-sub">Administración</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="{% url 'admin_portal' %}" class="nav-item"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <div class="nav-section-label">Gestión</div>
+      <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
+      <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
+      <a href="{% url 'admin_tareas' %}" class="nav-item"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <a href="{% url 'admin_incidencias' %}" class="nav-item active"><i class="bi bi-exclamation-triangle-fill"></i> Incidencias</a>
+      <div class="nav-section-label">Módulos</div>
+      <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
+      <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
+      <div class="sidebar-footer">
+        <div class="admin-info">
+          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
+          <div>
+            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
+            <div class="admin-role">Administrador</div>
+          </div>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list fs-4"></i></button>
+      <div>
+        <h5 class="topbar-title">Incidencias</h5>
+        <small class="topbar-sub">Reportes generados por operarios</small>
+      </div>
+      <!-- Filtros -->
+      <div class="ms-auto d-flex gap-2 align-items-center flex-wrap">
+        <form method="GET" class="d-flex gap-2 align-items-center">
+          <input type="text" name="buscar" value="{{ buscar_filtro }}"
+            class="form-control form-control-sm" style="width:180px;" placeholder="Buscar operario o tipo...">
+          <select name="estado" class="form-select form-select-sm" style="width:150px;" onchange="this.form.submit()">
+            <option value="">Todos los estados</option>
+            <option value="Generado" {% if estado_filtro == 'Generado' %}selected{% endif %}>Generado</option>
+            <option value="Revisado" {% if estado_filtro == 'Revisado' %}selected{% endif %}>Revisado</option>
+            <option value="Pendiente" {% if estado_filtro == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+          </select>
+          <button type="submit" class="btn btn-primary-ht btn-sm">Filtrar</button>
+          {% if buscar_filtro or estado_filtro %}
+          <a href="{% url 'admin_incidencias' %}" class="btn btn-outline-ht btn-sm">Limpiar</a>
+          {% endif %}
+        </form>
+      </div>
+    </header>
+
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="content-wrap">
+      <div class="section-card">
+        <div class="section-card-header">
+          <h6><i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% if estado_filtro %}Incidencias — {{ estado_filtro }}{% else %}Todas las incidencias{% endif %}
+            ({{ incidencias|length }})
+          </h6>
+        </div>
+        <div class="section-card-body p-0">
+          <table class="ht-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Operario</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Período</th>
+                <th>Fecha generación</th>
+                <th>Fecha revisión</th>
+                <th>Estado</th>
+                <th class="text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inc in incidencias %}
+              <tr>
+                <td><strong>#{{ inc.idIncidencia }}</strong></td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="admin-avatar" style="width:26px;height:26px;font-size:0.72rem;">
+                      {{ inc.idOperario.idUsuario.nombre|first|upper }}
+                    </div>
+                    {{ inc.idOperario.idUsuario.nombre }} {{ inc.idOperario.idUsuario.apellido }}
+                  </div>
+                </td>
+                <td>{{ inc.tipoIncidencia }}</td>
+                <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  {{ inc.descripcion }}
+                </td>
+                <td>{{ inc.periodoEvaluado|default:"—" }}</td>
+                <td>{{ inc.fechaGeneracion }}</td>
+                <td>{{ inc.fechaRevision|default:"—" }}</td>
+                <td>
+                  {% if inc.estado == 'Revisado' %}
+                    <span class="badge-ht badge-success">Revisado</span>
+                  {% elif inc.estado == 'Pendiente' %}
+                    <span class="badge-ht badge-warning">Pendiente</span>
+                  {% else %}
+                    <span class="badge-ht badge-info">Generado</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <!-- Botón Editar -->
+                  <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                    data-bs-toggle="modal" data-bs-target="#editModal{{ inc.idIncidencia }}" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <!-- Botón Eliminar -->
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#deleteModal{{ inc.idIncidencia }}" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+
+                  <!-- Modal Editar -->
+                  <div class="modal fade" id="editModal{{ inc.idIncidencia }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content" style="border-radius:14px;">
+                        <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+                          <h5 class="modal-title" style="font-family:var(--ff-display);">
+                            <i class="bi bi-pencil me-2"></i>Editar incidencia #{{ inc.idIncidencia }}
+                          </h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="{% url 'admin_editar_incidencia' inc.idIncidencia %}">
+                          {% csrf_token %}
+                          <div class="modal-body">
+                            <div class="row g-3">
+                              <div class="col-12">
+                                <label class="form-label">Tipo de incidencia</label>
+                                <input type="text" name="tipoIncidencia" class="form-control"
+                                  value="{{ inc.tipoIncidencia }}" required>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea name="descripcion" class="form-control" rows="3" required>{{ inc.descripcion }}</textarea>
+                              </div>
+                              <div class="col-md-6">
+                                <label class="form-label">Período evaluado</label>
+                                <input type="text" name="periodoEvaluado" class="form-control"
+                                  value="{{ inc.periodoEvaluado|default:'' }}" placeholder="Ej: Junio 2026">
+                              </div>
+                              <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select name="estado" class="form-select" required>
+                                  <option value="Generado" {% if inc.estado == 'Generado' %}selected{% endif %}>Generado</option>
+                                  <option value="Revisado" {% if inc.estado == 'Revisado' %}selected{% endif %}>Revisado</option>
+                                  <option value="Pendiente" {% if inc.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                                </select>
+                              </div>
+                              <div class="col-12">
+                                <label class="form-label">Fecha de revisión</label>
+                                <input type="date" name="fechaRevision" class="form-control"
+                                  value="{{ inc.fechaRevision|default:'' }}">
+                              </div>
+                            </div>
+                          </div>
+                          <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary-ht">
+                              <i class="bi bi-check-lg me-1"></i>Guardar cambios
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Modal Eliminar -->
+                  <div class="modal fade" id="deleteModal{{ inc.idIncidencia }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                      <div class="modal-content" style="border-radius:14px;">
+                        <div class="modal-body text-center p-4">
+                          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2.5rem;"></i>
+                          <h5 class="mt-3">¿Eliminar incidencia #{{ inc.idIncidencia }}?</h5>
+                          <p class="text-muted small">Esta acción no se puede deshacer.</p>
+                          <form method="POST" action="{% url 'admin_eliminar_incidencia' inc.idIncidencia %}">
+                            {% csrf_token %}
+                            <div class="d-flex gap-2 justify-content-center mt-3">
+                              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                              <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="9" class="text-center text-muted py-4">No hay incidencias registradas</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/admin.js' %}"></script>
+</body>
+</html>

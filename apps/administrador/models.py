@@ -1,3 +1,5 @@
+# apps/administrador/models.py
+
 from django.db import models
 
 
@@ -151,3 +153,30 @@ class Cliente(models.Model):
 
     def __str__(self):
         return self.empresa or self.nombre or f'Cliente #{self.idCliente}'
+
+
+class Incidencia(models.Model):
+    ESTADO_CHOICES = [
+        ('Generado', 'Generado'),
+        ('Revisado', 'Revisado'),
+        ('Pendiente', 'Pendiente'),
+    ]
+
+    idIncidencia = models.AutoField(primary_key=True)
+    idOperario = models.ForeignKey(
+        Operario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario'   # 👈 la columna real en MySQL es idUsuario, no idOperario
+    )
+    tipoIncidencia = models.CharField(max_length=50)
+    descripcion = models.TextField()
+    estado = models.CharField(max_length=30, choices=ESTADO_CHOICES, default='Generado')
+    fechaGeneracion = models.DateField(auto_now_add=True)
+    fechaRevision = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'incidencias'
+        managed = False
+
+    def __str__(self):
+        return f'Incidencia #{self.idIncidencia} — {self.tipoIncidencia}'

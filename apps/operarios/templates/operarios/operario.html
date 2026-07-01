@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es" >
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +13,6 @@
 
 <body>
 
-  <!-- ===== NAVBAR PRINCIPAL ===== -->
   <nav class="ht-navbar-top">
     <div class="ht-navbar-inner">
       <div class="brand-icon">
@@ -22,7 +21,6 @@
 
       <div class="ht-nav-actions">
 
-        <!-- Tareas asignadas -->
         <div class="dropdown">
           <button class="ht-nav-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Mis tareas">
             <i class="bi bi-clipboard-check"></i>
@@ -40,7 +38,6 @@
           </div>
         </div>
 
-        <!-- Historial reportes -->
         <div class="dropdown">
           <button class="ht-nav-btn ht-nav-btn-icon" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Historial de reportes">
             <i class="bi bi-clock-history"></i>
@@ -56,7 +53,6 @@
           </div>
         </div>
 
-        <!-- Perfil operario -->
         <div class="dropdown">
           <button class="ht-profile-btn" type="button" data-bs-toggle="dropdown">
             <div class="ht-avatar" id="navAvatar">SC</div>
@@ -90,11 +86,9 @@
     </div>
   </nav>
 
-  <!-- ===== BARRA DE CONTROLES ===== -->
   <div class="ht-controls-bar">
     <div class="ht-controls-inner">
 
-      <!-- Estadísticas rápidas -->
       <div class="ht-stats-row">
         <span class="ht-stat ht-stat-pending">
           <span class="ht-stat-dot"></span>
@@ -113,9 +107,7 @@
         </span>
       </div>
 
-      <!-- Acciones y filtros -->
       <div class="ht-controls-right">
-        <!-- Toggle ocultar completadas -->
         <button class="ht-btn-toggle" id="btnToggleCompletadas" title="Ocultar/mostrar tareas completadas">
           <i class="bi bi-eye-slash"></i>
           <span>Ocultar completadas</span>
@@ -140,10 +132,8 @@
     </div>
   </div>
 
-  <!-- ===== CONTENIDO PRINCIPAL ===== -->
   <main class="ht-main">
 
-    <!-- Encabezado -->
     <div class="ht-page-header">
       <div>
         <h1 class="ht-page-title"><i class="bi bi-kanban"></i>Tablero Operarios</h1>
@@ -155,13 +145,10 @@
       </div>
     </div>
 
-    <!-- Toast de notificaciones -->
     <div class="ht-toast-wrap" id="toastWrap" aria-live="polite"></div>
 
-    <!-- Tablero Kanban -->
     <div class="ht-kanban-board" id="kanbanBoard">
 
-      <!-- Columna: Pendiente -->
       <div class="ht-kanban-col" id="col-Pendiente">
         <div class="ht-col-header ht-col-header--pending">
           <div class="ht-col-dot"></div>
@@ -176,7 +163,6 @@
         </div>
       </div>
 
-      <!-- Columna: En Progreso -->
       <div class="ht-kanban-col" id="col-En Progreso">
         <div class="ht-col-header ht-col-header--progress">
           <div class="ht-col-dot"></div>
@@ -191,7 +177,6 @@
         </div>
       </div>
 
-      <!-- Columna: Completada (colapsable) -->
       <div class="ht-kanban-col ht-kanban-col--completada" id="col-Completada">
         <div class="ht-col-header ht-col-header--done" id="headerCompletada" style="cursor:pointer;" title="Colapsar/expandir">
           <div class="ht-col-dot"></div>
@@ -210,7 +195,6 @@
     </div>
   </main>
 
-  <!-- ===== MODAL: DETALLE DE TAREA ===== -->
   <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content ht-modal-content">
@@ -219,7 +203,7 @@
             <span class="ht-modal-eyebrow">Detalle de Tarea</span>
             <h5 class="modal-title ht-modal-title" id="taskDetailModalLabel">—</h5>
           </div>
-          <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body" id="taskDetailBody"></div>
         <div class="modal-footer ht-modal-footer">
@@ -232,7 +216,6 @@
     </div>
   </div>
 
-  <!-- ===== MODAL: GENERAR / EDITAR REPORTE ===== -->
   <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content ht-modal-content">
@@ -241,11 +224,10 @@
             <span class="ht-modal-eyebrow" id="reportModalEyebrow">Nueva Incidencia</span>
             <h5 class="modal-title ht-modal-title" id="reportModalLabel">Generar Reporte</h5>
           </div>
-          <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
 
-          <!-- Campo oculto para modo edición -->
           <input type="hidden" id="reportEditId" value="">
 
           <div class="ht-form-group">
@@ -260,13 +242,6 @@
             <textarea class="ht-input ht-textarea" id="reportDesc" rows="4" placeholder="Describe detalladamente el problema o situación ocurrida…" maxlength="2000"></textarea>
             <div class="ht-field-hint"><span id="descCount">0</span>/2000 (mín. 10 caracteres)</div>
             <div class="ht-field-error" id="err-desc"></div>
-          </div>
-
-          <div class="ht-form-group">
-            <label class="ht-label" for="reportPeriodo">Período evaluado <span class="ht-optional">(opcional)</span></label>
-            <input type="text" class="ht-input" id="reportPeriodo" placeholder="Ej: Junio 2026, Semana 24…" maxlength="50">
-            <div class="ht-field-hint"><span id="periodoCount">0</span>/50</div>
-            <div class="ht-field-error" id="err-periodo"></div>
           </div>
 
           <div class="ht-report-info" id="reportTareaRef" style="display:none;">
@@ -285,7 +260,6 @@
     </div>
   </div>
 
-  <!-- ===== MODAL: CONFIRMAR ELIMINACIÓN ===== -->
   <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content ht-modal-content">
@@ -294,7 +268,7 @@
             <span class="ht-modal-eyebrow">Confirmar acción</span>
             <h5 class="modal-title ht-modal-title">Eliminar reporte</h5>
           </div>
-          <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
           <p class="mb-0" style="font-size:.9rem; color:var(--text-muted);">

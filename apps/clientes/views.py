@@ -1,16 +1,18 @@
 # clientes/views.py
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Orden, Cliente, Producto, Usuario
 
+from apps.core.decorators import login_required_rol
 
+# ── Decorador de protección por rol ─────────────────────────
+cliente_required = login_required_rol(rol_esperado='cliente', session_key='usuario_id')
+
+
+@cliente_required
 def cliente_portal(request):
-    # Verificar que haya sesión activa y que el rol sea cliente
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id or request.session.get('usuario_rol') != 'cliente':
-        messages.error(request, 'Debes iniciar sesión como cliente.')
-        return redirect('login')
+    usuario_id = request.session['usuario_id']
 
     try:
         cliente = Cliente.objects.get(idUsuario=usuario_id)
@@ -51,10 +53,9 @@ def cliente_portal(request):
     })
 
 
+@cliente_required
 def registrar_orden(request):
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return redirect('login')
+    usuario_id = request.session['usuario_id']
 
     if request.method == 'POST':
         try:
@@ -91,21 +92,26 @@ def registrar_orden(request):
     return redirect('cliente_portal')
 
 
+@cliente_required
 def orden_exitosa(request, idOrden):
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return redirect('login')
+    usuario_id = request.session['usuario_id']
 
-    orden = Orden.objects.get(idOrden=idOrden)
+    # ✅ Se filtra por idCliente__idUsuario para evitar que un cliente vea
+    # el detalle de una orden ajena cambiando el número en la URL (IDOR).
+    orden = get_object_or_404(
+        Orden, idOrden=idOrden, idCliente__idUsuario=usuario_id
+    )
     return render(request, 'clientes/orden_exitosa.html', {'orden': orden})
 
 
+@cliente_required
 def editar_orden(request, idOrden):
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return redirect('login')
+    usuario_id = request.session['usuario_id']
 
-    orden = Orden.objects.get(idOrden=idOrden)
+    # ✅ Misma corrección: solo puede editar órdenes propias.
+    orden = get_object_or_404(
+        Orden, idOrden=idOrden, idCliente__idUsuario=usuario_id
+    )
 
     # Solo se puede editar si está Pendiente
     if orden.estado != 'Pendiente':
@@ -141,12 +147,14 @@ def editar_orden(request, idOrden):
     })
 
 
+@cliente_required
 def eliminar_orden(request, idOrden):
-    usuario_id = request.session.get('usuario_id')
-    if not usuario_id:
-        return redirect('login')
+    usuario_id = request.session['usuario_id']
 
-    orden = Orden.objects.get(idOrden=idOrden)
+    # ✅ Misma corrección: solo puede eliminar órdenes propias.
+    orden = get_object_or_404(
+        Orden, idOrden=idOrden, idCliente__idUsuario=usuario_id
+    )
 
     if orden.estado != 'Pendiente':
         messages.error(request, 'Solo puedes eliminar órdenes en estado Pendiente.')

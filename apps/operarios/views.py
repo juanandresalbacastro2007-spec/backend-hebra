@@ -21,11 +21,18 @@ from reportlab.platypus import (
 from reportlab.lib.enums import TA_CENTER
 
 from .models import Operario, AsignacionTarea, Incidencia
+from apps.core.decorators import login_required_rol, login_required_api
 
 logger = logging.getLogger(__name__)
 
 ESTADOS_VALIDOS_ASIGNACION = ['Pendiente', 'En Progreso', 'Completada', 'Cancelada']
 TIPO_INCIDENCIA_MAX_LEN = 50
+
+# ── Decoradores de protección (centralizados en apps.core) ─────────
+# session_key='idOperario' porque el login guarda ahí el id específico
+# del operario (ver apps.usuarios.views.login_view), además del rol.
+operario_login_required = login_required_rol(rol_esperado='operario', session_key='idOperario')
+operario_login_required_api = login_required_api(rol_esperado='operario', session_key='idOperario')
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -48,28 +55,14 @@ def _get_operario_actual(request):
         return None
 
 
-def _get_operario_o_dev(request):
-    """
-    En desarrollo (DEBUG=True) usa el operario id=1 como fallback.
-    En producción, si no hay sesión, devuelve None.
-    """
-    operario = _get_operario_actual(request)
-    if operario is None and settings.DEBUG:
-        try:
-            operario = Operario.objects.select_related('idUsuario').get(idOperario=1)
-            logger.warning("Usando operario id=1 de fallback (DEBUG=True). No usar en producción.")
-        except Operario.DoesNotExist:
-            operario = None
-    return operario
-
-
 # ---------------------------------------------------------------------------
 # Vista principal — Tablero Kanban
 # ---------------------------------------------------------------------------
 
+@operario_login_required
 def tablero_operario(request):
     """GET /operarios/"""
-    operario = _get_operario_o_dev(request)
+    operario = _get_operario_actual(request)
 
     asignaciones = []
     if operario:
@@ -99,12 +92,10 @@ def tablero_operario(request):
 # API — Tareas del operario
 # ---------------------------------------------------------------------------
 
+@operario_login_required_api
 def api_tareas(request):
     """GET /operarios/api/tareas/"""
-    operario = _get_operario_o_dev(request)
-
-    if operario is None:
-        return JsonResponse({'tareas': [], 'error': 'Sesión no válida'}, status=401)
+    operario = _get_operario_actual(request)
 
     asignaciones = (
         AsignacionTarea.objects
@@ -137,16 +128,13 @@ def api_tareas(request):
 
 # ---------------------------------------------------------------------------
 # API — Registrar incidencia
-# ✅ CORREGIDO: @csrf_exempt DEBE ir antes que @require_POST
 # ---------------------------------------------------------------------------
 
-@csrf_exempt
+@operario_login_required_api
 @require_POST
 def api_guardar_reporte(request):
     """POST /operarios/api/reporte/"""
-    operario = _get_operario_o_dev(request)
-    if operario is None:
-        return JsonResponse({'ok': False, 'error': 'Sesión no válida'}, status=401)
+    operario = _get_operario_actual(request)
 
     try:
         data = json.loads(request.body)
@@ -181,7 +169,7 @@ def api_guardar_reporte(request):
 
     try:
         incidencia = Incidencia.objects.create(
-            idUsuario       = operario,       # ✅ CORREGIDO: nombre del campo en el modelo
+            idUsuario       = operario,       # nombre del campo en el modelo
             tipoIncidencia  = tipo,
             descripcion     = descripcion,
             periodoEvaluado = periodo,
@@ -204,15 +192,14 @@ def api_guardar_reporte(request):
 # API — Historial de reportes
 # ---------------------------------------------------------------------------
 
+@operario_login_required_api
 def api_historial_reportes(request):
     """GET /operarios/api/reportes/"""
-    operario = _get_operario_o_dev(request)
-    if operario is None:
-        return JsonResponse({'reportes': [], 'error': 'Sesión no válida'}, status=401)
+    operario = _get_operario_actual(request)
 
     reportes_qs = (
         Incidencia.objects
-        .filter(idUsuario=operario)           # ✅ CORREGIDO: idUsuario en vez de idOperario
+        .filter(idUsuario=operario)
         .order_by('-fechaGeneracion')[:20]
     )
 
@@ -234,16 +221,13 @@ def api_historial_reportes(request):
 
 # ---------------------------------------------------------------------------
 # API — Actualizar estado de una asignación (drag & drop)
-# ✅ CORREGIDO: @csrf_exempt DEBE ir antes que @require_POST
 # ---------------------------------------------------------------------------
 
-@csrf_exempt
+@operario_login_required_api
 @require_POST
 def api_actualizar_estado(request, id_asignacion):
     """POST /operarios/api/tarea/<id_asignacion>/estado/"""
-    operario = _get_operario_o_dev(request)
-    if operario is None:
-        return JsonResponse({'ok': False, 'error': 'Sesión no válida'}, status=401)
+    operario = _get_operario_actual(request)
 
     asignacion = get_object_or_404(
         AsignacionTarea, idAsignacion=id_asignacion, idOperario=operario
@@ -274,7 +258,7 @@ def api_actualizar_estado(request, id_asignacion):
     })
 
 
-@csrf_exempt
+@operario_login_required_api
 @require_POST
 def api_editar_reporte(request, id_incidencia):
     """
@@ -282,9 +266,7 @@ def api_editar_reporte(request, id_incidencia):
     Permite al operario editar una incidencia que él mismo generó.
     Solo se puede editar si el estado es 'Generado' (no revisado aún).
     """
-    operario = _get_operario_o_dev(request)
-    if operario is None:
-        return JsonResponse({'ok': False, 'error': 'Sesión no válida'}, status=401)
+    operario = _get_operario_actual(request)
 
     try:
         incidencia = Incidencia.objects.get(
@@ -344,7 +326,7 @@ def api_editar_reporte(request, id_incidencia):
     })
 
 
-@csrf_exempt
+@operario_login_required_api
 @require_POST
 def api_eliminar_reporte(request, id_incidencia):
     """
@@ -352,9 +334,7 @@ def api_eliminar_reporte(request, id_incidencia):
     Elimina una incidencia generada por el operario.
     Solo se puede eliminar si el estado es 'Generado' (no revisado aún).
     """
-    operario = _get_operario_o_dev(request)
-    if operario is None:
-        return JsonResponse({'ok': False, 'error': 'Sesión no válida'}, status=401)
+    operario = _get_operario_actual(request)
 
     try:
         incidencia = Incidencia.objects.get(
@@ -380,10 +360,17 @@ def api_eliminar_reporte(request, id_incidencia):
 
 
 # ── PDF — Generar y descargar incidencia ────────────────────────────────
+@operario_login_required
 def generar_pdf_reporte(request, id_incidencia):
-    incidencia = get_object_or_404(Incidencia, idIncidencia=id_incidencia)
+    operario = _get_operario_actual(request)
 
-    operario        = incidencia.idUsuario            # instancia Operario
+    # ✅ Se filtra también por idUsuario=operario para evitar que un
+    # operario pueda descargar el PDF de una incidencia ajena cambiando
+    # el número en la URL (IDOR).
+    incidencia = get_object_or_404(
+        Incidencia, idIncidencia=id_incidencia, idUsuario=operario
+    )
+
     usuario         = operario.idUsuario              # instancia Usuario
     nombre_completo = f"{usuario.nombre} {usuario.apellido}"
     especialidad    = operario.especialidad or '—'
@@ -392,12 +379,11 @@ def generar_pdf_reporte(request, id_incidencia):
     doc = SimpleDocTemplate(
         buffer, pagesize=letter,
         rightMargin=2*cm, leftMargin=2*cm,
-        topMargin=3*cm,   bottomMargin=2*cm,  # AJUSTE 1: Más margen superior (3*cm)
+        topMargin=3*cm,   bottomMargin=2*cm,
     )
     story  = []
     styles = getSampleStyleSheet()
 
-    # AJUSTE 2: Agregar un poco de espacio en blanco inicial
     story.append(Spacer(1, 0.5*cm))
 
     # ── Paleta HebraTech ──────────────────────────────────────────────
@@ -450,7 +436,6 @@ def generar_pdf_reporte(request, id_incidencia):
     # ── ENCABEZADO ────────────────────────────────────────────────────
     story.append(Paragraph(
         "HebraTech",
-        # AJUSTE 3: Añadir leading=32 para que el texto grande tenga espacio
         st('Brand', fontSize=26, leading=32, fontName='Helvetica-Bold',
            textColor=C_PURPLE, alignment=TA_CENTER, spaceAfter=2)
     ))
@@ -501,7 +486,6 @@ def generar_pdf_reporte(request, id_incidencia):
         ('LEFTPADDING',   (0,0), (-1,-1), 12),
         ('RIGHTPADDING',  (0,0), (-1,-1), 12),
     ]))
-    # AJUSTE 4: Sangría corregida aquí abajo
     story.append(t_desc)
     story.append(Spacer(1, 1.2*cm))
 

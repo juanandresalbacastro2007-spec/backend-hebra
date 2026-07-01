@@ -13,34 +13,34 @@
   --accent:       #A5C9CA;
   --bg-light:     #E7F6F2;
 
-  /* Derivados para dark UI */
-  --bg:           #1A2326;
-  --surface:      #243238;
-  --surface2:     #1E2C32;
-  --border:       rgba(165,201,202,.15);
-  --border-md:    rgba(165,201,202,.28);
+  /* Derivados para UI clara (acorde a admin.css) */
+  --bg:           #f0f4f5;
+  --surface:      #ffffff;
+  --surface2:     #E7F6F2;
+  --border:       rgba(165,201,202,.35);
+  --border-md:    rgba(165,201,202,.6);
 
   /* Texto */
-  --text:         #E4ECED;
-  --text-muted:   #7A9A9C;
+  --text:         #2C3333;
+  --text-muted:   #7a8c8d;
 
-  /* Semánticos */
-  --danger:       #E05C5C;
-  --warn:         #D4923A;
-  --ok:           #4FAB7E;
-  --info:         #4A96B8;
+  /* Semánticos (oscurecidos para buen contraste sobre fondo claro) */
+  --danger:       #b02a37;
+  --warn:         #a07800;
+  --ok:           #157347;
+  --info:         #2f6690;
 
-  /* Alias de conveniencia (igual que accent/primary) */
-  --hi:           #A5C9CA;
-  --hi2:          #7AADB0;
+  /* Alias de conveniencia — ahora orientados a texto sobre fondo claro */
+  --hi:           #395B64;
+  --hi2:          #2f4d55;
   --accent2:      #2C4A52;
 
   /* Forma */
   --radius:    12px;
   --radius-sm: 8px;
   --radius-xs: 6px;
-  --shadow:    0 4px 24px rgba(0,0,0,.45);
-  --shadow-sm: 0 2px 10px rgba(0,0,0,.3);
+  --shadow:    0 4px 24px rgba(57,91,100,.12);
+  --shadow-sm: 0 2px 10px rgba(57,91,100,.08);
 }
 
 html, body {
@@ -117,8 +117,8 @@ html, body {
 
 .ht-nav-btn {
   background: transparent;
-  border: 1px solid var(--border-md);
-  color: var(--text);
+  border: 1px solid rgba(255,255,255,.22);
+  color: rgba(255,255,255,.85);
   border-radius: var(--radius-xs);
   padding: 6px 12px;
   display: flex;
@@ -132,8 +132,8 @@ html, body {
 }
 
 .ht-nav-btn:hover {
-  background: var(--surface);
-  border-color: var(--hi2);
+  background: rgba(165,201,202,.14);
+  border-color: var(--accent);
 }
 
 .ht-nav-btn-icon { padding: 6px 9px; border-radius: 50%; }
@@ -157,8 +157,8 @@ html, body {
 
 .ht-profile-btn {
   background: transparent;
-  border: 1px solid var(--border-md);
-  color: var(--text);
+  border: 1px solid rgba(255,255,255,.22);
+  color: rgba(255,255,255,.9);
   border-radius: 20px;
   padding: 5px 12px 5px 5px;
   display: flex;
@@ -170,7 +170,7 @@ html, body {
   font-family: 'Roboto', sans-serif;
 }
 
-.ht-profile-btn:hover { background: var(--surface); }
+.ht-profile-btn:hover { background: rgba(255,255,255,.08); }
 
 .ht-avatar {
   width: 28px; height: 28px;
@@ -186,7 +186,7 @@ html, body {
 }
 
 .ht-avatar-lg { width: 40px; height: 40px; font-size: .9rem; }
-.ht-chevron { font-size: .7rem; color: var(--text-muted); margin-left: 2px; }
+.ht-chevron { font-size: .7rem; color: rgba(255,255,255,.55); margin-left: 2px; }
 
 /* Dropdowns */
 .ht-dropdown-panel {
@@ -211,7 +211,7 @@ html, body {
   font-family: 'Fredoka', sans-serif;
   font-weight: 600;
   font-size: .95rem;
-  color: var(--accent);
+  color: var(--primary);
   position: sticky;
   top: 0;
   background: var(--surface);
@@ -296,9 +296,9 @@ html, body {
   color: var(--hi2);
 }
 .ht-report-action-btn--edit:hover {
-  background: rgba(165,201,202,.15);
+  background: rgba(165,201,202,.25);
   border-color: var(--hi2);
-  color: var(--accent);
+  color: var(--primary-dark);
 }
 
 .ht-report-action-btn--delete {
@@ -404,8 +404,8 @@ html, body {
 }
 
 .ht-btn-toggle.active {
-  background: rgba(57,91,100,.25);
-  color: var(--accent);
+  background: var(--primary);
+  color: #fff;
   border-color: var(--primary);
 }
 
@@ -414,7 +414,7 @@ html, body {
   align-items: center;
   gap: 6px;
   background: var(--primary);
-  color: var(--accent);
+  color: #fff;
   border: none;
   border-radius: var(--radius-xs);
   padding: 7px 14px;
@@ -499,10 +499,10 @@ html, body {
   align-items: center;
   gap: 10px;
 }
-.ht-page-title i { color: var(--accent); }
+.ht-page-title i { color: var(--primary); }
 
 .ht-page-sub { margin: 4px 0 0; color: var(--text-muted); font-size: .84rem; }
-.ht-page-sub strong { color: var(--accent); }
+.ht-page-sub strong { color: var(--primary); }
 
 .ht-loading {
   display: flex;
@@ -617,8 +617,8 @@ html, body {
 .ht-col-header--done .ht-col-dot     { background: var(--ok); }
 
 .ht-col-count {
-  background: rgba(165,201,202,.12);
-  color: var(--accent);
+  background: rgba(165,201,202,.25);
+  color: var(--primary);
   font-size: .78rem;
   font-weight: 600;
   min-width: 22px;
@@ -802,7 +802,7 @@ html, body {
 }
 .ht-card-btn-detail:hover {
   background: var(--primary);
-  color: var(--accent);
+  color: #fff;
   border-color: var(--primary);
 }
 
@@ -897,7 +897,7 @@ html, body {
   margin-bottom: 6px;
   font-size: .84rem;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--primary);
 }
 
 .ht-required { color: var(--danger); }
@@ -946,7 +946,7 @@ html, body {
 /* ================================================================ BUTTONS */
 .ht-btn-primary {
   background: var(--primary);
-  color: var(--accent);
+  color: #fff;
   border: none;
   border-radius: var(--radius-xs);
   padding: 9px 18px;

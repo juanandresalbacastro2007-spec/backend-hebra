@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'apps.administrador',
     'apps.proveedores',
     'apps.operarios',
+    'apps.core', 
 ]
 
 MIDDLEWARE = [
@@ -59,7 +60,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'hebratech',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': '12345',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }

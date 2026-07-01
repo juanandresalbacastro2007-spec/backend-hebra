@@ -12,6 +12,10 @@ def login_view(request):
         correo = request.POST.get('correo')
         contrasena = request.POST.get('contrasena')
 
+        # ✅ Mensaje genérico de error para no revelar si el correo existe
+        # o no en la base (evita enumeración de usuarios).
+        error_generico = 'Correo o contraseña incorrectos.'
+
         try:
             usuario = Usuario.objects.get(
                 correoElectronico=correo,
@@ -19,6 +23,10 @@ def login_view(request):
             )
 
             if check_password(contrasena, usuario.contrasena):
+                # ✅ Regenerar el ID de sesión antes de guardar datos del
+                # usuario autenticado, para prevenir session fixation.
+                request.session.cycle_key()
+
                 # Guardar datos clave en la sesión
                 request.session['usuario_id'] = usuario.idUsuario
                 request.session['usuario_nombre'] = usuario.nombre
@@ -43,10 +51,10 @@ def login_view(request):
                 else:
                     messages.error(request, 'Rol de usuario no reconocido.')
             else:
-                messages.error(request, 'Contraseña incorrecta.')
+                messages.error(request, error_generico)
 
         except Usuario.DoesNotExist:
-            messages.error(request, 'No existe una cuenta con ese correo.')
+            messages.error(request, error_generico)
 
     return render(request, 'usuarios/login.html')
 

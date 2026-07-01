@@ -1,3 +1,4 @@
+# urls.py completo con las nuevas rutas de reportes
 from django.urls import path
 from . import views
 
@@ -13,6 +14,9 @@ urlpatterns = [
     path('ordenes/<int:idOrden>/editar/', views.orden_editar, name='admin_editar_orden'),
     path('ordenes/<int:idOrden>/eliminar/', views.orden_eliminar, name='admin_eliminar_orden'),
     
+    # NUEVAS RUTAS DE EXPORTACIÓN (AGREGAR ESTAS DOS LÍNEAS)
+   path('ordenes/exportar/excel/', views.exportar_ordenes_excel, name='exportar_ordenes_excel'),
+    path('ordenes/exportar/pdf/', views.exportar_ordenes_pdf, name='exportar_ordenes_pdf'),
     path('tareas/', views.tareas_lista, name='admin_tareas'),
     path('tareas/asignar/', views.tarea_asignar, name='admin_tarea_asignar'),
     path('tareas/<int:idAsignacion>/editar/', views.tarea_editar, name='admin_editar_tarea'),

@@ -9,7 +9,12 @@ from .models import (
     Usuario, Operario, Tarea,
     AsignacionTarea, Orden, Cliente
 )
-
+import openpyxl
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from xhtml2pdf import pisa
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 # ── Decorador de protección por rol ─────────────────────────
 def admin_required(view_func):
@@ -330,3 +335,133 @@ def produccion_placeholder(request):
 @admin_required
 def proveedores_placeholder(request):
     return redirect('proveedores')
+
+# ── Exportar Órdenes a Excel (openpyxl) ──────────────────────────
+@admin_required
+def exportar_ordenes_excel(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Órdenes HebraTech"
+    ws.views.sheetView[0].showGridLines = True
+
+    # Paleta de colores Corporativa Muted (Azul Acero)
+    HEADER_FILL = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    ZEBRA_FILL = PatternFill(start_color="F2F5F9", end_color="F2F5F9", fill_type="solid")
+    
+    FONT_HEADER = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    FONT_REGULAR = Font(name="Calibri", size=11)
+    
+    THIN_BORDER = Border(
+        left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'),
+        top=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9')
+    )
+
+    # Encabezados adaptados a tus campos del CRUD
+    headers = ["ID Orden", "Cliente / Empresa", "Fecha Creación", "Entrega Estimada", "Cantidad", "Precio Unitario", "Total", "Prioridad", "Estado"]
+    ws.append(headers)
+
+    # Estilizar los encabezados
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = HEADER_FILL
+        cell.font = FONT_HEADER
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Extraer las órdenes respetando los filtros de búsqueda actuales de tu vista original
+    ordenes = Orden.objects.all().select_related('idCliente__idUsuario').order_by('-fechaCreacion')
+
+    # Aplicar los mismos filtros que tienes en ordenes_lista si el usuario los manda por GET
+    buscar_filtro = request.GET.get('buscar', '')
+    if buscar_filtro:
+        ordenes = ordenes.filter(
+            Q(idOrden__icontains=buscar_filtro) | 
+            Q(idCliente__nombre__icontains=buscar_filtro) |
+            Q(idCliente__empresa__icontains=buscar_filtro)
+        )
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro:
+        ordenes = ordenes.filter(estado=estado_filtro)
+
+    # Rellenar filas de Excel
+    for idx, orden in enumerate(ordenes, start=2):
+        cliente_nombre = orden.idCliente.empresa or orden.idCliente.nombre or f"Cliente #{orden.idCliente.idCliente}"
+        
+        ws.append([
+            orden.idOrden,
+            cliente_nombre,
+            orden.fechaCreacion.strftime('%Y-%m-%d') if orden.fechaCreacion else "",
+            orden.fechaEntregaEstimada.strftime('%Y-%m-%d') if orden.fechaEntregaEstimada else "",
+            orden.cantidad or 0,
+            float(orden.precioUnitario) if orden.precioUnitario else 0,
+            f"=E{idx}*F{idx}",  # Fórmula de Excel para multiplicar Cantidad * Precio Unitario
+            orden.prioridad,
+            orden.estado
+        ])
+        
+        # Estilos aplicados dinámicamente
+        is_zebra = (idx % 2 == 0)
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=idx, column=col_idx)
+            cell.font = FONT_REGULAR
+            cell.border = THIN_BORDER
+            if is_zebra:
+                cell.fill = ZEBRA_FILL
+            
+            # Alineaciones especiales
+            if col_idx in [1, 3, 4, 8, 9]:
+                cell.alignment = Alignment(horizontal="center")
+            elif col_idx == 5:
+                cell.alignment = Alignment(horizontal="right")
+                cell.number_format = "#,##0"
+            elif col_idx in [6, 7]:
+                cell.alignment = Alignment(horizontal="right")
+                cell.number_format = "$#,##0.00"
+
+    # Auto-ajustar columnas
+    for col in ws.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.value:
+                max_len = max(max_len, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="HebraTech_Reporte_Ordenes.xlsx"'
+    wb.save(response)
+    return response
+@admin_required
+def exportar_ordenes_pdf(request):
+    ordenes = Orden.objects.all().select_related('idCliente__idUsuario').order_by('-fechaCreacion')
+    
+    # Filtros para mantener la coherencia con lo que el usuario ve en pantalla
+    buscar_filtro = request.GET.get('buscar', '')
+    if buscar_filtro:
+        ordenes = ordenes.filter(
+            Q(idOrden__icontains=buscar_filtro) | 
+            Q(idCliente__nombre__icontains=buscar_filtro) |
+            Q(idCliente__empresa__icontains=buscar_filtro)
+        )
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro:
+        ordenes = ordenes.filter(estado=estado_filtro)
+
+    # Renderizar la plantilla HTML del PDF
+    html_string = render_to_string('administrador/ordenes_pdf.html', {'ordenes': ordenes})
+    
+    # Preparar la respuesta HTTP tipo PDF
+    response = HttpResponse(content_type='application/pdf')
+    
+   # configuración de la cabecera
+   
+    response['Content-Disposition'] = 'attachment; filename="HebraTech_Reporte_Ordenes.pdf"'
+    
+    
+    # Convertir el HTML a PDF usando xhtml2pdf
+    pisa_status = pisa.CreatePDF(html_string, dest=response)
+    
+    # Si hubo un error en la conversión, avisar
+    if pisa_status.err:
+        return HttpResponse('Hubo un error al generar el PDF', status=500)
+        
+    return response

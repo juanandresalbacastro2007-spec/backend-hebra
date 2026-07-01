@@ -43,6 +43,7 @@
             </div>
         </nav>
     </aside>
+    
 
     <div class="main-content">
         <header class="topbar">
@@ -51,6 +52,15 @@
                 <h5 class="topbar-title">Órdenes de clientes</h5>
                 <small class="topbar-sub">Todas las órdenes registradas en el sistema</small>
             </div>
+            <div class="d-flex gap-2">
+    <a href="{% url 'exportar_ordenes_excel' %}?buscar={{ request.GET.buscar }}&estado={{ request.GET.estado }}" class="btn btn-success d-inline-flex align-items-center bg-success border-success px-3 py-2 fw-medium shadow-sm">
+        <i class="bi bi-file-earmark-excel me-2 fs-5"></i> Exportar a Excel
+    </a>
+
+    <a href="{% url 'exportar_ordenes_pdf' %}?buscar={{ request.GET.buscar }}&estado={{ request.GET.estado }}" class="btn btn-danger d-inline-flex align-items-center bg-danger border-danger px-3 py-2 fw-medium shadow-sm">
+        <i class="bi bi-file-earmark-pdf me-2 fs-5"></i> Exportar a PDF
+    </a>
+</div>
             <div class="ms-auto">
                 <form method="GET" class="d-flex gap-2 align-items-center" id="searchForm">
                     

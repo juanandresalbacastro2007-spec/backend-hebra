@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Órdenes - HebraTech</title>
+    <style>
+        /* Configuración de la página en Horizontal (Landscape) */
+        @page {
+            size: letter landscape;
+            margin: 10mm 12mm 10mm 12mm;
+        }
+        
+        /* Estilos Base (Fuentes nativas seguras para xhtml2pdf) */
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #333333;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+        
+        /* Encabezado del Reporte */
+        .header-table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1F497D;
+            padding-bottom: 8px;
+        }
+        .title-system {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1F497D;
+        }
+        .title-report {
+            font-size: 12px;
+            color: #555555;
+            margin-top: 2px;
+        }
+        .meta-info {
+            text-align: right;
+            font-size: 9px;
+            color: #666666;
+        }
+        
+        /* Estilos de la Tabla de Datos */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th {
+            background-color: #1F497D;
+            color: #ffffff;
+            font-weight: bold;
+            padding: 7px 5px;
+            font-size: 9px;
+            text-transform: uppercase;
+            text-align: left;
+        }
+        .data-table td {
+            padding: 6px 5px;
+            border-bottom: 1px solid #E0E0E0;
+            font-size: 9px;
+        }
+        
+        /* Clases de utilidad de alineación */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        
+        /* Evita saltos de página extraños a mitad de una fila */
+        tr {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="title-system">HebraTech</div>
+                <div class="title-report">Reporte Ejecutivo de Órdenes de Confección</div>
+            </td>
+            <td class="meta-info">
+                <strong>Fecha Emisión:</strong> {% now "Y-m-d H:i" %}<br>
+                <strong>Generado por:</strong> Administrador del Sistema
+            </td>
+        </tr>
+    </table>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th width="8%" class="text-center">ID Orden</th>
+                <th>Cliente / Empresa</th>
+                <th width="12%" class="text-center">Fecha Creación</th>
+                <th width="12%" class="text-center">Entrega Estimada</th>
+                <th width="10%" class="text-right">Cantidad</th>
+                <th width="12%" class="text-right">P. Unitario</th>
+                <th width="12%" class="text-center">Prioridad</th>
+                <th width="12%" class="text-center">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for orden in ordenes %}
+            <tr>
+                <td class="text-center"><strong>#{{ orden.idOrden }}</strong></td>
+                <td>{{ orden.idCliente.empresa|default:orden.idCliente.nombre|default:"—" }}</td>
+                <td class="text-center">{{ orden.fechaCreacion|date:"Y-m-d" }}</td>
+                <td class="text-center">{{ orden.fechaEntregaEstimada|date:"Y-m-d"|default:"—" }}</td>
+                <td class="text-right">{{ orden.cantidad|default:"0" }}</td>
+                <td class="text-right">{% if orden.precioUnitario %}${{ orden.precioUnitario }}{% else %}—{% endif %}</td>
+                <td class="text-center">{{ orden.prioridad }}</td>
+                <td class="text-center">
+                    <strong>{{ orden.estado }}</strong>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center" style="padding: 20px; color: #777777;">
+                    No se encontraron registros de órdenes.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="text-align: right; font-size: 8px; color: #777777; margin-top: 15px;">
+        Página <pdf:pagenumber /> de <pdf:pagecount />
+    </div>
+
+</body>
+</html>

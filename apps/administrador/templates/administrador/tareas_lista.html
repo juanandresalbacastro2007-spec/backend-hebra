@@ -1,15 +1,19 @@
 {% load static %}
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HebraTech — Tareas</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
 </head>
+
 <body>
 
   <aside class="sidebar" id="sidebar">
@@ -29,6 +33,9 @@
       <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
       <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
       <a href="{% url 'admin_tareas' %}" class="nav-item active"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <a href="{% url 'admin_incidencias' %}" class="nav-item">
+        <i class="bi bi-building"></i> Incidencias
+      </a>
       <div class="nav-section-label">Módulos</div>
       <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
       <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
@@ -52,20 +59,22 @@
         <h5 class="topbar-title">Tareas asignadas</h5>
         <small class="topbar-sub">Control de asignaciones a operarios</small>
       </div>
-      
+
       <div class="ms-auto d-flex gap-3 align-items-center">
         <form method="GET" class="d-flex gap-2 align-items-center" id="searchForm">
           <div class="input-group input-group-sm" style="max-width: 260px;">
             <span class="input-group-text bg-white border-end-0 text-muted">
               <i class="bi bi-search"></i>
             </span>
-            <input type="search" name="buscar" id="buscarInput" class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1" 
-                   placeholder="Buscar tarea u operario..." value="{{ buscar_filtro|default:'' }}">
-            
+            <input type="search" name="buscar" id="buscarInput"
+              class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
+              placeholder="Buscar tarea u operario..." value="{{ buscar_filtro|default:'' }}">
+
             {% if buscar_filtro %}
-              <a href="{% url 'admin_tareas' %}" class="input-group-text bg-white border-start-0 text-muted" title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
-                <i class="bi bi-x-circle-fill"></i>
-              </a>
+            <a href="{% url 'admin_tareas' %}" class="input-group-text bg-white border-start-0 text-muted"
+              title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
+              <i class="bi bi-x-circle-fill"></i>
+            </a>
             {% endif %}
           </div>
           <button type="submit" class="d-none"></button>
@@ -80,7 +89,8 @@
     {% if messages %}
     <div class="px-4 pt-3">
       {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+      <div
+        class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
         {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
       {% endfor %}
@@ -108,7 +118,7 @@
               </tr>
             </thead>
             <tbody>
-             {% for asig in asignaciones %}
+              {% for asig in asignaciones %}
               <tr>
                 <td><strong>{{ asig.idAsignacion }}</strong></td>
                 <td>{{ asig.idTarea.nombreTarea }}</td>
@@ -120,39 +130,44 @@
                     {{ asig.idOperario.idUsuario.nombre }}
                   </div>
                 </td>
-                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ asig.descripcion }}">
+                <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                  title="{{ asig.descripcion }}">
                   {{ asig.descripcion }}
                 </td>
                 <td>{{ asig.fechaInicio }}</td>
                 <td>{{ asig.horasEstimadas }} h</td>
                 <td>
                   {% if asig.prioridad == 'Urgente' %}
-                    <span class="badge-ht badge-danger">Urgente</span>
+                  <span class="badge-ht badge-danger">Urgente</span>
                   {% elif asig.prioridad == 'Alta' %}
-                    <span class="badge-ht badge-warning">Alta</span>
+                  <span class="badge-ht badge-warning">Alta</span>
                   {% elif asig.prioridad == 'Media' %}
-                    <span class="badge-ht badge-info">Media</span>
+                  <span class="badge-ht badge-info">Media</span>
                   {% else %}
-                    <span class="badge-ht" style="background:#eee;color:#555;">Baja</span>
+                  <span class="badge-ht" style="background:#eee;color:#555;">Baja</span>
                   {% endif %}
                 </td>
                 <td>
                   {% if asig.estado == 'Completada' %}
-                    <span class="badge-ht badge-success">Completada</span>
+                  <span class="badge-ht badge-success">Completada</span>
                   {% elif asig.estado == 'En Progreso' %}
-                    <span class="badge-ht badge-info">En Progreso</span>
+                  <span class="badge-ht badge-info">En Progreso</span>
                   {% elif asig.estado == 'Cancelada' %}
-                    <span class="badge-ht badge-danger">Cancelada</span>
+                  <span class="badge-ht badge-danger">Cancelada</span>
                   {% else %}
-                    <span class="badge-ht badge-pending">Pendiente</span>
+                  <span class="badge-ht badge-pending">Pendiente</span>
                   {% endif %}
                 </td>
                 <td>
-                  <button type="button" class="btn btn-sm text-primary p-0 border-0 me-2" data-bs-toggle="modal" data-bs-target="#modalEditarTarea{{ asig.idAsignacion }}" title="Editar asignación">
+                  <button type="button" class="btn btn-sm text-primary p-0 border-0 me-2" data-bs-toggle="modal"
+                    data-bs-target="#modalEditarTarea{{ asig.idAsignacion }}" title="Editar asignación">
                     <i class="bi bi-pencil-fill"></i>
                   </button>
 
-                  <a href="{% url 'admin_eliminar_tarea' asig.idAsignacion %}" class="btn btn-sm text-danger p-0 border-0" onclick="return confirm('¿Estás seguro de que deseas eliminar la asignación #{{ asig.idAsignacion }}?');" title="Eliminar asignación">
+                  <a href="{% url 'admin_eliminar_tarea' asig.idAsignacion %}"
+                    class="btn btn-sm text-danger p-0 border-0"
+                    onclick="return confirm('¿Estás seguro de que deseas eliminar la asignación #{{ asig.idAsignacion }}?');"
+                    title="Eliminar asignación">
                     <i class="bi bi-trash-fill"></i>
                   </a>
                 </td>
@@ -164,25 +179,29 @@
                     <form action="{% url 'admin_editar_tarea' asig.idAsignacion %}" method="POST">
                       {% csrf_token %}
                       <div class="modal-header bg-light">
-                        <h5 class="modal-title" style="font-family: 'Fredoka', sans-serif;"><i class="bi bi-pencil me-2 text-primary"></i>Editar Asignación #{{ asig.idAsignacion }}</h5>
+                        <h5 class="modal-title" style="font-family: 'Fredoka', sans-serif;"><i
+                            class="bi bi-pencil me-2 text-primary"></i>Editar Asignación #{{ asig.idAsignacion }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                       </div>
                       <div class="modal-body text-start" style="color: #333;">
                         <p class="text-muted small">Modifica los detalles de control y asignación para el operario.</p>
-                        
+
                         <div class="mb-3">
                           <label class="form-label fw-medium small">Descripción / Notas</label>
-                          <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles de la asignación...">{{ asig.descripcion }}</textarea>
+                          <textarea name="descripcion" class="form-control" rows="2"
+                            placeholder="Detalles de la asignación...">{{ asig.descripcion }}</textarea>
                         </div>
 
                         <div class="mb-3">
                           <label class="form-label fw-medium small">Fecha de Inicio</label>
-                          <input type="date" name="fecha_inicio" class="form-control" value="{{ asig.fechaInicio|date:'Y-m-d' }}">
+                          <input type="date" name="fecha_inicio" class="form-control"
+                            value="{{ asig.fechaInicio|date:'Y-m-d' }}">
                         </div>
 
                         <div class="mb-3">
                           <label class="form-label fw-medium small">Horas Estimadas</label>
-                          <input type="number" name="horas_estimadas" class="form-control" value="{{ asig.horasEstimadas }}" placeholder="Ej: 8">
+                          <input type="number" name="horas_estimadas" class="form-control"
+                            value="{{ asig.horasEstimadas }}" placeholder="Ej: 8">
                         </div>
 
                         <div class="mb-3">
@@ -191,17 +210,22 @@
                             <option value="Baja" {% if asig.prioridad == 'Baja' %}selected{% endif %}>Baja</option>
                             <option value="Media" {% if asig.prioridad == 'Media' %}selected{% endif %}>Media</option>
                             <option value="Alta" {% if asig.prioridad == 'Alta' %}selected{% endif %}>Alta</option>
-                            <option value="Urgente" {% if asig.prioridad == 'Urgente' %}selected{% endif %}>Urgente</option>
+                            <option value="Urgente" {% if asig.prioridad == 'Urgente' %}selected{% endif %}>Urgente
+                            </option>
                           </select>
                         </div>
 
                         <div class="mb-3">
                           <label class="form-label fw-medium small">Estado actual</label>
                           <select name="estado" class="form-select">
-                            <option value="Pendiente" {% if asig.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                            <option value="En Progreso" {% if asig.estado == 'En Progreso' %}selected{% endif %}>En Progreso</option>
-                            <option value="Completada" {% if asig.estado == 'Completada' %}selected{% endif %}>Completada</option>
-                            <option value="Cancelada" {% if asig.estado == 'Cancelada' %}selected{% endif %}>Cancelada</option>
+                            <option value="Pendiente" {% if asig.estado == 'Pendiente' %}selected{% endif %}>Pendiente
+                            </option>
+                            <option value="En Progreso" {% if asig.estado == 'En Progreso' %}selected{% endif %}>En
+                              Progreso</option>
+                            <option value="Completada" {% if asig.estado == 'Completada' %}selected{% endif %}>Completada
+                            </option>
+                            <option value="Cancelada" {% if asig.estado == 'Cancelada' %}selected{% endif %}>Cancelada
+                            </option>
                           </select>
                         </div>
                       </div>
@@ -214,7 +238,9 @@
                 </div>
               </div>
               {% empty %}
-              <tr><td colspan="9" class="text-center text-muted py-4">No hay tareas asignadas aún</td></tr>
+              <tr>
+                <td colspan="9" class="text-center text-muted py-4">No hay tareas asignadas aún</td>
+              </tr>
               {% endfor %}
             </tbody>
           </table>
@@ -225,20 +251,21 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'js/admin.js' %}"></script>
-  
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const buscarInput = document.getElementById('buscarInput');
-        const searchForm = document.getElementById('searchForm');
 
-        if (buscarInput && searchForm) {
-            buscarInput.addEventListener('input', function() {
-                if (this.value.trim() === "") {
-                    searchForm.submit();
-                }
-            });
-        }
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const buscarInput = document.getElementById('buscarInput');
+      const searchForm = document.getElementById('searchForm');
+
+      if (buscarInput && searchForm) {
+        buscarInput.addEventListener('input', function () {
+          if (this.value.trim() === "") {
+            searchForm.submit();
+          }
+        });
+      }
     });
   </script>
 </body>
+
 </html>

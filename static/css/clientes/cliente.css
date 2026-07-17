@@ -847,3 +847,37 @@ body {
   .nav-divider { display: none; }
   .company-name { display: none !important; }
 }
+
+/*rango de entrega*/
+/* Contenedor y título del rango */
+.rango-fechas-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.rango-fechas-title {
+  font-weight: 600;
+  color: #333333;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+/* Ajustes para que el input del calendario mida lo mismo que el subtotal */
+.rango-fechas-container .input-group {
+  min-height: 44px;
+}
+
+.rango-fechas-container .input-group-text {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  border-right: none;
+  color: #6c757d;
+}
+
+.rango-fechas-container .form-control {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border: 1px solid #ced4da;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}

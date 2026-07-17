@@ -4,7 +4,10 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import connection
-from .models import Usuario
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from .models import Usuario, PasswordResetToken
 
 
 def login_view(request):
@@ -99,10 +102,6 @@ def registro_view(request):
     return redirect('login')
 
 
-def recuperar_view(request):
-    return render(request, 'usuarios/recuperar.html')
-
-
 def home_view(request):
     return render(request, 'usuarios/home.html')
 
@@ -110,3 +109,103 @@ def home_view(request):
 def logout_view(request):
     request.session.flush()
     return redirect('login')
+
+
+def recuperar_view(request):
+    if request.method == 'POST':
+        correo = request.POST.get('correo', '').strip()
+
+        try:
+            usuario = Usuario.objects.get(
+                correoElectronico=correo,
+                estado='activo'
+            )
+
+            reset_token = PasswordResetToken.generar_para_usuario(usuario.idUsuario)
+
+            enlace = request.build_absolute_uri(
+                f'/recuperar/{reset_token.token}/'
+            )
+
+            html_content = render_to_string('usuarios/email_recuperar.html', {
+                'nombre': usuario.nombre,
+                'enlace': enlace,
+            })
+            texto_plano = strip_tags(html_content)
+
+            send_mail(
+                subject='Recuperación de contraseña - HebraTech',
+                message=texto_plano,
+                from_email=None,  # usa DEFAULT_FROM_EMAIL
+                recipient_list=[usuario.correoElectronico],
+                html_message=html_content,
+                fail_silently=False,
+            )
+
+        except Usuario.DoesNotExist:
+            # ✅ No revelamos si el correo existe o no (mismo criterio que el login)
+            pass
+
+        # Siempre mostramos el mismo mensaje de éxito, exista o no el correo
+        messages.success(
+            request,
+            'Si el correo está registrado, te enviamos un enlace de recuperación.'
+        )
+        return redirect('recuperar')
+
+    return render(request, 'usuarios/recuperar.html')
+
+
+def validar_reset_view(request, token):
+    try:
+        reset_token = PasswordResetToken.objects.get(token=token)
+    except PasswordResetToken.DoesNotExist:
+        messages.error(request, 'El enlace de recuperación no es válido.')
+        return redirect('recuperar')
+
+    if not reset_token.es_valido():
+        messages.error(request, 'El enlace de recuperación expiró o ya fue utilizado.')
+        return redirect('recuperar')
+
+    return render(request, 'usuarios/nueva_contrasena.html', {'token': token})
+
+
+def procesar_reset_view(request, token):
+    try:
+        reset_token = PasswordResetToken.objects.get(token=token)
+    except PasswordResetToken.DoesNotExist:
+        messages.error(request, 'El enlace de recuperación no es válido.')
+        return redirect('recuperar')
+
+    if not reset_token.es_valido():
+        messages.error(request, 'El enlace de recuperación expiró o ya fue utilizado.')
+        return redirect('recuperar')
+
+    if request.method == 'POST':
+        nueva = request.POST.get('nueva_contrasena', '')
+        repetir = request.POST.get('repetir_contrasena', '')
+
+        if len(nueva) < 8:
+            messages.error(request, 'La contraseña debe tener al menos 8 caracteres.')
+            return render(request, 'usuarios/nueva_contrasena.html', {'token': token})
+
+        if nueva != repetir:
+            messages.error(request, 'Las contraseñas no coinciden.')
+            return render(request, 'usuarios/nueva_contrasena.html', {'token': token})
+
+        try:
+            usuario = Usuario.objects.get(idUsuario=reset_token.idUsuario)
+        except Usuario.DoesNotExist:
+            messages.error(request, 'No se encontró el usuario asociado.')
+            return redirect('recuperar')
+
+        usuario.contrasena = make_password(nueva)
+        usuario.save()
+
+        reset_token.usado = True
+        reset_token.save()
+
+        messages.success(request, 'Tu contraseña fue actualizada. Ya puedes iniciar sesión.')
+        return redirect('login')
+
+    return redirect('validar_reset', token=token)

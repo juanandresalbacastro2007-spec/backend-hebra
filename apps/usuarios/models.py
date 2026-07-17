@@ -1,3 +1,6 @@
+import secrets
+from datetime import timedelta
+from django.utils import timezone
 from django.db import models
 
 class Usuario(models.Model):
@@ -28,3 +31,37 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f'{self.nombre} {self.apellido}'
+    
+    import secrets
+from datetime import timedelta
+from django.utils import timezone
+
+
+class PasswordResetToken(models.Model):
+    idToken = models.AutoField(primary_key=True)
+    idUsuario = models.IntegerField()
+    token = models.CharField(max_length=64, unique=True)
+    fechaCreacion = models.DateTimeField(auto_now_add=True)
+    expira = models.DateTimeField()
+    usado = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'password_reset_tokens'
+        managed = False
+
+    @staticmethod
+    def generar_para_usuario(id_usuario, minutos_validez=15):
+        # Invalida cualquier token anterior sin usar de ese usuario
+        PasswordResetToken.objects.filter(
+            idUsuario=id_usuario, usado=False
+        ).update(usado=True)
+
+        nuevo_token = secrets.token_urlsafe(32)
+        return PasswordResetToken.objects.create(
+            idUsuario=id_usuario,
+            token=nuevo_token,
+            expira=timezone.now() + timedelta(minutes=minutos_validez)
+        )
+
+    def es_valido(self):
+        return not self.usado and timezone.now() <= self.expira

@@ -1,15 +1,19 @@
 {% load static %}
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HebraTech — {{ accion }} Usuario</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
 </head>
+
 <body>
 
   <aside class="sidebar" id="sidebar">
@@ -29,6 +33,9 @@
       <a href="{% url 'admin_usuarios' %}" class="nav-item active"><i class="bi bi-people-fill"></i> Usuarios</a>
       <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
       <a href="{% url 'admin_tareas' %}" class="nav-item"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <a href="{% url 'admin_incidencias' %}" class="nav-item">
+        <i class="bi bi-building"></i> Incidencias
+      </a>
       <div class="nav-section-label">Módulos</div>
       <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
       <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
@@ -51,7 +58,8 @@
       <div>
         <h5 class="topbar-title">{{ accion }} Usuario</h5>
         <small class="topbar-sub">
-          {% if accion == 'Crear' %}Registra un nuevo usuario en el sistema{% else %}Modifica los datos del usuario{% endif %}
+          {% if accion == 'Crear' %}Registra un nuevo usuario en el sistema{% else %}Modifica los datos del usuario{%
+          endif %}
         </small>
       </div>
     </header>
@@ -59,7 +67,8 @@
     {% if messages %}
     <div class="px-4 pt-3">
       {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+      <div
+        class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
         {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
       {% endfor %}
@@ -83,8 +92,8 @@
 
                   <div class="col-md-6">
                     <label class="form-label">Nombre</label>
-                    <input type="text" name="nombre" class="form-control"
-                      value="{{ usuario_editar.nombre|default:'' }}" required>
+                    <input type="text" name="nombre" class="form-control" value="{{ usuario_editar.nombre|default:'' }}"
+                      required>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label">Apellido</label>
@@ -107,9 +116,11 @@
                   <div class="col-md-6">
                     <label class="form-label">Rol</label>
                     <select name="rol" class="form-select" id="rolSelect" onchange="toggleEspecialidad()">
-                      <option value="cliente" {% if usuario_editar.rol == 'cliente' %}selected{% endif %}>Cliente</option>
-                      <option value="operario" {% if usuario_editar.rol == 'operario' %}selected{% endif %}>Operario</option>
-                      <option value="administrador" {% if usuario_editar.rol == 'administrador' %}selected{% endif %}>Administrador</option>
+                      <option value="cliente" {% if usuario_editar.rol=='cliente' %}selected{% endif %}>Cliente</option>
+                      <option value="operario" {% if usuario_editar.rol=='operario' %}selected{% endif %}>Operario
+                      </option>
+                      <option value="administrador" {% if usuario_editar.rol=='administrador' %}selected{% endif %}>
+                        Administrador</option>
                     </select>
                   </div>
 
@@ -132,9 +143,11 @@
                   <div class="col-md-6">
                     <label class="form-label">Estado</label>
                     <select name="estado" class="form-select">
-                      <option value="activo" {% if usuario_editar.estado == 'activo' %}selected{% endif %}>Activo</option>
-                      <option value="inactivo" {% if usuario_editar.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
-                      <option value="reportado" {% if usuario_editar.estado == 'reportado' %}selected{% endif %}>Reportado</option>
+                      <option value="activo" {% if usuario_editar.estado=='activo' %}selected{% endif %}>Activo</option>
+                      <option value="inactivo" {% if usuario_editar.estado=='inactivo' %}selected{% endif %}>Inactivo
+                      </option>
+                      <option value="reportado" {% if usuario_editar.estado=='reportado' %}selected{% endif %}>Reportado
+                      </option>
                     </select>
                   </div>
                   {% endif %}
@@ -142,8 +155,8 @@
                   {% if accion == 'Crear' %}
                   <div class="col-md-6">
                     <label class="form-label">Contraseña</label>
-                    <input type="password" name="contrasena" class="form-control"
-                      placeholder="Mínimo 8 caracteres" required>
+                    <input type="password" name="contrasena" class="form-control" placeholder="Mínimo 8 caracteres"
+                      required>
                   </div>
                   {% endif %}
 
@@ -174,4 +187,5 @@
     toggleEspecialidad();
   </script>
 </body>
+
 </html>

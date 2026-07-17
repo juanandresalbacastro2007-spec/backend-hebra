@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'apps.administrador',
     'apps.proveedores',
     'apps.operarios',
+    'apps.core', 
 ]
 
 MIDDLEWARE = [

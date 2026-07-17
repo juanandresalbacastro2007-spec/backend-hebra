@@ -1,15 +1,19 @@
 {% load static %}
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HebraTech — {{ seccion }}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
 </head>
+
 <body>
 
   <aside class="sidebar" id="sidebar">
@@ -29,6 +33,9 @@
       <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
       <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
       <a href="{% url 'admin_tareas' %}" class="nav-item"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
+      <a href="{% url 'admin_incidencias' %}" class="nav-item">
+        <i class="bi bi-building"></i> Incidencias
+      </a>
       <div class="nav-section-label">Módulos</div>
       <a href="{% url 'admin_produccion' %}" class="nav-item {% if seccion == 'Producción' %}active{% endif %}">
         <i class="bi bi-gear-wide-connected"></i> Producción
@@ -76,4 +83,5 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'js/admin.js' %}"></script>
 </body>
+
 </html>

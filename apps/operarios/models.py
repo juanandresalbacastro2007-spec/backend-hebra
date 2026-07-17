@@ -90,7 +90,7 @@ class AsignacionTarea(models.Model):
 class Incidencia(models.Model):
     idIncidencia = models.AutoField(primary_key=True)
 
-    # ✅ CORREGIDO: la columna en MySQL se llama 'idUsuario', no 'idOperario'
+    # ✅ la columna en MySQL se llama 'idUsuario', no 'idOperario'
     idUsuario = models.ForeignKey(
         Operario,
         on_delete=models.CASCADE,
@@ -99,7 +99,7 @@ class Incidencia(models.Model):
 
     tipoIncidencia = models.CharField(max_length=50)
     descripcion = models.TextField()
-    periodoEvaluado = models.CharField(max_length=50, null=True, blank=True)
+    # Se ha eliminado el campo 'periodoEvaluado' para coincidir con la base de datos
     estado = models.CharField(max_length=30, default='Generado')
     fechaGeneracion = models.DateField()          # ✅ sin auto_now_add — lo pasamos manualmente
     fechaRevision = models.DateField(null=True, blank=True)

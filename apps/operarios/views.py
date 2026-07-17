@@ -29,8 +29,6 @@ ESTADOS_VALIDOS_ASIGNACION = ['Pendiente', 'En Progreso', 'Completada', 'Cancela
 TIPO_INCIDENCIA_MAX_LEN = 50
 
 # ── Decoradores de protección (centralizados en apps.core) ─────────
-# session_key='idOperario' porque el login guarda ahí el id específico
-# del operario (ver apps.usuarios.views.login_view), además del rol.
 operario_login_required = login_required_rol(rol_esperado='operario', session_key='idOperario')
 operario_login_required_api = login_required_api(rol_esperado='operario', session_key='idOperario')
 
@@ -41,7 +39,6 @@ operario_login_required_api = login_required_api(rol_esperado='operario', sessio
 def _get_operario_actual(request):
     """
     Obtiene el Operario logueado desde la sesión.
-    La sesión debe tener 'idOperario' guardado al hacer login.
     """
     id_operario = request.session.get('idOperario')
     if not id_operario:
@@ -127,7 +124,7 @@ def api_tareas(request):
 
 
 # ---------------------------------------------------------------------------
-# API — Registrar incidencia
+# API — Registrar incidencia (Corregida)
 # ---------------------------------------------------------------------------
 
 @operario_login_required_api
@@ -146,7 +143,6 @@ def api_guardar_reporte(request):
 
     tipo        = (data.get('tipoIncidencia') or '').strip()
     descripcion = (data.get('descripcion') or '').strip()
-    periodo     = (data.get('periodoEvaluado') or '').strip() or None
 
     errores = {}
     if not tipo:
@@ -161,18 +157,15 @@ def api_guardar_reporte(request):
     elif len(descripcion) > 2000:
         errores['descripcion'] = 'La descripción no puede superar los 2000 caracteres'
 
-    if periodo and len(periodo) > 50:
-        errores['periodoEvaluado'] = 'El periodo evaluado no puede superar los 50 caracteres'
-
     if errores:
         return JsonResponse({'ok': False, 'errores': errores}, status=400)
 
     try:
         incidencia = Incidencia.objects.create(
-            idUsuario       = operario,       # nombre del campo en el modelo
+            idUsuario       = operario,
             tipoIncidencia  = tipo,
             descripcion     = descripcion,
-            periodoEvaluado = periodo,
+            # Se ha removido periodoEvaluado
             estado          = 'Generado',
             fechaGeneracion = date.today(),
         )
@@ -189,7 +182,7 @@ def api_guardar_reporte(request):
 
 
 # ---------------------------------------------------------------------------
-# API — Historial de reportes
+# API — Historial de reportes (Corregida)
 # ---------------------------------------------------------------------------
 
 @operario_login_required_api
@@ -208,7 +201,7 @@ def api_historial_reportes(request):
             'idIncidencia':    r.idIncidencia,
             'tipoIncidencia':  r.tipoIncidencia,
             'descripcion':     (r.descripcion[:100] + '...') if len(r.descripcion) > 100 else r.descripcion,
-            'periodoEvaluado': r.periodoEvaluado,
+            # Se ha removido periodoEvaluado
             'estado':          r.estado,
             'fechaGeneracion': str(r.fechaGeneracion),
             'fechaRevision':   str(r.fechaRevision) if r.fechaRevision else None,
@@ -258,13 +251,15 @@ def api_actualizar_estado(request, id_asignacion):
     })
 
 
+# ---------------------------------------------------------------------------
+# API — Editar reporte (Corregida)
+# ---------------------------------------------------------------------------
+
 @operario_login_required_api
 @require_POST
 def api_editar_reporte(request, id_incidencia):
     """
     POST /operarios/api/reporte/<id_incidencia>/editar/
-    Permite al operario editar una incidencia que él mismo generó.
-    Solo se puede editar si el estado es 'Generado' (no revisado aún).
     """
     operario = _get_operario_actual(request)
 
@@ -276,7 +271,6 @@ def api_editar_reporte(request, id_incidencia):
     except Incidencia.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'Reporte no encontrado'}, status=404)
 
-    # Solo se puede editar si todavía no fue revisado
     if incidencia.estado != 'Generado':
         return JsonResponse({
             'ok': False,
@@ -290,7 +284,6 @@ def api_editar_reporte(request, id_incidencia):
 
     tipo        = (data.get('tipoIncidencia') or '').strip()
     descripcion = (data.get('descripcion') or '').strip()
-    periodo     = (data.get('periodoEvaluado') or '').strip() or None
 
     errores = {}
     if not tipo:
@@ -305,16 +298,13 @@ def api_editar_reporte(request, id_incidencia):
     elif len(descripcion) > 2000:
         errores['descripcion'] = 'La descripción no puede superar los 2000 caracteres'
 
-    if periodo and len(periodo) > 50:
-        errores['periodoEvaluado'] = 'El periodo evaluado no puede superar los 50 caracteres'
-
     if errores:
         return JsonResponse({'ok': False, 'errores': errores}, status=400)
 
     try:
         incidencia.tipoIncidencia  = tipo
         incidencia.descripcion     = descripcion
-        incidencia.periodoEvaluado = periodo
+        # Se ha removido periodoEvaluado
         incidencia.save()
     except Exception:
         logger.exception("Error al editar incidencia id=%s", id_incidencia)
@@ -326,13 +316,15 @@ def api_editar_reporte(request, id_incidencia):
     })
 
 
+# ---------------------------------------------------------------------------
+# API — Eliminar reporte
+# ---------------------------------------------------------------------------
+
 @operario_login_required_api
 @require_POST
 def api_eliminar_reporte(request, id_incidencia):
     """
     POST /operarios/api/reporte/<id_incidencia>/eliminar/
-    Elimina una incidencia generada por el operario.
-    Solo se puede eliminar si el estado es 'Generado' (no revisado aún).
     """
     operario = _get_operario_actual(request)
 
@@ -359,19 +351,16 @@ def api_eliminar_reporte(request, id_incidencia):
     return JsonResponse({'ok': True, 'mensaje': 'Reporte eliminado correctamente'})
 
 
-# ── PDF — Generar y descargar incidencia ────────────────────────────────
+# ── PDF — Generar y descargar incidencia (Corregida) ──────────────────────
 @operario_login_required
 def generar_pdf_reporte(request, id_incidencia):
     operario = _get_operario_actual(request)
 
-    # ✅ Se filtra también por idUsuario=operario para evitar que un
-    # operario pueda descargar el PDF de una incidencia ajena cambiando
-    # el número en la URL (IDOR).
     incidencia = get_object_or_404(
         Incidencia, idIncidencia=id_incidencia, idUsuario=operario
     )
 
-    usuario         = operario.idUsuario              # instancia Usuario
+    usuario         = operario.idUsuario
     nombre_completo = f"{usuario.nombre} {usuario.apellido}"
     especialidad    = operario.especialidad or '—'
 
@@ -403,7 +392,7 @@ def generar_pdf_reporte(request, id_incidencia):
     def bloque_encabezado(texto, color):
         t = Table(
             [[Paragraph(texto, st('Th', fontSize=10, fontName='Helvetica-Bold',
-                                  textColor=colors.white, alignment=TA_CENTER))]],
+                                 textColor=colors.white, alignment=TA_CENTER))]],
             colWidths=[16*cm]
         )
         t.setStyle(TableStyle([
@@ -462,11 +451,10 @@ def generar_pdf_reporte(request, id_incidencia):
     ]))
     story.append(Spacer(1, 0.5*cm))
 
-    # ── DETALLE DE LA INCIDENCIA ──────────────────────────────────────
+    # ── DETALLE DE LA INCIDENCIA (Sin período evaluado) ────────────────
     story.append(bloque_encabezado('DETALLE DE LA INCIDENCIA', C_PINK))
     story.append(bloque_filas([
         [Paragraph('Tipo de incidencia:', lbl), Paragraph(incidencia.tipoIncidencia or '—', val)],
-        [Paragraph('Período evaluado:',   lbl), Paragraph(incidencia.periodoEvaluado or '—', val)],
         [Paragraph('Estado:',             lbl), Paragraph(incidencia.estado or '—', val)],
         [Paragraph('Fecha generación:',   lbl), Paragraph(fecha_str, val)],
     ]))

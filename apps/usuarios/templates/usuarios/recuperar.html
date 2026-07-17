@@ -1,18 +1,22 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HebraTech | Recuperar contraseña</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'css/usuarios/recuperar.css' %}">
 </head>
+
 <body>
 
     <main class="auth-container">
@@ -37,26 +41,34 @@
 
                 <!-- ── FORMULARIO VIEW ── -->
                 <div id="form-view">
-                    <h1>¿Olvidaste tu<br>contraseña?</h1>
-                    <p class="subtitle">Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un enlace para restablecer tu contraseña.</p>
 
-                    <!-- Alert -->
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="ht-alert {% if message.tags == 'success' %}ht-alert-success{% else %}ht-alert-error{% endif %}"
+                        style="display:flex;">
+                        <i
+                            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <h1>¿Olvidaste tu<br>contraseña?</h1>
+                    <p class="subtitle">Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un enlace
+                        para restablecer tu contraseña.</p>
+
+                    <!-- Alert de validación JS (la dejamos, es para el error de "correo inválido" en tiempo real) -->
                     <div id="form-alert" class="ht-alert ht-alert-error">
                         <i class="fas fa-exclamation-circle"></i>
                         <span id="form-alert-msg">El correo ingresado no es válido.</span>
                     </div>
 
-                    <form id="recovery-form" novalidate>
+                    <form id="recovery-form" method="POST" action="{% url 'recuperar' %}" novalidate>
+                        {% csrf_token %}
                         <div class="mb-4">
                             <label for="recovery-email" class="form-label">Correo electrónico</label>
-                            <input
-                                type="email"
-                                id="recovery-email"
-                                class="form-control"
-                                placeholder="ejemplo@correo.com"
-                                required
-                                autocomplete="email"
-                            >
+                            <input type="email" id="recovery-email" name="correo" class="form-control"
+                                placeholder="ejemplo@correo.com" required autocomplete="email">
                             <span class="invalid-feedback">
                                 <i class="fas fa-times-circle me-1"></i>Ingresa un correo electrónico válido.
                             </span>
@@ -81,7 +93,8 @@
                     </div>
 
                     <h2>¡Correo enviado!</h2>
-                    <p>Hemos enviado un enlace de recuperación a tu correo electrónico. Revisa tu bandeja de entrada y sigue las instrucciones para crear una nueva contraseña.</p>
+                    <p>Hemos enviado un enlace de recuperación a tu correo electrónico. Revisa tu bandeja de entrada y
+                        sigue las instrucciones para crear una nueva contraseña.</p>
 
                     <div class="success-email-badge" id="sent-email-badge">
                         <i class="fas fa-at me-1"></i> <span id="sent-email-text">correo@ejemplo.com</span>
@@ -96,7 +109,7 @@
                         <span>Reenviar enlace</span>
                     </button>
 
-                    <a href="iniciosesion.html" class="btn-back d-block text-center">
+                    <a href="login.html" class="btn-back d-block text-center">
                         <i class="fas fa-arrow-left"></i> Volver al inicio de sesión
                     </a>
 
@@ -138,7 +151,8 @@
 
             <div class="promo-text">
                 <h3>Tu seguridad es nuestra prioridad</h3>
-                <p>HebraTech protege los datos de tu empresa con cifrado de extremo a extremo y autenticación segura de dos factores.</p>
+                <p>HebraTech protege los datos de tu empresa con cifrado de extremo a extremo y autenticación segura de
+                    dos factores.</p>
 
                 <div class="trust-badges">
                     <div class="trust-badge">
@@ -159,104 +173,12 @@
     </main>
 
     <!-- Back arrow -->
-    <a href="iniciosesion.html" class="back-arrow" title="Volver">
+    <a href="login.html" class="back-arrow" title="Volver">
         <i class="fas fa-arrow-left"></i>
     </a>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    (function () {
-
-        const form       = document.getElementById('recovery-form');
-        const emailInput = document.getElementById('recovery-email');
-        const sendBtn    = document.getElementById('send-btn');
-        const formView   = document.getElementById('form-view');
-        const successView= document.getElementById('success-view');
-        const alertBox   = document.getElementById('form-alert');
-        const alertMsg   = document.getElementById('form-alert-msg');
-        const dot1       = document.getElementById('dot-1');
-        const dot2       = document.getElementById('dot-2');
-
-        /* ── Email regex ── */
-        const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        /* ── Real-time validation ── */
-        emailInput.addEventListener('input', function () {
-            const valid = emailRx.test(this.value.trim());
-            this.classList.toggle('is-invalid', this.value.length > 0 && !valid);
-            this.classList.toggle('is-valid',   valid);
-            if (valid) hideAlert();
-        });
-
-        emailInput.addEventListener('blur', function () {
-            if (!this.value.trim()) {
-                this.classList.remove('is-valid', 'is-invalid');
-            }
-        });
-
-        /* ── Show / hide alert ── */
-        function showAlert(msg) {
-            alertMsg.textContent = msg;
-            alertBox.classList.add('show');
-        }
-
-        function hideAlert() {
-            alertBox.classList.remove('show');
-        }
-
-        /* ── Submit ── */
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            hideAlert();
-
-            const email = emailInput.value.trim();
-
-            if (!email) {
-                emailInput.classList.add('is-invalid');
-                showAlert('Por favor ingresa tu correo electrónico.');
-                return;
-            }
-
-            if (!emailRx.test(email)) {
-                emailInput.classList.add('is-invalid');
-                showAlert('El correo electrónico ingresado no es válido.');
-                return;
-            }
-
-            /* Loading state */
-            sendBtn.classList.add('loading');
-            sendBtn.disabled = true;
-
-            /* Simulate API call */
-            setTimeout(function () {
-                sendBtn.classList.remove('loading');
-                sendBtn.disabled = false;
-
-                /* Show success */
-                document.getElementById('sent-email-text').textContent = email;
-                formView.style.display = 'none';
-                successView.classList.add('show');
-
-                /* Update step dots */
-                dot1.classList.remove('active');
-                dot2.classList.add('active');
-
-            }, 1600);
-        });
-
-        /* ── Reset back to form (resend) ── */
-        function resetToForm() {
-            successView.classList.remove('show');
-            formView.style.display = 'block';
-            emailInput.classList.remove('is-valid', 'is-invalid');
-            emailInput.value = '';
-            dot1.classList.add('active');
-            dot2.classList.remove('active');
-        }
-
-        window.resetToForm = resetToForm;
-
-    })();
-    </script>
+    <script src="{% static 'js/recuperar.js' %}"></script>
 </body>
+
 </html>

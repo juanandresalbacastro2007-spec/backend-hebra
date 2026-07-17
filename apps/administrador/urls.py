@@ -1,7 +1,7 @@
 # apps/administrador/urls.py
 
-from django.urls import path
-from . import views
+from django.urls import path, include
+from . import views  
 
 urlpatterns = [
     path('', views.admin_portal, name='admin_portal'),
@@ -32,5 +32,5 @@ urlpatterns = [
 
     # Módulos externos
     path('produccion/', views.produccion_placeholder, name='admin_produccion'),
-    path('proveedores/', views.proveedores_placeholder, name='admin_proveedores'),
+    path('proveedores/', include('apps.proveedores.urls')),
 ]

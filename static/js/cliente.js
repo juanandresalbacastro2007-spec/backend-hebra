@@ -404,55 +404,86 @@ const formatterCOP = new Intl.NumberFormat('es-CO', {
     currency: 'COP',
     minimumFractionDigits: 0
 });
-
 function calcularCotizacion() {
-    const precio = parseFloat(quotePrenda.value) || 0;
-    const cantidad = parseInt(quoteCantidad.value) || 0;
+    // Verificamos que los elementos existan antes de leer sus valores
+    const prendaEl = document.getElementById('quotePrenda') || (typeof quotePrenda !== 'undefined' ? quotePrenda : null);
+    const cantidadEl = document.getElementById('quoteCantidad') || (typeof quoteCantidad !== 'undefined' ? quoteCantidad : null);
+    const precioUnitarioEl = document.getElementById('quotePrecioUnitario') || (typeof quotePrecioUnitario !== 'undefined' ? quotePrecioUnitario : null);
+    const subtotalEl = document.getElementById('quoteSubtotalDisplay') || (typeof quoteSubtotalDisplay !== 'undefined' ? quoteSubtotalDisplay : null);
 
-    if (precio > 0) {
-        quotePrecioUnitario.value = precio.toLocaleString('es-CO');
-    } else {
-        quotePrecioUnitario.value = '';
+    if (!prendaEl || !cantidadEl) return;
+
+    const precio = parseFloat(prendaEl.value) || 0;
+    const cantidad = parseInt(cantidadEl.value) || 0;
+
+    if (precioUnitarioEl) {
+        if (precio > 0) {
+            precioUnitarioEl.value = precio.toLocaleString('es-CO');
+        } else {
+            precioUnitarioEl.value = '';
+        }
     }
 
     const subtotal = precio * cantidad;
-    quoteSubtotalDisplay.textContent = formatterCOP.format(subtotal);
+    if (subtotalEl && typeof formatterCOP !== 'undefined') {
+        subtotalEl.textContent = formatterCOP.format(subtotal);
+    }
 }
 
-// Escuchadores para calcular montos en tiempo real
-quotePrenda.addEventListener('change', calcularCotizacion);
-quoteCantidad.addEventListener('input', calcularCotizacion);
+// Obtenemos referencias seguras de los elementos del DOM
+const elPrenda = document.getElementById('quotePrenda') || (typeof quotePrenda !== 'undefined' ? quotePrenda : null);
+const elCantidad = document.getElementById('quoteCantidad') || (typeof quoteCantidad !== 'undefined' ? quoteCantidad : null);
+const elFormCotizacion = document.getElementById('formCotizacion') || (typeof formCotizacion !== 'undefined' ? formCotizacion : null);
 
-// Manejo del envío del formulario con las validaciones de Bootstrap
-formCotizacion.addEventListener('submit', function (event) {
-    if (!formCotizacion.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-    } else {
-        event.preventDefault();
+// Escuchadores para calcular montos en tiempo real (Solo si existen en la página)
+if (elPrenda) {
+    elPrenda.addEventListener('change', calcularCotizacion);
+}
+if (elCantidad) {
+    elCantidad.addEventListener('input', calcularCotizacion);
+}
 
-        // Simulación de guardado exitoso
-        bootstrap.Modal.getInstance(document.getElementById('quoteModal')).hide();
+// Manejo del envío del formulario con las validaciones de Bootstrap (Solo si existe en la página)
+if (elFormCotizacion) {
+    elFormCotizacion.addEventListener('submit', function (event) {
+        if (!elFormCotizacion.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        } else {
+            event.preventDefault();
 
-        // Disparar toast nativo del sistema HebraTech
-        if (typeof mostrarToast === 'function') {
-            mostrarToast({
-                tipo: 'success',
-                icono: 'bi-file-earmark-check',
-                titulo: 'Cotización Enviada',
-                mensaje: 'La solicitud se ha registrado. Evaluaremos costos basados en tus especificaciones.',
-                accion: null
-            });
+            // Simulación de guardado exitoso
+            const modalEl = document.getElementById('quoteModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+
+            // Disparar toast nativo del sistema HebraTech
+            if (typeof mostrarToast === 'function') {
+                mostrarToast({
+                    tipo: 'success',
+                    icono: 'bi-file-earmark-check',
+                    titulo: 'Cotización Enviada',
+                    mensaje: 'La solicitud se ha registrado. Evaluaremos costos basados en tus especificaciones.',
+                    accion: null
+                });
+            }
+
+            // Resetear formulario para futuras solicitudes
+            elFormCotizacion.reset();
+            elFormCotizacion.classList.remove('was-validated');
+            
+            const subtotalEl = document.getElementById('quoteSubtotalDisplay') || (typeof quoteSubtotalDisplay !== 'undefined' ? quoteSubtotalDisplay : null);
+            if (subtotalEl) {
+                subtotalEl.textContent = '$0';
+            }
         }
-
-        // Resetear formulario para futuras solicitudes
-        formCotizacion.reset();
-        formCotizacion.classList.remove('was-validated');
-        quoteSubtotalDisplay.textContent = '$0';
-    }
-    formCotizacion.classList.add('was-validated');
-}, false);
-
+        elFormCotizacion.classList.add('was-validated');
+    }, false);
+}
 /* ══════════════════════════════════════════
    SISTEMA INTERACTIVO DE NOTIFICACIONES
 ══════════════════════════════════════════ */
@@ -726,30 +757,161 @@ window.addEventListener('DOMContentLoaded', () => {
   renderSedesTable();
 });
 
+// Configuración regional de Moment en Español
+moment.locale('es');
 
+$(function() {
+  const pickerInput = $('#o-fecha-rango');
 
-  $(function() {
-    $('#o-fecha-rango').daterangepicker({
-      autoUpdateInput: false, // Evita que ponga una fecha por defecto antes de hacer clic
-      locale: {
-        format: 'YYYY-MM-DD',
-        applyLabel: 'Aplicar',
-        cancelLabel: 'Limpiar',
-        fromLabel: 'Desde',
-        toLabel: 'Hasta',
-        daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
-        monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-        firstDay: 1
+  // Rango por defecto (Desde hoy hasta dentro de 10 días)
+  const fechaInicial = moment();
+  const fechaFinal = moment().add(10, 'days');
+
+  pickerInput.daterangepicker({
+    autoUpdateInput: true,
+    startDate: fechaInicial,
+    endDate: fechaFinal,
+    locale: {
+      format: 'YYYY-MM-DD',
+      applyLabel: 'Aplicar',
+      cancelLabel: 'Limpiar',
+      fromLabel: 'Desde',
+      toLabel: 'Hasta',
+      daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
+      monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+      firstDay: 1
+    },
+    isCustomDate: function(date) {
+      const drp = pickerInput.data('daterangepicker');
+      if (!drp || !drp.startDate || !drp.endDate) return '';
+
+      const start = drp.startDate;
+      const end = drp.endDate;
+
+      // EXCLUSIÓN: Si es exactamente el primer día seleccionado o el último, mantener color por defecto
+      if (date.isSame(start, 'day') || date.isSame(end, 'day')) {
+        return '';
       }
-    });
 
-    // Acción cuando el usuario selecciona el rango y le da "Aplicar"
-    $('#o-fecha-rango').on('apply.daterangepicker', function(ev, picker) {
-        $(this).val(picker.startDate.format('YYYY-MM-DD') + '  hasta  ' + picker.endDate.format('YYYY-MM-DD'));
-    });
+      const totalDays = end.diff(start, 'days') + 1;
+      
+      const chunk = Math.floor(totalDays / 3);
+      const remainder = totalDays % 3;
+      const duracion1 = chunk + (remainder > 0 ? 1 : 0);
+      const duracion2 = chunk + (remainder > 1 ? 1 : 0);
 
-    // Acción si el usuario limpia el campo
-    $('#o-fecha-rango').on('cancel.daterangepicker', function(ev, picker) {
-        $(this).val('');
-    });
+      const e1End = start.clone().add(duracion1 - 1, 'days');
+      const e2Start = e1End.clone().add(1, 'days');
+      const e2End = e2Start.clone().add(duracion2 - 1, 'days');
+      const e3Start = e2End.clone().add(1, 'days');
+
+      if (date.isBetween(start, e1End, 'day', '[]')) return 'etapa-1-bg';
+      if (date.isBetween(e2Start, e2End, 'day', '[]')) return 'etapa-2-bg';
+      if (date.isBetween(e3Start, end, 'day', '[]')) return 'etapa-3-bg';
+      
+      return '';
+    }
   });
+
+  const drp = pickerInput.data('daterangepicker');
+
+  // Asignar el valor inicial formateado en el input
+  pickerInput.val(fechaInicial.format('YYYY-MM-DD') + ' hasta ' + fechaFinal.format('YYYY-MM-DD'));
+
+  function actualizarLeyendasFooter() {
+    const footer = drp.container.find('.drp-buttons');
+    footer.find('.etapas-legend-container').remove();
+
+    const legendHTML = `
+      <div class="etapas-legend-container">
+        <span class="etapa-badge etapa-1">Etapa 1</span>
+        <span class="etapa-badge etapa-2">Etapa 2</span>
+        <span class="etapa-badge etapa-3">Etapa 3</span>
+      </div>
+    `;
+    footer.prepend(legendHTML);
+  }
+
+  // Inyectar leyendas al abrir por primera vez
+  pickerInput.on('show.daterangepicker', function() {
+    actualizarLeyendasFooter();
+  });
+
+  // Modificar al aplicar cambios
+  pickerInput.on('apply.daterangepicker', function(ev, picker) {
+    $(this).val(picker.startDate.format('YYYY-MM-DD') + ' hasta ' + picker.endDate.format('YYYY-MM-DD'));
+    actualizarLeyendasFooter();
+  });
+
+  pickerInput.on('cancel.daterangepicker', function(ev, picker) {
+    $(this).val('');
+    drp.container.find('.etapas-legend-container').remove();
+  });
+});
+
+// ── LÓGICA DE PRECIOS Y CALCULO DEL SUB-TOTAL EN EL MODAL ──
+let precioSeleccionado = 0;
+
+function actualizarPrecio() {
+  const selectProducto = document.getElementById('modalProducto');
+  const inputPrecioDisplay = document.getElementById('modalPrecioDisplay');
+  const opcionSeleccionada = selectProducto.options[selectProducto.selectedIndex];
+
+  if (opcionSeleccionada && opcionSeleccionada.value !== "") {
+    precioSeleccionado = parseFloat(opcionSeleccionada.getAttribute('data-precio')) || 0;
+    inputPrecioDisplay.value = precioSeleccionado.toLocaleString('es-CO', { minimumFractionDigits: 0 });
+  } else {
+    precioSeleccionado = 0;
+    inputPrecioDisplay.value = "";
+  }
+  actualizarSubtotal();
+}
+
+function actualizarSubtotal() {
+  const cantidad = parseInt(document.getElementById('modalCantidad').value) || 0;
+  const subtotal = cantidad * precioSeleccionado;
+  const subtotalDisplay = document.getElementById('modalSubtotalDisplay');
+
+  if (subtotal > 0) {
+    subtotalDisplay.innerText = '$' + subtotal.toLocaleString('es-CO', { minimumFractionDigits: 0 });
+  } else {
+    subtotalDisplay.innerText = '$0';
+  }
+}
+
+// ── PROGRAMACIÓN DEL RELOJ EN TIEMPO REAL ──
+function actualizarReloj() {
+  const ahora = new Date();
+  const horas = String(ahora.getHours()).padStart(2, '0');
+  const minutos = String(ahora.getMinutes()).padStart(2, '0');
+  const segundos = String(ahora.getSeconds()).padStart(2, '0');
+  
+  document.getElementById('clockDisplay').textContent = `${horas}:${minutos}:${segundos}`;
+
+  const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'short' };
+  document.getElementById('dateDisplay').textContent = ahora.toLocaleDateString('es-ES', opcionesFecha).toUpperCase();
+}
+
+setInterval(actualizarReloj, 1000);
+actualizarReloj();
+
+// ── FORMULARIO DE SOPORTE RÁPIDO ──
+function enviarContacto() {
+  const asunto = document.getElementById('contactAsunto').value;
+  const mensaje = document.getElementById('contactMensaje').value;
+
+  if (!asunto || !mensaje.trim()) {
+    alert("Por favor completa los dos campos del formulario de soporte.");
+    return;
+  }
+
+  document.getElementById('contactFormWrap').classList.add('d-none');
+  document.getElementById('contactConfirm').classList.remove('d-none');
+}
+
+function resetContactForm() {
+  document.getElementById('contactAsunto').value = "";
+  document.getElementById('contactMensaje').value = "";
+  document.getElementById('contactFormWrap').classList.remove('d-none');
+  document.getElementById('contactConfirm').classList.add('d-none');
+}

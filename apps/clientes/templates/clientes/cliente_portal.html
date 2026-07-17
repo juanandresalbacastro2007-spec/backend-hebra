@@ -1,17 +1,26 @@
 {% load static %}
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HebraTech - Portal de Clientes</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes</title>
+
+  <!-- 1. Estilos base de Bootstrap (Siempre van primero) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&family=Graduate&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
+  
+  <!-- 2. Estilos del Calendario DateRangePicker -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+  
+  <!-- 3. Fuentes de Google (Fredoka, Graduate, Roboto) -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Graduate&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- 4. Iconos (FontAwesome y Bootstrap Icons para el diseño) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- 5. TU ARCHIVO DE ESTILOS PERSONALIZADO (El que me acabas de pasar) -->
+  <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}"> 
 </head>
 
 <body>
@@ -32,7 +41,7 @@
 
       <div class="nav-divider d-none d-md-block"></div>
 
-      <!-- Reloj -->
+      <!-- Reloj dinámico -->
       <div class="navbar-clock d-none d-md-flex flex-column align-items-center gap-0" id="navClock">
         <div class="d-flex align-items-center gap-1">
           <i class="bi bi-clock" style="font-size:0.78rem; color:#fff; opacity:0.8;"></i>
@@ -43,7 +52,6 @@
 
       <div class="nav-divider d-none d-lg-block"></div>
 
-      <!-- Cliente activo — datos reales -->
       <div class="company-name d-none d-md-block ms-1">
         Cliente: <strong>{{ cliente.empresa|default:cliente.nombre }}</strong>
       </div>
@@ -94,7 +102,9 @@
             </div>
             <div class="d-none d-md-block text-start">
               <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">{{ usuario.nombre }}</div>
-              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">{{ cliente.empresa|default:cliente.nombre }}</div>
+              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">
+                {{ cliente.empresa|default:cliente.nombre }}
+              </div>
             </div>
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileMenu">
@@ -112,7 +122,7 @@
     </div>
   </nav>
 
-  <!-- ══ MENSAJES DJANGO (alertas de éxito/error) ══ -->
+  <!-- ══ MENSAJES DJANGO ══ -->
   {% if messages %}
   <div class="container-fluid px-4 pt-3">
     {% for message in messages %}
@@ -130,10 +140,10 @@
   <div class="main-wrap">
     <div class="row g-4">
 
-      <!-- ── Columna izquierda ── -->
+      <!-- Columna izquierda -->
       <div class="col-12 col-xl-8">
 
-        <!-- Bienvenida con datos reales -->
+        <!-- Bienvenida -->
         <div class="card mb-4 shadow-sm">
           <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
             <div>
@@ -152,8 +162,7 @@
                 </div>
                 <div>
                   <div class="text-muted" style="font-size:0.72rem;">Pendientes</div>
-                  <div class="h5 mb-0 text-warning" style="font-family:var(--ff-display);">{{ ordenes_pendientes }}
-                  </div>
+                  <div class="h5 mb-0 text-warning" style="font-family:var(--ff-display);">{{ ordenes_pendientes }}</div>
                 </div>
               </div>
             </div>
@@ -161,8 +170,7 @@
               {% if proxima_entrega %}
               <div>
                 <div class="text-muted" style="font-size:0.72rem;">Próxima entrega</div>
-                <div class="h5 mb-0" style="font-family:var(--ff-display);">{{ proxima_entrega.fechaEntregaEstimada }}
-                </div>
+                <div class="h5 mb-0" style="font-family:var(--ff-display);">{{ proxima_entrega.fechaEntregaEstimada }}</div>
                 <div class="text-muted" style="font-size:0.72rem;">Orden #{{ proxima_entrega.idOrden }}</div>
               </div>
               {% endif %}
@@ -175,7 +183,7 @@
           </div>
         </div>
 
-        <!-- ══ MIS ÓRDENES — datos reales de la BD ══ -->
+        <!-- MIS ÓRDENES -->
         <div class="card mb-4 shadow-sm" id="secMisOrdenes" style="scroll-margin-top:78px;">
           <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h6 class="mb-0"><i class="bi bi-truck me-2" style="color:var(--primary);"></i>Mis órdenes</h6>
@@ -228,8 +236,7 @@
                     </td>
                     <td class="text-center">
                       {% if orden.estado == 'Pendiente' %}
-                      <a href="{% url 'editar_orden' orden.idOrden %}" class="btn btn-sm btn-outline-primary me-1"
-                        title="Editar">
+                      <a href="{% url 'editar_orden' orden.idOrden %}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
                         <i class="bi bi-pencil"></i>
                       </a>
                       <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
@@ -237,7 +244,7 @@
                         <i class="bi bi-trash"></i>
                       </button>
 
-                      <!-- Modal de confirmación de eliminación -->
+                      <!-- Modal de eliminación -->
                       <div class="modal fade" id="deleteModal{{ orden.idOrden }}" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
                           <div class="modal-content" style="border-radius:14px;">
@@ -248,8 +255,7 @@
                               <form method="POST" action="{% url 'eliminar_orden' orden.idOrden %}">
                                 {% csrf_token %}
                                 <div class="d-flex gap-2 justify-content-center mt-3">
-                                  <button type="button" class="btn btn-outline-secondary"
-                                    data-bs-dismiss="modal">Cancelar</button>
+                                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                                   <button type="submit" class="btn btn-danger">Sí, eliminar</button>
                                 </div>
                               </form>
@@ -279,7 +285,7 @@
           </div>
         </div>
 
-        <!-- Historial de facturas (estático por ahora) -->
+        <!-- Facturas -->
         <div class="card mb-4 shadow-sm" id="secHistorialFacturas" style="scroll-margin-top:78px;">
           <div class="card-header d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="bi bi-receipt me-2" style="color:var(--primary);"></i>Historial de facturas</h6>
@@ -314,7 +320,7 @@
 
       </div>
 
-      <!-- ── Columna derecha ── -->
+      <!-- Columna derecha -->
       <div class="col-12 col-xl-4">
 
         <!-- Acciones rápidas -->
@@ -323,8 +329,7 @@
             <h6 class="mb-0">Acciones rápidas</h6>
           </div>
           <div class="card-body d-flex flex-column gap-2">
-            <button class="btn btn-outline-primary w-100 text-start" data-bs-toggle="modal"
-              data-bs-target="#newOrderModal">
+            <button class="btn btn-outline-primary w-100 text-start" data-bs-toggle="modal" data-bs-target="#newOrderModal">
               <i class="bi bi-plus-circle me-2"></i>Nueva orden de producción
             </button>
             <a href="#secMisOrdenes" class="btn btn-outline-secondary w-100 text-start">
@@ -340,23 +345,20 @@
           </div>
         </div>
 
-        <!-- Contacto / Soporte -->
+        <!-- Soporte -->
         <div class="card mb-4 shadow-sm">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="bi bi-envelope-paper me-2" style="color:var(--primary);"></i>Contactar a
-              HebraTech</h6>
+            <h6 class="mb-0"><i class="bi bi-envelope-paper me-2" style="color:var(--primary);"></i>Contactar a HebraTech</h6>
             <span class="badge" style="background:var(--bg-light);color:var(--primary);font-size:0.68rem;">
               <i class="bi bi-clock me-1"></i>Resp. en &lt; 2 h
             </span>
           </div>
           <div class="card-body p-3">
             <div class="d-flex gap-2 mb-3 flex-wrap">
-              <a href="mailto:hebratech@gmail.com?subject=Consulta%20Portal%20Cliente"
-                class="btn btn-sm btn-outline-primary flex-fill">
+              <a href="mailto:hebratech@gmail.com?subject=Consulta%20Portal%20Cliente" class="btn btn-sm btn-outline-primary flex-fill">
                 <i class="bi bi-envelope me-1"></i>Correo directo
               </a>
-              <a href="https://wa.me/573016540378" target="_blank" class="btn btn-sm flex-fill"
-                style="border:1px solid #25D366;color:#25D366;">
+              <a href="https://wa.me/573016540378" target="_blank" class="btn btn-sm flex-fill" style="border:1px solid #25D366;color:#25D366;">
                 <i class="bi bi-whatsapp me-1"></i>WhatsApp
               </a>
             </div>
@@ -374,8 +376,7 @@
               </div>
               <div class="mb-2">
                 <label class="form-label">Mensaje</label>
-                <textarea class="form-control" rows="4" id="contactMensaje"
-                  placeholder="Describe tu consulta..."></textarea>
+                <textarea class="form-control" rows="4" id="contactMensaje" placeholder="Describe tu consulta..."></textarea>
               </div>
               <button class="btn btn-primary w-100" onclick="enviarContacto()">
                 <i class="bi bi-send me-1"></i>Enviar mensaje
@@ -383,12 +384,9 @@
             </div>
             <div id="contactConfirm" class="text-center py-3 d-none">
               <div style="font-size:2.5rem;">✅</div>
-              <div style="font-family:var(--ff-display);font-size:1rem;color:var(--primary-dark);margin-top:8px;">
-                ¡Mensaje enviado!</div>
-              <div class="small text-muted mt-1">Te responderemos a <strong>{{ usuario.correoElectronico }}</strong> en
-                menos de 2 horas.</div>
-              <button class="btn btn-outline-primary btn-sm mt-3" onclick="resetContactForm()">Enviar otro
-                mensaje</button>
+              <div style="font-family:var(--ff-display);font-size:1rem;color:var(--primary-dark);margin-top:8px;">¡Mensaje enviado!</div>
+              <div class="small text-muted mt-1">Te responderemos a <strong>{{ usuario.correoElectronico }}</strong> en menos de 2 horas.</div>
+              <button class="btn btn-outline-primary btn-sm mt-3" onclick="resetContactForm()">Enviar otro mensaje</button>
             </div>
           </div>
         </div>
@@ -398,7 +396,7 @@
   </div>
 
 
-  <!-- ══ MODAL — Nueva Orden de Producción (conectado al backend) ══ -->
+  <!-- ══ MODAL — Nueva Orden ══ -->
   <div class="modal fade" id="newOrderModal" tabindex="-1" aria-labelledby="newOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
@@ -414,8 +412,7 @@
           </div>
 
           <div class="modal-body">
-            <p class="text-muted small mb-4">Completa los campos para registrar tu orden en el sistema de producción.
-            </p>
+            <p class="text-muted small mb-4">Completa los campos para registrar tu orden en el sistema de producción.</p>
             <div class="row g-3">
 
               <!-- Producto -->
@@ -449,7 +446,7 @@
                 <div class="invalid-feedback">Ingresa una cantidad válida.</div>
               </div>
 
-              <!-- Precio unitario (solo lectura) -->
+              <!-- Precio unitario -->
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Precio Unitario</label>
                 <div class="input-group">
@@ -459,33 +456,26 @@
                 </div>
               </div>
 
-              <!-- Subtotal calculado -->
+              <!-- Subtotal -->
               <div class="col-md-6 d-flex align-items-end">
                 <div class="p-3 rounded-3 w-100 d-flex justify-content-between align-items-center"
                   style="background-color:rgba(57,91,100,0.08);border:1px dashed var(--primary);">
-                  <span class="fw-bold text-uppercase"
-                    style="font-size:0.8rem;color:var(--primary-dark);">Subtotal:</span>
+                  <span class="fw-bold text-uppercase" style="font-size:0.8rem;color:var(--primary-dark);">Subtotal:</span>
                   <span class="h5 mb-0 fw-bold text-primary" id="modalSubtotalDisplay">$0</span>
                 </div>
               </div>
 
-                <div class="col-12 col-md-6">
-                  <div class="rango-fechas-container">
-                    <label for="o-fecha-rango" class="rango-fechas-title">Fecha Estimada (Rango) *</label>
-                    <div class="input-group">
-                      <!-- Icono de calendario decorativo a la izquierda del campo -->
-                      <span class="input-group-text bg-white"><i class="bi bi-calendar-range"></i></span>
-                      <input 
-                        type="text" 
-                        id="o-fecha-rango" 
-                        name="fecha_rango" 
-                        class="form-control" 
-                        placeholder="Seleccionar período..." 
-                        required 
-                      />
-                    </div>
+              <!-- Selector de Rango de Fechas (Etapas) -->
+              <div class="col-12 col-md-6">
+                <div class="rango-fechas-container">
+                  <label for="o-fecha-rango" class="rango-fechas-title fw-semibold mb-2">Fecha Estimada (Rango) *</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-calendar-range"></i></span>
+                    <input type="text" id="o-fecha-rango" name="fecha_rango" class="form-control"
+                      placeholder="Seleccionar período..." required />
                   </div>
                 </div>
+              </div>
 
               <!-- Instrucciones -->
               <div class="col-12">
@@ -511,121 +501,80 @@
   </div>
 
 
- <!-- ══ MODAL — Editar perfil ══ -->
-<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
-      <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
-        <h5 class="modal-title" style="font-family:var(--ff-display);">
-          <i class="bi bi-person-gear me-2" style="color:var(--primary);"></i>Mi perfil
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="d-flex align-items-center gap-3 mb-4">
-          <div class="profile-avatar-large">{{ usuario.nombre|first|upper }}</div>
-          <div>
-            <div style="font-family:var(--ff-display);font-size:1.1rem;font-weight:600;">
-              {{ usuario.nombre }} {{ usuario.apellido|default:"" }}
+  <!-- ══ MODAL — Editar perfil ══ -->
+  <div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
+        <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+          <h5 class="modal-title" style="font-family:var(--ff-display);">
+            <i class="bi bi-person-gear me-2" style="color:var(--primary);"></i>Mi perfil
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center gap-3 mb-4">
+            <div class="profile-avatar-large">{{ usuario.nombre|first|upper }}</div>
+            <div>
+              <div style="font-family:var(--ff-display);font-size:1.1rem;font-weight:600;">
+                {{ usuario.nombre }} {{ usuario.apellido|default:"" }}
+              </div>
+              <div class="text-muted" style="font-size:0.8rem;">
+                {{ cliente.empresa|default:cliente.nombre }} · Cliente
+              </div>
             </div>
-            <div class="text-muted" style="font-size:0.8rem;">
-              {{ cliente.empresa|default:cliente.nombre }} · Cliente
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nombre</label>
+              <input type="text" class="form-control" value="{{ usuario.nombre }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Empresa</label>
+              <input type="text" class="form-control" value="{{ cliente.empresa|default:'—' }}" disabled
+                style="background:var(--bg-light);">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Correo electrónico</label>
+              <input type="email" class="form-control" value="{{ usuario.correoElectronico }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Teléfono</label>
+              <input type="tel" class="form-control" value="{{ usuario.telefono|default:'' }}"
+                placeholder="+57 300 000 0000">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ciudad</label>
+              <input type="text" class="form-control" value="{{ cliente.ciudad|default:'' }}" placeholder="Bogotá">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Dirección de entrega</label>
+              <input type="text" class="form-control" value="{{ cliente.direccion|default:'' }}"
+                placeholder="Calle / Carrera / Avenida...">
             </div>
           </div>
         </div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Nombre</label>
-            <input type="text" class="form-control" value="{{ usuario.nombre }}">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Empresa</label>
-            <input type="text" class="form-control" value="{{ cliente.empresa|default:'—' }}" disabled style="background:var(--bg-light);">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Correo electrónico</label>
-            <input type="email" class="form-control" value="{{ usuario.correoElectronico }}">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Teléfono</label>
-            <input type="tel" class="form-control" value="{{ usuario.telefono|default:'' }}" placeholder="+57 300 000 0000">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Ciudad</label>
-            <input type="text" class="form-control" value="{{ cliente.ciudad|default:'' }}" placeholder="Bogotá">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Dirección de entrega</label>
-            <input type="text" class="form-control" value="{{ cliente.direccion|default:'' }}" placeholder="Calle / Carrera / Avenida...">
-          </div>
+        <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+            <i class="bi bi-check-lg me-1"></i>Guardar cambios
+          </button>
         </div>
-      </div>
-      <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-          <i class="bi bi-check-lg me-1"></i>Guardar cambios
-        </button>
       </div>
     </div>
   </div>
-</div>
-
-
+<!-- ══ SCRIPTS Y DEPENDENCIAS EXTERNAS ══ -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- JQuery (Requerido por DateRangePicker) -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <!-- Moment.js (Manejo de Fechas) -->
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/locale/es.js"></script>
+  <!-- DateRangePicker Plugin JS -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+  <!-- ══ TU PROPIO ARCHIVO JAVASCRIPT LIMPIO ══ -->
+
   <script src="{% static 'js/cliente.js' %}"></script>
-  <script>
-    function actualizarPrecio() {
-      const select = document.getElementById('modalProducto');
-      const option = select.options[select.selectedIndex];
-      const precio = option ? parseFloat(option.getAttribute('data-precio')) || 0 : 0;
-      document.getElementById('modalPrecioDisplay').value = precio ? precio.toLocaleString('es-CO') : '';
-      actualizarSubtotal();
-    }
-
-    function actualizarSubtotal() {
-      const select = document.getElementById('modalProducto');
-      const option = select.options[select.selectedIndex];
-      const precio = option ? parseFloat(option.getAttribute('data-precio')) || 0 : 0;
-      const cantidad = parseInt(document.getElementById('modalCantidad').value) || 0;
-      const subtotal = precio * cantidad;
-      document.getElementById('modalSubtotalDisplay').textContent =
-        '$' + subtotal.toLocaleString('es-CO');
-    }
-  </script>
-  <!-- Asegúrate de tener estas librerías cargadas en tu proyecto para que funcione -->
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-
-<script>
-  $(function() {
-    $('#o-fecha-rango').daterangepicker({
-      autoUpdateInput: false, // Evita que ponga una fecha por defecto antes de hacer clic
-      locale: {
-        format: 'YYYY-MM-DD',
-        applyLabel: 'Aplicar',
-        cancelLabel: 'Limpiar',
-        fromLabel: 'Desde',
-        toLabel: 'Hasta',
-        daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
-        monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-        firstDay: 1
-      }
-    });
-
-    // Acción cuando el usuario selecciona el rango y le da "Aplicar"
-    $('#o-fecha-rango').on('apply.daterangepicker', function(ev, picker) {
-        $(this).val(picker.startDate.format('YYYY-MM-DD') + '  hasta  ' + picker.endDate.format('YYYY-MM-DD'));
-    });
-
-    // Acción si el usuario limpia el campo
-    $('#o-fecha-rango').on('cancel.daterangepicker', function(ev, picker) {
-        $(this).val('');
-    });
-  });
-</script>
-
 </body>
-
 </html>

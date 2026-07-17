@@ -49,17 +49,11 @@
         <p>Control de productos, órdenes y avance de producción en tiempo real</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-outline" onclick="exportarCSV()">
+        <button class="btn btn-outline" style="color: white; background-color: red;" onclick="exportarCSV()">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
-          Exportar
-        </button>
-        <button class="btn btn-dark" onclick="abrirModalProducto()">
-          + Nuevo Producto
-        </button>
-        <button class="btn btn-primary" onclick="abrirModalOrden()">
-          🗒 Nueva Orden
+          Exportar PDF
         </button>
       </div>
     </div>
@@ -186,108 +180,10 @@
       </div>
     </div>
 
-  </div> </div> <div class="modal-backdrop" id="modal-producto">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
-      <button class="modal-close" onclick="cerrarModalProducto()">×</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="producto-id" />
-      <div class="form-row">
-        <div class="form-group">
-          <label>Nombre *</label>
-          <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
-        </div>
-        <div class="form-group">
-          <label>Categoría *</label>
-          <select id="prod-categoria">
-            <option value="">Seleccionar...</option>
-            <option>Camisa</option>
-            <option>Pantalón</option>
-            <option>Uniforme</option>
-            <option>Chaqueta</option>
-            <option>Accesorio</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Precio</label>
-          <input id="prod-precio" type="number" value="0" min="0" step="0.01" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group full">
-          <label>Descripción *</label>
-          <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
-    </div>
-  </div>
-</div>
+  
 
 
-<div class="modal-backdrop" id="modal-orden">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
-      <button class="modal-close" onclick="cerrarModalOrden()">×</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="orden-id" />
-      <div class="form-row">
-        <div class="form-group">
-          <label>Producto *</label>
-          <select id="o-producto"></select>
-        </div>
-        <div class="form-group">
-          <label>Cantidad Requerida *</label>
-          <input id="o-cantidad" type="number" value="1" min="1" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group full">
-          <label>Descripción *</label>
-          <input id="o-descripcion" type="text" placeholder="Ej: Lote camisetas básicas — orden Éxito" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Fecha Inicio *</label>
-          <input id="o-fecha-inicio" type="date" />
-        </div>
-        <div class="form-group">
-          <label>Fecha Estimada Fin *</label>
-          <input id="o-fecha-fin" type="date" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Costo Estimado</label>
-          <input id="o-costo-estimado" type="number" value="" min="0" step="0.01" placeholder="Opcional" />
-        </div>
-        <div class="form-group">
-          <label>Estado</label>
-          <select id="o-estado">
-            <option>Pendiente</option>
-            <option>En Progreso</option>
-            <option>Completado</option>
-            <option>Detenido</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
-    </div>
-  </div>
-</div>
+
 
 <div class="toast" id="toast"></div>
 

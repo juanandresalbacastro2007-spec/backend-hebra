@@ -726,3 +726,30 @@ window.addEventListener('DOMContentLoaded', () => {
   renderSedesTable();
 });
 
+
+
+  $(function() {
+    $('#o-fecha-rango').daterangepicker({
+      autoUpdateInput: false, // Evita que ponga una fecha por defecto antes de hacer clic
+      locale: {
+        format: 'YYYY-MM-DD',
+        applyLabel: 'Aplicar',
+        cancelLabel: 'Limpiar',
+        fromLabel: 'Desde',
+        toLabel: 'Hasta',
+        daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
+        monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        firstDay: 1
+      }
+    });
+
+    // Acción cuando el usuario selecciona el rango y le da "Aplicar"
+    $('#o-fecha-rango').on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('YYYY-MM-DD') + '  hasta  ' + picker.endDate.format('YYYY-MM-DD'));
+    });
+
+    // Acción si el usuario limpia el campo
+    $('#o-fecha-rango').on('cancel.daterangepicker', function(ev, picker) {
+        $(this).val('');
+    });
+  });

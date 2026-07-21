@@ -1,12 +1,12 @@
 from pathlib import Path
 import os
+from decouple import config
 
 # Raíz del proyecto: backend-hebra/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = 'django-insecure-u4pp=fbxptdt#zn2-uoq%&hfpl6v)ufd$qs640a#p56ggqejty'
-
-DEBUG = True
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = []
 
@@ -60,7 +60,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'hebratech',
         'USER': 'root',
-        'PASSWORD': '12345',
+        'PASSWORD': '',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }
@@ -102,6 +102,12 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+<<<<<<< HEAD
 EMAIL_HOST_USER = 'jorgeformulaone@gmail.com'
 EMAIL_HOST_PASSWORD = 'gxmc jxks ztpp qeqq'
 DEFAULT_FROM_EMAIL = 'HebraTech <jorgeformulaone@gmail.com>'
+=======
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = f'HebraTech <{EMAIL_HOST_USER}>'
+>>>>>>> 87893a73b5c0166782694dd182741d0a1723c177

@@ -360,10 +360,6 @@ def produccion_placeholder(request):
     return redirect('produccion_portal')
 
 
-@admin_required
-def proveedores_placeholder(request):
-    return redirect('proveedores')
-
 
 # ── Exportar Órdenes a Excel ──────────────────────────────────
 @admin_required

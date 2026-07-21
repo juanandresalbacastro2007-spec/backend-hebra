@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,94 +20,198 @@
     }
   </style>
 </head>
+
 <body>
 
-<div class="main">
+  <div class="main">
 
-  <header class="topbar">
-    <div class="topbar-left">
-      <span class="live-badge">
-        <span class="live-dot"></span>
-        Sistema En Vivo
-      </span>
-      <span class="live-datetime" id="live-datetime"></span>
-    </div>
-    <div class="topbar-right">
-      <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
-        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-        </svg>
-        Volver
-      </button>
-    </div>
-  </header>
-
-  <div class="content">
-
-    <div class="page-header">
-      <div class="page-title-wrap">
-        <h1>👕 Módulo de Producción</h1>
-        <p>Control de productos, órdenes y avance de producción en tiempo real</p>
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="live-badge">
+          <span class="live-dot"></span>
+          Sistema En Vivo
+        </span>
+        <span class="live-datetime" id="live-datetime"></span>
       </div>
-      <div class="header-actions">
-        <button class="btn btn-outline" style="color: white; background-color: red;" onclick="exportarCSV()">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      <div class="topbar-right">
+        <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          Exportar PDF
+          Volver
         </button>
       </div>
-    </div>
+    </header>
 
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon teal">👕</div>
-        <div>
-          <div class="kpi-val" id="kpi-productos">—</div>
-          <div class="kpi-lbl">Tipos de Producto</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon green">✅</div>
-        <div>
-          <div class="kpi-val" id="kpi-completadas">—</div>
-          <div class="kpi-lbl">Órdenes Completadas</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon orange">⏳</div>
-        <div>
-          <div class="kpi-val" id="kpi-proceso">—</div>
-          <div class="kpi-lbl">En Progreso</div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon red">🔖</div>
-        <div>
-          <div class="kpi-val" id="kpi-pendientes">—</div>
-          <div class="kpi-lbl">Pendientes</div>
-        </div>
-      </div>
-    </div>
+    <div class="content">
 
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
-      <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
-    </div>
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <h1>👕 Módulo de Producción</h1>
+          <p>Control de productos, órdenes y avance de producción en tiempo real</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" onclick="exportarCSV()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Exportar
+          </button>
+          <button class="btn btn-dark" onclick="abrirModalProducto()">
+            + Nuevo Producto
+          </button>
+          <button class="btn btn-primary" onclick="abrirModalOrden()">
+            🗒 Nueva Orden
+          </button>
+        </div>
+      </div>
 
-    <div id="tab-productos" class="tab-content active">
-      <div class="table-card">
-        <div class="table-toolbar">
-          <h3>Productos Registrados</h3>
-          <div class="toolbar-right">
-            <div class="search-wrap">
-              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              <input id="search-productos" type="text" placeholder="Buscar producto..." oninput="filtrarProductos()" />
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon teal">👕</div>
+          <div>
+            <div class="kpi-val" id="kpi-productos">—</div>
+            <div class="kpi-lbl">Tipos de Producto</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green">✅</div>
+          <div>
+            <div class="kpi-val" id="kpi-completadas">—</div>
+            <div class="kpi-lbl">Órdenes Completadas</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon orange">⏳</div>
+          <div>
+            <div class="kpi-val" id="kpi-proceso">—</div>
+            <div class="kpi-lbl">En Progreso</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon red">🔖</div>
+          <div>
+            <div class="kpi-val" id="kpi-pendientes">—</div>
+            <div class="kpi-lbl">Pendientes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
+        <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
+      </div>
+
+      <div id="tab-productos" class="tab-content active">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <h3>Productos Registrados</h3>
+            <div class="toolbar-right">
+              <div class="search-wrap">
+                <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input id="search-productos" type="text" placeholder="Buscar producto..."
+                  oninput="filtrarProductos()" />
+              </div>
+              <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
+                <option value="">Todas las categorías</option>
+                <option>Camisa</option>
+                <option>Pantalón</option>
+                <option>Uniforme</option>
+                <option>Chaqueta</option>
+                <option>Accesorio</option>
+              </select>
             </div>
-            <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
-              <option value="">Todas las categorías</option>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-productos">
+              <tr>
+                <td colspan="5" style="text-align:center;padding:30px">
+                  <span class="spinner"></span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-ordenes" class="tab-content">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <h3>Órdenes de Producción</h3>
+            <div class="toolbar-right">
+              <div class="search-wrap">
+                <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
+              </div>
+              <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
+                <option value="">Todos los estados</option>
+                <option>Pendiente</option>
+                <option>En Progreso</option>
+                <option>Completado</option>
+                <option>Detenido</option>
+              </select>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Producto</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Est. Fin</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ordenes">
+              <tr>
+                <td colspan="8" style="text-align:center;padding:30px">
+                  <span class="spinner"></span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="modal-backdrop" id="modal-producto">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
+        <button class="modal-close" onclick="cerrarModalProducto()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="producto-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
+          </div>
+          <div class="form-group">
+            <label>Categoría *</label>
+            <select id="prod-categoria">
+              <option value="">Seleccionar...</option>
               <option>Camisa</option>
               <option>Pantalón</option>
               <option>Uniforme</option>
@@ -115,40 +220,69 @@
             </select>
           </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Descripción</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-productos">
-            <tr>
-              <td colspan="5" style="text-align:center;padding:30px">
-                <span class="spinner"></span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio</label>
+            <input id="prod-precio" type="number" value="0" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Descripción *</label>
+            <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
       </div>
     </div>
+  </div>
 
-    <div id="tab-ordenes" class="tab-content">
-      <div class="table-card">
-        <div class="table-toolbar">
-          <h3>Órdenes de Producción</h3>
-          <div class="toolbar-right">
-            <div class="search-wrap">
-              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
-            </div>
-            <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
-              <option value="">Todos los estados</option>
+
+  <div class="modal-backdrop" id="modal-orden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
+        <button class="modal-close" onclick="cerrarModalOrden()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="orden-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Producto *</label>
+            <select id="o-producto"></select>
+          </div>
+          <div class="form-group">
+            <label>Cantidad Requerida *</label>
+            <input id="o-cantidad" type="number" value="1" min="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Descripción *</label>
+            <input id="o-descripcion" type="text" placeholder="Ej: Lote camisetas básicas — orden Éxito" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha Inicio *</label>
+            <input id="o-fecha-inicio" type="date" />
+          </div>
+          <div class="form-group">
+            <label>Fecha Estimada Fin *</label>
+            <input id="o-fecha-fin" type="date" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Costo Estimado</label>
+            <input id="o-costo-estimado" type="number" value="" min="0" step="0.01" placeholder="Opcional" />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="o-estado">
               <option>Pendiente</option>
               <option>En Progreso</option>
               <option>Completado</option>
@@ -156,38 +290,101 @@
             </select>
           </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Producto</th>
-              <th>Descripción</th>
-              <th>Cantidad</th>
-              <th>Fecha Inicio</th>
-              <th>Fecha Est. Fin</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-ordenes">
-            <tr>
-              <td colspan="8" style="text-align:center;padding:30px">
-                <span class="spinner"></span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
       </div>
     </div>
+  </div>
 
-  
+  <div class="toast" id="toast"></div>
 
+  <script src="{% static 'js/produccion.js' %}"></script>
+<!-- CONTROL DE DUPLICADOS EN TIEMPO REAL -->
+<script>
+  // Sobrescribimos la función guardarProducto() con la ruta corregida (/produccion/productos/)
+  async function guardarProducto() {
+      // 1. Obtener valores del formulario
+      const idProducto = document.getElementById('producto-id').value;
+      const nombre = document.getElementById('prod-nombre').value.trim();
+      const categoria = document.getElementById('prod-categoria').value;
+      const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+      const descripcion = document.getElementById('prod-descripcion').value.trim();
 
+      // 2. Validación Frontend básica
+      if (!nombre || !categoria || !descripcion) {
+          mostrarAlertaToast("Por favor, completa todos los campos obligatorios (*).", "error");
+          return;
+      }
 
+      // 3. Empaquetar datos
+      const datosProducto = {
+          nombre: nombre,
+          categoria: categoria,
+          precio: precio,
+          descripcion: descripcion
+      };
 
-<div class="toast" id="toast"></div>
+      // 4. Determinar URL y Método HTTP usando tu prefijo confirmado: /produccion/
+      const url = idProducto ? `/produccion/productos/${idProducto}/` : '/produccion/productos/';
+      const metodo = idProducto ? 'PUT' : 'POST';
 
-<script src="{% static 'js/produccion.js' %}"></script>
+      try {
+          const response = await fetch(url, {
+              method: metodo,
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(datosProducto)
+          });
+
+          const data = await response.json();
+
+          // 5. Validar respuesta HTTP de Django
+          if (!response.ok) {
+              // Si Django devuelve error (como el 400 de duplicado), lanzamos la excepción
+              throw new Error(data.error || 'Ocurrió un error al procesar la solicitud.');
+          }
+
+          // 6. Si todo sale bien
+          mostrarAlertaToast(idProducto ? '¡Producto actualizado con éxito!' : '¡Producto creado con éxito!', 'success');
+         
+          // Cerramos el modal usando la función ya existente en tu archivo produccion.js
+          if (typeof cerrarModalProducto === 'function') {
+              cerrarModalProducto();
+          }
+
+          // Esperar 1.5 segundos para que lean el Toast y recargar para pintar la tabla actualizada
+          setTimeout(() => {
+              location.reload();
+          }, 1500);
+
+      } catch (error) {
+          // Captura el mensaje de duplicado enviado por Django y lo muestra en el Toast rojo
+          mostrarAlertaToast(error.message, 'error');
+      }
+  }
+
+  // Función para manejar visualmente tu elemento de Toast en pantalla
+  function mostrarAlertaToast(mensaje, tipo = 'success') {
+      const toast = document.getElementById('toast');
+      if (!toast) {
+          alert(mensaje); // Fallback de emergencia por si el div no responde
+          return;
+      }
+     
+      toast.textContent = mensaje;
+     
+      // Aplica las clases CSS según corresponda (success o error)
+      toast.className = `toast show ${tipo}`;
+     
+      // Ocultar automáticamente tras 4 segundos
+      setTimeout(() => {
+          toast.className = 'toast';
+      }, 4000);
+  }
+</script>
 
 </body>
-</html>
+</html> 

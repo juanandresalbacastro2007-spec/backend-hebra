@@ -16,6 +16,12 @@ admin_required = login_required_rol(rol_esperado='administrador', session_key='u
 admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
 
 
+@admin_required
+def lista_proveedores(request):
+    # Esta es tu vista real que cargará el HTML limpio de proveedores
+    return render(request, 'proveedores/proveedores.html')
+
+
 @admin_required_api
 @require_POST
 def cambiar_estado_proveedor(request, id):
@@ -39,7 +45,7 @@ def cambiar_estado_proveedor(request, id):
 def listar_proveedores(request):
     proveedores = Proveedor.objects.all().order_by('-fechaRegistro')
     form = ProveedorForm()
-    return render(request, 'administrador/proveedores.html', {
+    return render(request, 'proveedores/proveedores.html', {
         'proveedores': proveedores, 
         'form': form
     })
@@ -60,7 +66,7 @@ def crear_proveedor(request):
             return redirect('proveedores')
     
     form = ProveedorForm()
-    return render(request, 'administrador/proveedores.html', {
+    return render(request, 'proveedores/proveedores.html', {
         'form': form,
         'proveedores': Proveedor.objects.all().order_by('-fechaRegistro')
     })
@@ -80,7 +86,7 @@ def editar_proveedor(request, id):
         form = ProveedorForm(instance=proveedor)
     
     proveedores = Proveedor.objects.all().order_by('-fechaRegistro')
-    return render(request, 'administrador/proveedores.html', {
+    return render(request, 'proveedores/proveedores.html', {
         'form': form,
         'proveedores': proveedores
     })

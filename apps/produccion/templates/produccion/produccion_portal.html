@@ -1,269 +1,390 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
-  <head>
-    <title>Proveedores</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<html lang="es">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous" />
-    <link rel="stylesheet" href="{% static 'css/proveedores/proveedores.css' %}">
-  </head>
-  <body style="background-color: #A5C9CA;">
-    <body style="background-color: #A5C9CA;">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Producción | Heebra-Tech</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}" />
+  <style>
+    .live-datetime {
+      color: #4a6070;
+      font-size: 12.5px;
+      font-weight: 500;
+      margin-left: 14px;
+      padding-left: 14px;
+      border-left: 1px solid #1e4158;
+      white-space: nowrap;
+    }
+  </style>
+</head>
 
-  <!-- ✅ Botón volver fijo esquina superior izquierda -->
-  <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
-    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-    </svg>
-    Volver
-  </button>
+<body>
 
-  <div class="w-100 min-vh-100" style="background-color: #A5C9CA;">
-    <div class="w-100 min-vh-100" style="background-color: #A5C9CA;">
-      <header class="container mt-4 mb-4">
-        <div class="row justify-content-center">
-          <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-5 py-4 px-5 bg-white text-center">
-              <span class="text-uppercase tracking-wider fw-bold small d-block mb-1 text-primary" style="letter-spacing: 3px; font-size: 0.7rem;">PANEL DE CONTROL</span>
-              <h1 class="fw-bold text-dark h3 mb-2">Directorio de Proveedores Textiles</h1>
-              <p class="text-muted small mb-0 mx-auto" style="max-width: 550px;">Consulte las fichas de contacto, NIT y estados de sincronización de sus proveedores en tiempo real.</p>
-            </div>
+  <div class="main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="live-badge">
+          <span class="live-dot"></span>
+          Sistema En Vivo
+        </span>
+        <span class="live-datetime" id="live-datetime"></span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Volver
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <h1>👕 Módulo de Producción</h1>
+          <p>Control de productos, órdenes y avance de producción en tiempo real</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" onclick="exportarCSV()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Exportar
+          </button>
+          <button class="btn btn-dark" onclick="abrirModalProducto()">
+            + Nuevo Producto
+          </button>
+          <button class="btn btn-primary" onclick="abrirModalOrden()">
+            🗒 Nueva Orden
+          </button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon teal">👕</div>
+          <div>
+            <div class="kpi-val" id="kpi-productos">—</div>
+            <div class="kpi-lbl">Tipos de Producto</div>
           </div>
         </div>
-      </header>
-
-      <section class="container mt-4">
-        <div class="row m-0" style="height: 70vh;">
-          
-          <!-- Panel izquierdo: Lista de proveedores -->
-          <div class="col-lg-4 h-100 p-0">
-            <div class="card border-0 h-100 d-flex flex-column rounded-start-4 rounded-end-0" style="background-color: #1A2F3B;">
-              <div class="p-3">
-                <h6 class="text-white opacity-75">PROVEEDORES REGISTRADOS</h6>
-                
-                <button type="button" class="btn btn-primary w-100 mb-3 rounded-3" data-bs-toggle="modal" data-bs-target="#modalAgregarProveedor">
-                  Agregar
-                </button>
-                
-                <input type="text" id="campoBusqueda" class="form-control rounded-3" placeholder="Buscar...">
-              </div>
-              
-              <div class="flex-grow-1 overflow-auto p-2">
-                <div class="nav flex-column nav-pills" role="tablist">
-                    {% for p in proveedores %}
-                    <button class="nav-link text-start border-0 mb-1 text-white {% if forloop.first %}active{% endif %}" 
-                            data-bs-toggle="pill" data-bs-target="#tab-{{ p.idProveedor }}">
-                        <div class="d-flex align-items-center gap-2">
-                        <span class="rounded-circle" style="width: 14px; height: 14px; flex-shrink: 0; {% if p.estado == 'activo' %}background-color: #28a745;{% else %}background-color: #dc3545;{% endif %}"></span>
-                        <div>
-                            <strong>{{ p.nombreEmpresa }}</strong>
-                            <small class="d-block text-white-50">NIT: {{ p.nit }}</small>
-                        </div>
-                        </div>
-                    </button>
-                    {% endfor %}
-                </div>
-              </div>
-            </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green">✅</div>
+          <div>
+            <div class="kpi-val" id="kpi-completadas">—</div>
+            <div class="kpi-lbl">Órdenes Completadas</div>
           </div>
-
-          <!-- Panel derecho: Contenido del proveedor seleccionado -->
-          <div class="col-lg-8 h-100 p-0">
-            <div class="tab-content h-100">
-              {% for p in proveedores %}
-              <div class="tab-pane fade h-100 {% if forloop.first %}show active{% endif %}" id="tab-{{ p.idProveedor }}" role="tabpanel">
-                <div class="card border-0 shadow rounded-4 p-4 bg-white h-100 overflow-auto">
-                  
-                  <!-- Header con estado y ID -->
-                  <div class="d-flex justify-content-between align-items-start mb-4">
-                        <div>
-                            <h4 class="fw-bold text-dark mb-1">{{ p.nombreEmpresa }}</h4>
-                            <p class="text-muted small mb-0">Registrado el: {{ p.fechaRegistro|date:"d/m/Y" }}</p>
-                        </div>
-                        
-                        <div class="text-end text-muted small">
-                            <p class="mb-1"><strong>ID Proveedor:</strong> #{{ p.idProveedor }}</p>
-                            <p class="mb-0"><strong>ID Usuario Asoc.:</strong> #{{ p.idUsuario }}</p>
-                        </div>
-                    </div>
-
-                  <hr class="my-3">
-
-                  <!-- Información Principal -->
-                  <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                      <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Contacto Principal</label>
-                      <div class="text-dark fw-semibold">{{ p.nombreContacto }}</div>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Número de Identificación (NIT)</label>
-                      <div class="text-dark fw-semibold">{{ p.nit }}</div>
-                    </div>
-                  </div>
-
-                  <!-- Información de Contacto -->
-                  <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                      <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Correo Electrónico</label>
-                      <div class="text-dark">
-                        <a href="mailto:{{ p.correo }}" class="text-decoration-none">{{ p.correo }}</a>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Teléfono de Línea</label>
-                      <div class="text-dark fw-semibold">{{ p.telefono }}</div>
-                    </div>
-                  </div>
-
-                  <!-- Dirección -->
-                  <div class="row g-4 mb-4">
-                    <div class="col-12">
-                      <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Dirección</label>
-                      <div class="text-dark">{{ p.direccion }}</div>
-                    </div>
-                  </div>
-
-                  <!-- Botones de Acción -->
-                  <div class="border-top pt-4 mt-4">
-                    <div class="d-flex gap-2">
-                      <button type="button" class="btn btn-sm btn-primary rounded-3" data-bs-toggle="modal" data-bs-target="#modalEditarProveedor-{{ p.idProveedor }}">
-                        ✏️ Editar
-                      </button>
-                      <a href="{% url 'eliminar_proveedor' p.idProveedor %}" class="btn btn-sm btn-danger rounded-3" onclick="return confirm('¿Desactivar este proveedor?')">
-                        🗑️ Desactivar
-                      </a>
-                    </div>
-                  </div>
-
-                  
-                  
-
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-
         </div>
-      </section>
-
-      <!-- MODALES PARA EDITAR CADA PROVEEDOR -->
-      {% for p in proveedores %}
-      <div class="modal fade" id="modalEditarProveedor-{{ p.idProveedor }}" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Editar Proveedor: {{ p.nombreEmpresa }}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{% url 'editar_proveedor' p.idProveedor %}">
-              {% csrf_token %}
-              <div class="modal-body">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label">Nombre Empresa</label>
-                    <input type="text" name="nombreEmpresa" class="form-control" value="{{ p.nombreEmpresa }}" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">NIT</label>
-                    <input type="text" name="nit" class="form-control" value="{{ p.nit }}" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Contacto</label>
-                    <input type="text" name="nombreContacto" class="form-control" value="{{ p.nombreContacto }}" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Teléfono</label>
-                    <input type="text" name="telefono" class="form-control" value="{{ p.telefono }}" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label">Correo</label>
-                    <input type="email" name="correo" class="form-control" value="{{ p.correo }}" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label">Dirección</label>
-                    <textarea name="direccion" class="form-control" rows="3" required>{{ p.direccion }}</textarea>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label">Estado</label>
-                    <select name="estado" class="form-select" required>
-                      <option value="activo" {% if p.estado == "activo" %}selected{% endif %}>ACTIVO</option>
-                      <option value="inactivo" {% if p.estado == "inactivo" %}selected{% endif %}>INACTIVO</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-              </div>
-            </form>
+        <div class="kpi-card">
+          <div class="kpi-icon orange">⏳</div>
+          <div>
+            <div class="kpi-val" id="kpi-proceso">—</div>
+            <div class="kpi-lbl">En Progreso</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon red">🔖</div>
+          <div>
+            <div class="kpi-val" id="kpi-pendientes">—</div>
+            <div class="kpi-lbl">Pendientes</div>
           </div>
         </div>
       </div>
-      {% endfor %}
-    </div>
 
-    <!-- MODAL PARA AGREGAR PROVEEDOR -->
-    <div class="modal fade" id="modalAgregarProveedor" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Agregar Nuevo Proveedor</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <form method="POST" action="{% url 'crear_proveedor' %}">
-            {% csrf_token %}
-            <div class="modal-body">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label">Nombre Empresa</label>
-                  <input type="text" name="nombreEmpresa" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">NIT</label>
-                  <input type="text" name="nit" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Contacto</label>
-                  <input type="text" name="nombreContacto" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Teléfono</label>
-                  <input type="text" name="telefono" class="form-control" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label">Correo</label>
-                  <input type="email" name="correo" class="form-control" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label">Dirección</label>
-                  <textarea name="direccion" class="form-control" rows="3" required></textarea>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Estado</label>
-                  <select name="estado" class="form-select" required>
-                    <option value="">Selecciona estado</option>
-                    <option value="activo">ACTIVO</option>
-                    <option value="inactivo">INACTIVO</option>
-                  </select>
-                </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
+        <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
+      </div>
+
+      <div id="tab-productos" class="tab-content active">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <h3>Productos Registrados</h3>
+            <div class="toolbar-right">
+              <div class="search-wrap">
+                <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input id="search-productos" type="text" placeholder="Buscar producto..."
+                  oninput="filtrarProductos()" />
               </div>
+              <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
+                <option value="">Todas las categorías</option>
+                <option>Camisa</option>
+                <option>Pantalón</option>
+                <option>Uniforme</option>
+                <option>Chaqueta</option>
+                <option>Accesorio</option>
+              </select>
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary">Guardar Proveedor</button>
-            </div>
-          </form>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-productos">
+              <tr>
+                <td colspan="5" style="text-align:center;padding:30px">
+                  <span class="spinner"></span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+
+      <div id="tab-ordenes" class="tab-content">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <h3>Órdenes de Producción</h3>
+            <div class="toolbar-right">
+              <div class="search-wrap">
+                <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
+              </div>
+              <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
+                <option value="">Todos los estados</option>
+                <option>Pendiente</option>
+                <option>En Progreso</option>
+                <option>Completado</option>
+                <option>Detenido</option>
+              </select>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Producto</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Est. Fin</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ordenes">
+              <tr>
+                <td colspan="8" style="text-align:center;padding:30px">
+                  <span class="spinner"></span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
+  </div>
+  <div class="modal-backdrop" id="modal-producto">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
+        <button class="modal-close" onclick="cerrarModalProducto()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="producto-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
+          </div>
+          <div class="form-group">
+            <label>Categoría *</label>
+            <select id="prod-categoria">
+              <option value="">Seleccionar...</option>
+              <option>Camisa</option>
+              <option>Pantalón</option>
+              <option>Uniforme</option>
+              <option>Chaqueta</option>
+              <option>Accesorio</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio</label>
+            <input id="prod-precio" type="number" value="0" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Descripción *</label>
+            <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-    <script src="{% static 'js/proveedores.js' %}"></script>
 
-    
-  </body>
-</html>
+  <div class="modal-backdrop" id="modal-orden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
+        <button class="modal-close" onclick="cerrarModalOrden()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="orden-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Producto *</label>
+            <select id="o-producto"></select>
+          </div>
+          <div class="form-group">
+            <label>Cantidad Requerida *</label>
+            <input id="o-cantidad" type="number" value="1" min="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Descripción *</label>
+            <input id="o-descripcion" type="text" placeholder="Ej: Lote camisetas básicas — orden Éxito" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha Inicio *</label>
+            <input id="o-fecha-inicio" type="date" />
+          </div>
+          <div class="form-group">
+            <label>Fecha Estimada Fin *</label>
+            <input id="o-fecha-fin" type="date" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Costo Estimado</label>
+            <input id="o-costo-estimado" type="number" value="" min="0" step="0.01" placeholder="Opcional" />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="o-estado">
+              <option>Pendiente</option>
+              <option>En Progreso</option>
+              <option>Completado</option>
+              <option>Detenido</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="{% static 'js/produccion.js' %}"></script>
+<!-- CONTROL DE DUPLICADOS EN TIEMPO REAL -->
+<script>
+  // Sobrescribimos la función guardarProducto() con la ruta corregida (/produccion/productos/)
+  async function guardarProducto() {
+      // 1. Obtener valores del formulario
+      const idProducto = document.getElementById('producto-id').value;
+      const nombre = document.getElementById('prod-nombre').value.trim();
+      const categoria = document.getElementById('prod-categoria').value;
+      const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+      const descripcion = document.getElementById('prod-descripcion').value.trim();
+
+      // 2. Validación Frontend básica
+      if (!nombre || !categoria || !descripcion) {
+          mostrarAlertaToast("Por favor, completa todos los campos obligatorios (*).", "error");
+          return;
+      }
+
+      // 3. Empaquetar datos
+      const datosProducto = {
+          nombre: nombre,
+          categoria: categoria,
+          precio: precio,
+          descripcion: descripcion
+      };
+
+      // 4. Determinar URL y Método HTTP usando tu prefijo confirmado: /produccion/
+      const url = idProducto ? `/produccion/productos/${idProducto}/` : '/produccion/productos/';
+      const metodo = idProducto ? 'PUT' : 'POST';
+
+      try {
+          const response = await fetch(url, {
+              method: metodo,
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(datosProducto)
+          });
+
+          const data = await response.json();
+
+          // 5. Validar respuesta HTTP de Django
+          if (!response.ok) {
+              // Si Django devuelve error (como el 400 de duplicado), lanzamos la excepción
+              throw new Error(data.error || 'Ocurrió un error al procesar la solicitud.');
+          }
+
+          // 6. Si todo sale bien
+          mostrarAlertaToast(idProducto ? '¡Producto actualizado con éxito!' : '¡Producto creado con éxito!', 'success');
+         
+          // Cerramos el modal usando la función ya existente en tu archivo produccion.js
+          if (typeof cerrarModalProducto === 'function') {
+              cerrarModalProducto();
+          }
+
+          // Esperar 1.5 segundos para que lean el Toast y recargar para pintar la tabla actualizada
+          setTimeout(() => {
+              location.reload();
+          }, 1500);
+
+      } catch (error) {
+          // Captura el mensaje de duplicado enviado por Django y lo muestra en el Toast rojo
+          mostrarAlertaToast(error.message, 'error');
+      }
+  }
+
+  // Función para manejar visualmente tu elemento de Toast en pantalla
+  function mostrarAlertaToast(mensaje, tipo = 'success') {
+      const toast = document.getElementById('toast');
+      if (!toast) {
+          alert(mensaje); // Fallback de emergencia por si el div no responde
+          return;
+      }
+     
+      toast.textContent = mensaje;
+     
+      // Aplica las clases CSS según corresponda (success o error)
+      toast.className = `toast show ${tipo}`;
+     
+      // Ocultar automáticamente tras 4 segundos
+      setTimeout(() => {
+          toast.className = 'toast';
+      }, 4000);
+  }
+</script>
+
+</body>
+</html> 

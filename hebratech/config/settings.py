@@ -102,12 +102,11 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-<<<<<<< HEAD
+
 EMAIL_HOST_USER = 'jorgeformulaone@gmail.com'
 EMAIL_HOST_PASSWORD = 'gxmc jxks ztpp qeqq'
 DEFAULT_FROM_EMAIL = 'HebraTech <jorgeformulaone@gmail.com>'
-=======
+
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = f'HebraTech <{EMAIL_HOST_USER}>'
->>>>>>> 87893a73b5c0166782694dd182741d0a1723c177

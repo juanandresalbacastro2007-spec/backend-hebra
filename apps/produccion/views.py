@@ -96,20 +96,27 @@ def ordenes(request):
         lista = Produccion.objects.select_related('idProducto').all()
         return JsonResponse([produccion_to_dict(o) for o in lista], safe=False)
 
+    # POST → crear nueva orden de producción
     data = json.loads(request.body)
-    try:
-        producto = Producto.objects.get(pk=data['idProducto'])
-    except Producto.DoesNotExist:
-        return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+
+    # Validar que el producto no tenga ya una orden activa (Pendiente / En Progreso)
+    activo = Produccion.objects.filter(
+        idProducto_id=data['idProducto'],
+        estado__in=['Pendiente', 'En Progreso']
+    ).exists()
+    if activo:
+        return JsonResponse(
+            {'error': 'Este producto ya tiene otro proceso activo.'},
+            status=400
+        )
 
     o = Produccion.objects.create(
-        idOrden           = data.get('idOrden', None),
-        idProducto        = producto,
-        descripcion       = data.get('descripcion', ''),
+        idOrden           = data.get('idOrden'),
+        idProducto_id     = data['idProducto'],
+        descripcion       = data['descripcion'],
         cantidadRequerida = data['cantidadRequerida'],
         fechaInicio       = data['fechaInicio'],
         fechaEstimadaFin  = data['fechaEstimadaFin'],
-        fechaRealFin      = data.get('fechaRealFin', None),
         estado            = data.get('estado', 'Pendiente'),
     )
     return JsonResponse(produccion_to_dict(o), status=201)
@@ -129,6 +136,20 @@ def orden_detalle(request, id):
 
     if request.method == 'PUT':
         data = json.loads(request.body)
+
+        nuevo_estado = data.get('estado', o.estado)
+        if nuevo_estado in ['Pendiente', 'En Progreso'] and o.estado not in ['Pendiente', 'En Progreso']:
+            # Se está reactivando esta orden: verificar que no haya otra activa del mismo producto
+            otro_activo = Produccion.objects.filter(
+                idProducto=o.idProducto,
+                estado__in=['Pendiente', 'En Progreso']
+            ).exclude(pk=o.pk).exists()
+            if otro_activo:
+                return JsonResponse(
+                    {'error': f'"{o.idProducto.nombre}" ya tiene otro proceso activo.'},
+                    status=400
+                )
+
         for campo in ['idOrden', 'descripcion', 'cantidadRequerida',
                       'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin', 'estado']:
             if campo in data:

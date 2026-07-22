@@ -6,7 +6,11 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # --- CONFIGURACIÓN DE SEGURIDAD ---
+<<<<<<< Updated upstream
 SECRET_KEY = 'b3nr3w#uf=1ue=4dwct^m9_6=%5mft+ei7&_+w+egjw%jv!zdg'
+=======
+SECRET_KEY = 'k7$mQz2!wR9xN4pL#6vB8jT1cA5yE0hF3dS+gU_oI-kM7nZ2qX'
+>>>>>>> Stashed changes
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -22,11 +26,11 @@ INSTALLED_APPS = [
     # Tus aplicaciones
     'apps.usuarios',
     'apps.clientes',
-    'apps.produccion', 
+    'apps.produccion',
     'apps.administrador',
     'apps.proveedores',
     'apps.operarios',
-    'apps.core', 
+    'apps.core',
 ]
 
 MIDDLEWARE = [
@@ -109,8 +113,14 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
+<<<<<<< Updated upstream
 
 EMAIL_HOST_USER = 'hebratechoficial@gmail.com'
 EMAIL_HOST_PASSWORD = ''
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
 
+=======
+EMAIL_HOST_USER = 'yefersonidarraga7@gmail.com'
+EMAIL_HOST_PASSWORD = 'ojogstdnkjqpuucx'
+DEFAULT_FROM_EMAIL = 'HebraTech <yefersonidarraga7@gmail.com>'
+>>>>>>> Stashed changes

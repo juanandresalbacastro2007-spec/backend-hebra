@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Producto(models.Model):
     CATEGORIA_CHOICES = [
         ('Camisa',    'Camisa'),
@@ -19,6 +20,9 @@ class Producto(models.Model):
         db_table = 'productos'
         managed  = False
 
+    def __str__(self):
+        return self.nombre
+
 
 class Produccion(models.Model):
     ESTADO_CHOICES = [
@@ -28,16 +32,23 @@ class Produccion(models.Model):
         ('Detenido',    'Detenido'),
     ]
 
-    idProduccion       = models.AutoField(primary_key=True)
-    idOrden            = models.IntegerField(null=True, blank=True, db_column='idOrden')
-    idProducto         = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='idProducto')
-    descripcion        = models.CharField(max_length=255)
-    cantidadRequerida  = models.IntegerField()
-    fechaInicio        = models.DateField()
-    fechaEstimadaFin   = models.DateField()
-    fechaRealFin       = models.DateField(null=True, blank=True) # ◄ Ya existe en la BD
-    estado             = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
+    idProduccion      = models.AutoField(primary_key=True)
+    idOrden           = models.IntegerField(null=True, blank=True, db_column='idOrden')
+    idProducto        = models.ForeignKey(
+        Producto,
+        on_delete=models.CASCADE,
+        db_column='idProducto',
+    )
+    descripcion       = models.CharField(max_length=255)
+    cantidadRequerida = models.IntegerField()
+    fechaInicio       = models.DateField()
+    fechaEstimadaFin  = models.DateField()
+    fechaRealFin      = models.DateField(null=True, blank=True)
+    estado            = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
 
     class Meta:
         db_table = 'produccion'
         managed  = False
+
+    def __str__(self):
+        return f'Orden #{self.idProduccion} — {self.idProducto.nombre}'

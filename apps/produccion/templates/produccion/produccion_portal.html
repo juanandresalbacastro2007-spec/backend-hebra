@@ -52,6 +52,7 @@
           <p>Control de productos, órdenes y avance de producción en tiempo real</p>
         </div>
         <div class="header-actions">
+<<<<<<< Updated upstream
           <button class="btn btn-outline"  style="color: white; background-color: red;" onclick="exportarCSV()">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -63,6 +64,11 @@
             + Nuevo Producto
           </button>
           
+=======
+          <button class="btn btn-dark" onclick="abrirModalProducto()">
+            + Nuevo Producto
+          </button>
+>>>>>>> Stashed changes
         </div>
       </div>
 
@@ -193,6 +199,7 @@
 
     </div>
   </div>
+
   <div class="modal-backdrop" id="modal-producto">
     <div class="modal">
       <div class="modal-header">
@@ -242,90 +249,90 @@
   <div class="toast" id="toast"></div>
 
   <script src="{% static 'js/produccion.js' %}"></script>
-<!-- CONTROL DE DUPLICADOS EN TIEMPO REAL -->
-<script>
-  // Sobrescribimos la función guardarProducto() con la ruta corregida (/produccion/productos/)
-  async function guardarProducto() {
-      // 1. Obtener valores del formulario
-      const idProducto = document.getElementById('producto-id').value;
-      const nombre = document.getElementById('prod-nombre').value.trim();
-      const categoria = document.getElementById('prod-categoria').value;
-      const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
-      const descripcion = document.getElementById('prod-descripcion').value.trim();
+  <!-- CONTROL DE DUPLICADOS EN TIEMPO REAL -->
+  <script>
+    // Sobrescribimos la función guardarProducto() con la ruta corregida (/produccion/productos/)
+    async function guardarProducto() {
+        // 1. Obtener valores del formulario
+        const idProducto = document.getElementById('producto-id').value;
+        const nombre = document.getElementById('prod-nombre').value.trim();
+        const categoria = document.getElementById('prod-categoria').value;
+        const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+        const descripcion = document.getElementById('prod-descripcion').value.trim();
 
-      // 2. Validación Frontend básica
-      if (!nombre || !categoria || !descripcion) {
-          mostrarAlertaToast("Por favor, completa todos los campos obligatorios (*).", "error");
-          return;
-      }
+        // 2. Validación Frontend básica
+        if (!nombre || !categoria || !descripcion) {
+            mostrarAlertaToast("Por favor, completa todos los campos obligatorios (*).", "error");
+            return;
+        }
 
-      // 3. Empaquetar datos
-      const datosProducto = {
-          nombre: nombre,
-          categoria: categoria,
-          precio: precio,
-          descripcion: descripcion
-      };
+        // 3. Empaquetar datos
+        const datosProducto = {
+            nombre: nombre,
+            categoria: categoria,
+            precio: precio,
+            descripcion: descripcion
+        };
 
-      // 4. Determinar URL y Método HTTP usando tu prefijo confirmado: /produccion/
-      const url = idProducto ? `/produccion/productos/${idProducto}/` : '/produccion/productos/';
-      const metodo = idProducto ? 'PUT' : 'POST';
+        // 4. Determinar URL y Método HTTP usando tu prefijo confirmado: /produccion/
+        const url = idProducto ? `/produccion/productos/${idProducto}/` : '/produccion/productos/';
+        const metodo = idProducto ? 'PUT' : 'POST';
 
-      try {
-          const response = await fetch(url, {
-              method: metodo,
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(datosProducto)
-          });
+        try {
+            const response = await fetch(url, {
+                method: metodo,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(datosProducto)
+            });
 
-          const data = await response.json();
+            const data = await response.json();
 
-          // 5. Validar respuesta HTTP de Django
-          if (!response.ok) {
-              // Si Django devuelve error (como el 400 de duplicado), lanzamos la excepción
-              throw new Error(data.error || 'Ocurrió un error al procesar la solicitud.');
-          }
+            // 5. Validar respuesta HTTP de Django
+            if (!response.ok) {
+                // Si Django devuelve error (como el 400 de duplicado), lanzamos la excepción
+                throw new Error(data.error || 'Ocurrió un error al procesar la solicitud.');
+            }
 
-          // 6. Si todo sale bien
-          mostrarAlertaToast(idProducto ? '¡Producto actualizado con éxito!' : '¡Producto creado con éxito!', 'success');
-         
-          // Cerramos el modal usando la función ya existente en tu archivo produccion.js
-          if (typeof cerrarModalProducto === 'function') {
-              cerrarModalProducto();
-          }
+            // 6. Si todo sale bien
+            mostrarAlertaToast(idProducto ? '¡Producto actualizado con éxito!' : '¡Producto creado con éxito!', 'success');
 
-          // Esperar 1.5 segundos para que lean el Toast y recargar para pintar la tabla actualizada
-          setTimeout(() => {
-              location.reload();
-          }, 1500);
+            // Cerramos el modal usando la función ya existente en tu archivo produccion.js
+            if (typeof cerrarModalProducto === 'function') {
+                cerrarModalProducto();
+            }
 
-      } catch (error) {
-          // Captura el mensaje de duplicado enviado por Django y lo muestra en el Toast rojo
-          mostrarAlertaToast(error.message, 'error');
-      }
-  }
+            // Esperar 1.5 segundos para que lean el Toast y recargar para pintar la tabla actualizada
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
 
-  // Función para manejar visualmente tu elemento de Toast en pantalla
-  function mostrarAlertaToast(mensaje, tipo = 'success') {
-      const toast = document.getElementById('toast');
-      if (!toast) {
-          alert(mensaje); // Fallback de emergencia por si el div no responde
-          return;
-      }
-     
-      toast.textContent = mensaje;
-     
-      // Aplica las clases CSS según corresponda (success o error)
-      toast.className = `toast show ${tipo}`;
-     
-      // Ocultar automáticamente tras 4 segundos
-      setTimeout(() => {
-          toast.className = 'toast';
-      }, 4000);
-  }
-</script>
+        } catch (error) {
+            // Captura el mensaje de duplicado enviado por Django y lo muestra en el Toast rojo
+            mostrarAlertaToast(error.message, 'error');
+        }
+    }
+
+    // Función para manejar visualmente tu elemento de Toast en pantalla
+    function mostrarAlertaToast(mensaje, tipo = 'success') {
+        const toast = document.getElementById('toast');
+        if (!toast) {
+            alert(mensaje); // Fallback de emergencia por si el div no responde
+            return;
+        }
+
+        toast.textContent = mensaje;
+
+        // Aplica las clases CSS según corresponda (success o error)
+        toast.className = `toast show ${tipo}`;
+
+        // Ocultar automáticamente tras 4 segundos
+        setTimeout(() => {
+            toast.className = 'toast';
+        }, 4000);
+    }
+  </script>
 
 </body>
-</html> 
+</html>

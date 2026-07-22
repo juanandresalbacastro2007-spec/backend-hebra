@@ -109,6 +109,6 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = 'jorgeformulaone@gmail.com'
-EMAIL_HOST_PASSWORD = 'kvve uyzo awzx urpd'
-DEFAULT_FROM_EMAIL = 'HebraTech <jorgeformulaone@gmail.com>'
+EMAIL_HOST_USER = 'hebratechoficial@gmail.com'
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'

@@ -1,15 +1,17 @@
 from pathlib import Path
 import os
-from decouple import config
 
+# --- RUTAS PRINCIPALES ---
 # Raíz del proyecto: backend-hebra/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
+# --- CONFIGURACIÓN DE SEGURIDAD ---
+SECRET_KEY = 'b3nr3w#uf=1ue=4dwct^m9_6=%5mft+ei7&_+w+egjw%jv!zdg'
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# --- APLICACIONES ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -17,6 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Tus aplicaciones
     'apps.usuarios',
     'apps.clientes',
     'apps.produccion', 
@@ -38,6 +41,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'hebratech.config.urls'
 
+# --- PLANTILLAS ---
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -55,6 +59,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hebratech.config.wsgi.application'
 
+# --- BASE DE DATOS ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -73,40 +78,37 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# --- LOCALIZACIÓN ---
 LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
 
-# Archivos estáticos (CSS, JS, imágenes)
+# --- ARCHIVOS ESTÁTICOS Y MEDIA ---
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-STATIC_ROOT = BASE_DIR / 'staticfiles'  # para collectstatic en producción
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Archivos de media (uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'hebratech' / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- PARCHE DE COMPATIBILIDAD PARA MARIADB/MYSQL ---
+# --- PARCHE DE COMPATIBILIDAD MARIADB/MYSQL ---
 import django.db.backends.mysql.base
 from django.db.backends.mysql.base import DatabaseFeatures
 
 DatabaseFeatures.can_return_rows_from_bulk_insert = False
 DatabaseFeatures.has_select_for_update_returning = False
 
+# --- CONFIGURACIÓN DE CORREO ELECTRÓNICO ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = 'jorgeformulaone@gmail.com'
-EMAIL_HOST_PASSWORD = 'gxmc jxks ztpp qeqq'
+EMAIL_HOST_PASSWORD = 'kvve uyzo awzx urpd'
 DEFAULT_FROM_EMAIL = 'HebraTech <jorgeformulaone@gmail.com>'
-
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = f'HebraTech <{EMAIL_HOST_USER}>'

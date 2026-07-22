@@ -18,6 +18,7 @@ from openpyxl.utils import get_column_letter
 
 from apps.core.decorators import login_required_rol
 
+
 # ── Decorador de protección por rol (centralizado en apps.core) ────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 

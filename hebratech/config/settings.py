@@ -109,6 +109,8 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
+
 EMAIL_HOST_USER = 'ssantiagocubides@gmail.com'
 EMAIL_HOST_PASSWORD = 'liip odei lkdy higw'
 DEFAULT_FROM_EMAIL = 'HebraTech <ssantiagocubides@gmail.com>'
+

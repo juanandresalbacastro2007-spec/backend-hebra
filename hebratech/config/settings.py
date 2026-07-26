@@ -6,14 +6,12 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # --- CONFIGURACIÓN DE SEGURIDAD ---
-<<<<<<< Updated upstream
-SECRET_KEY = 'b3nr3w#uf=1ue=4dwct^m9_6=%5mft+ei7&_+w+egjw%jv!zdg'
-=======
-SECRET_KEY = 'k7$mQz2!wR9xN4pL#6vB8jT1cA5yE0hF3dS+gU_oI-kM7nZ2qX'
->>>>>>> Stashed changes
+SECRET_KEY = 'khu0^e#r85^iv@0b6ddi*ld%(g$ta2fz_8(hn7wcm&zzsxjj7%'
+
+# Habilitar el modo de depuración para desarrollo local
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 # --- APLICACIONES ---
 INSTALLED_APPS = [
@@ -69,7 +67,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'hebratech',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': '12345',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }
@@ -113,14 +111,6 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-<<<<<<< Updated upstream
-
 EMAIL_HOST_USER = 'hebratechoficial@gmail.com'
-EMAIL_HOST_PASSWORD = ''
+EMAIL_HOST_PASSWORD = 'xbdw dide skml xgfn'
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
-
-=======
-EMAIL_HOST_USER = 'yefersonidarraga7@gmail.com'
-EMAIL_HOST_PASSWORD = 'ojogstdnkjqpuucx'
-DEFAULT_FROM_EMAIL = 'HebraTech <yefersonidarraga7@gmail.com>'
->>>>>>> Stashed changes

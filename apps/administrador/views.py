@@ -34,6 +34,7 @@ def admin_portal(request):
     total_ordenes = Orden.objects.count()
     ordenes_pendientes = Orden.objects.filter(estado='Pendiente').count()
     tareas_pendientes = AsignacionTarea.objects.filter(estado='Pendiente').count()
+    usuarios_pendientes = Usuario.objects.filter(estado='pendiente').count()
 
     ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
     ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
@@ -46,6 +47,7 @@ def admin_portal(request):
         'total_ordenes': total_ordenes,
         'ordenes_pendientes': ordenes_pendientes,
         'tareas_pendientes': tareas_pendientes,
+        'usuarios_pendientes': usuarios_pendientes,
         'ultimas_ordenes': ultimas_ordenes,
         'ultimas_asignaciones': ultimas_asignaciones,
     })
@@ -56,9 +58,15 @@ def admin_portal(request):
 def usuarios_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     usuarios = Usuario.objects.all().order_by('rol', 'nombre')
+
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro:
+        usuarios = usuarios.filter(estado=estado_filtro)
+
     return render(request, 'administrador/usuarios_lista.html', {
         'usuario': usuario,
         'usuarios': usuarios,
+        'estado_filtro': estado_filtro,
     })
 
 
@@ -79,6 +87,7 @@ def usuario_crear(request):
             return redirect('admin_usuario_crear')
 
         with connection.cursor() as cursor:
+            # Un usuario creado directamente por el admin queda activo de una
             cursor.execute("""
                 INSERT INTO usuarios
                     (nombre, apellido, correoElectronico, contrasena, telefono, rol, estado)
@@ -130,6 +139,33 @@ def usuario_editar(request, idUsuario):
         usuario_editar_obj.rol = rol
         usuario_editar_obj.estado = estado
         usuario_editar_obj.save()
+
+        # ── Aprobación de usuario pendiente ──────────────────────
+        # Si el admin le asigna un rol operativo (cliente/operario) y
+        # todavía no tiene su fila relacionada, se la creamos ahora.
+        # Esto cubre tanto usuarios recién registrados (rol='sin_asignar')
+        # como ediciones normales donde cambia el rol.
+        with connection.cursor() as cursor:
+            if rol == 'cliente':
+                cursor.execute(
+                    "SELECT idCliente FROM clientes WHERE idUsuario = %s", [idUsuario]
+                )
+                if cursor.fetchone() is None:
+                    cursor.execute("""
+                        INSERT INTO clientes (idUsuario, tipoCliente, nombre, correoElectronico, estado)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, [idUsuario, 'Natural', f'{nombre} {apellido}', correo, 'activo'])
+
+            elif rol == 'operario':
+                cursor.execute(
+                    "SELECT idOperario FROM operarios WHERE idUsuario = %s", [idUsuario]
+                )
+                if cursor.fetchone() is None:
+                    especialidad = request.POST.get('especialidad', 'General')
+                    cursor.execute("""
+                        INSERT INTO operarios (idUsuario, especialidad, fechaIngreso, estado)
+                        VALUES (%s, %s, CURDATE(), %s)
+                    """, [idUsuario, especialidad, 'activo'])
 
         messages.success(request, f'Usuario {nombre} actualizado correctamente.')
         return redirect('admin_usuarios')

@@ -32,9 +32,6 @@ class Usuario(models.Model):
     def __str__(self):
         return f'{self.nombre} {self.apellido}'
     
-    import secrets
-from datetime import timedelta
-from django.utils import timezone
 
 
 class PasswordResetToken(models.Model):

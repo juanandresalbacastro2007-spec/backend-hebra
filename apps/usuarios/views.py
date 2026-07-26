@@ -79,28 +79,16 @@ def registro_view(request):
             return render(request, 'usuarios/login.html')
 
         with connection.cursor() as cursor:
-            # 1. Crear el usuario base
             cursor.execute("""
                 INSERT INTO usuarios 
                     (nombre, apellido, correoElectronico, contrasena, rol, estado)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, [nombre, apellido, correo, make_password(contrasena), 'cliente', 'activo'])
+            """, [nombre, apellido, correo, make_password(contrasena), 'sin_asignar', 'pendiente'])
 
-            # 2. Tomar el idUsuario recién generado
-            id_usuario_nuevo = cursor.lastrowid
-
-            # 3. Crear automáticamente su fila correspondiente en clientes
-            cursor.execute("""
-                INSERT INTO clientes
-                    (idUsuario, tipoCliente, nombre, correoElectronico, estado)
-                VALUES (%s, %s, %s, %s, %s)
-            """, [id_usuario_nuevo, 'Natural', f'{nombre} {apellido}', correo, 'activo'])
-
-        messages.success(request, '¡Cuenta creada! Ya puedes iniciar sesión.')
+        messages.success(request, '¡Cuenta creada! Un administrador debe aprobarla antes de que puedas iniciar sesión.')
         return redirect('login')
 
     return redirect('login')
-
 
 def home_view(request):
     return render(request, 'usuarios/home.html')

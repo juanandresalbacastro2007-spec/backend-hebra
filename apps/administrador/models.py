@@ -8,10 +8,12 @@ class Usuario(models.Model):
         ('administrador', 'Administrador'),
         ('operario', 'Operario'),
         ('cliente', 'Cliente'),
+        ('sin_asignar', 'Sin asignar'),
     ]
     ESTADO_CHOICES = [
         ('activo', 'Activo'),
         ('inactivo', 'Inactivo'),
+        ('pendiente', 'Pendiente de aprobación'),
         ('reportado', 'Reportado'),
     ]
 
@@ -22,8 +24,8 @@ class Usuario(models.Model):
     contrasena = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, null=True, blank=True)
     direccion = models.CharField(max_length=255, null=True, blank=True)
-    rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='cliente')
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activo')
+    rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='sin_asignar')
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
 
     class Meta:
         db_table = 'usuarios'

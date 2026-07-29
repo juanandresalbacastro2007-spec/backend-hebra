@@ -760,15 +760,15 @@ window.addEventListener('DOMContentLoaded', () => {
 // Configuración regional de Moment en Español
 moment.locale('es');
 
-$(function() {
+(function() {
   const pickerInput = $('#o-fecha-rango');
 
-  // Rango por defecto (Desde hoy hasta dentro de 10 días)
+  // Rango por defecto solo para uso interno del picker (calendario, cálculo de etapas)
   const fechaInicial = moment();
   const fechaFinal = moment().add(10, 'days');
 
   pickerInput.daterangepicker({
-    autoUpdateInput: true,
+    autoUpdateInput: false, // 👈 CAMBIO CLAVE: ya no rellena el input solo
     startDate: fechaInicial,
     endDate: fechaFinal,
     locale: {
@@ -788,13 +788,12 @@ $(function() {
       const start = drp.startDate;
       const end = drp.endDate;
 
-      // EXCLUSIÓN: Si es exactamente el primer día seleccionado o el último, mantener color por defecto
       if (date.isSame(start, 'day') || date.isSame(end, 'day')) {
         return '';
       }
 
       const totalDays = end.diff(start, 'days') + 1;
-      
+
       const chunk = Math.floor(totalDays / 3);
       const remainder = totalDays % 3;
       const duracion1 = chunk + (remainder > 0 ? 1 : 0);
@@ -808,15 +807,15 @@ $(function() {
       if (date.isBetween(start, e1End, 'day', '[]')) return 'etapa-1-bg';
       if (date.isBetween(e2Start, e2End, 'day', '[]')) return 'etapa-2-bg';
       if (date.isBetween(e3Start, end, 'day', '[]')) return 'etapa-3-bg';
-      
+
       return '';
     }
   });
 
   const drp = pickerInput.data('daterangepicker');
 
-  // Asignar el valor inicial formateado en el input
-  pickerInput.val(fechaInicial.format('YYYY-MM-DD') + ' hasta ' + fechaFinal.format('YYYY-MM-DD'));
+  // ❌ ELIMINADA: pickerInput.val(fechaInicial.format(...) + ' hasta ' + fechaFinal.format(...));
+  // El input queda vacío mostrando el placeholder "Seleccionar período..."
 
   function actualizarLeyendasFooter() {
     const footer = drp.container.find('.drp-buttons');
@@ -832,12 +831,11 @@ $(function() {
     footer.prepend(legendHTML);
   }
 
-  // Inyectar leyendas al abrir por primera vez
   pickerInput.on('show.daterangepicker', function() {
     actualizarLeyendasFooter();
   });
 
-  // Modificar al aplicar cambios
+  // Aquí SÍ se llena el input, solo cuando el usuario aplica
   pickerInput.on('apply.daterangepicker', function(ev, picker) {
     $(this).val(picker.startDate.format('YYYY-MM-DD') + ' hasta ' + picker.endDate.format('YYYY-MM-DD'));
     actualizarLeyendasFooter();
@@ -847,7 +845,7 @@ $(function() {
     $(this).val('');
     drp.container.find('.etapas-legend-container').remove();
   });
-});
+})();
 
 // ── LÓGICA DE PRECIOS Y CALCULO DEL SUB-TOTAL EN EL MODAL ──
 let precioSeleccionado = 0;

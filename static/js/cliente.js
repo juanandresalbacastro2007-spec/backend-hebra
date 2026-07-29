@@ -763,14 +763,9 @@ moment.locale('es');
 (function() {
   const pickerInput = $('#o-fecha-rango');
 
-  // Rango por defecto solo para uso interno del picker (calendario, cálculo de etapas)
-  const fechaInicial = moment();
-  const fechaFinal = moment().add(10, 'days');
-
   pickerInput.daterangepicker({
-    autoUpdateInput: false, // 👈 CAMBIO CLAVE: ya no rellena el input solo
-    startDate: fechaInicial,
-    endDate: fechaFinal,
+    autoUpdateInput: false,
+    // ❌ Ya no pasamos startDate/endDate con fechaInicial/fechaFinal
     locale: {
       format: 'YYYY-MM-DD',
       applyLabel: 'Aplicar',
@@ -787,6 +782,9 @@ moment.locale('es');
 
       const start = drp.startDate;
       const end = drp.endDate;
+
+      // Si aún no hay un rango real seleccionado (start === end), no pintar nada
+      if (start.isSame(end, 'day')) return '';
 
       if (date.isSame(start, 'day') || date.isSame(end, 'day')) {
         return '';
@@ -814,9 +812,6 @@ moment.locale('es');
 
   const drp = pickerInput.data('daterangepicker');
 
-  // ❌ ELIMINADA: pickerInput.val(fechaInicial.format(...) + ' hasta ' + fechaFinal.format(...));
-  // El input queda vacío mostrando el placeholder "Seleccionar período..."
-
   function actualizarLeyendasFooter() {
     const footer = drp.container.find('.drp-buttons');
     footer.find('.etapas-legend-container').remove();
@@ -835,7 +830,6 @@ moment.locale('es');
     actualizarLeyendasFooter();
   });
 
-  // Aquí SÍ se llena el input, solo cuando el usuario aplica
   pickerInput.on('apply.daterangepicker', function(ev, picker) {
     $(this).val(picker.startDate.format('YYYY-MM-DD') + ' hasta ' + picker.endDate.format('YYYY-MM-DD'));
     actualizarLeyendasFooter();

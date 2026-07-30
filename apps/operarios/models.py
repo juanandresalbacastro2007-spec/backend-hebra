@@ -80,6 +80,8 @@ class AsignacionTarea(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     prioridad = models.CharField(max_length=10, default='Media')
     horasEstimadas = models.DecimalField(max_digits=5, decimal_places=2)
+    tipoPrenda = models.CharField(max_length=50, null=True, blank=True)
+    cantidadPrendas = models.IntegerField(null=True, blank=True)
     horasReales = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     class Meta:
@@ -99,9 +101,8 @@ class Incidencia(models.Model):
 
     tipoIncidencia = models.CharField(max_length=50)
     descripcion = models.TextField()
-    # Se ha eliminado el campo 'periodoEvaluado' para coincidir con la base de datos
     estado = models.CharField(max_length=30, default='Generado')
-    fechaGeneracion = models.DateField()          # ✅ sin auto_now_add — lo pasamos manualmente
+    fechaGeneracion = models.DateField()
     fechaRevision = models.DateField(null=True, blank=True)
 
     class Meta:

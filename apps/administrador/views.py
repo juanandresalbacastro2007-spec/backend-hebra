@@ -7,7 +7,8 @@ from django.db import connection
 from django.db.models import Q
 from .models import (
     Usuario, Operario, Tarea,
-    AsignacionTarea, Orden, Cliente, Incidencia
+    AsignacionTarea, Orden, Cliente, Incidencia,
+    TIEMPOS_ESTANDAR_MINUTOS,
 )
 import openpyxl
 from django.http import HttpResponse
@@ -87,7 +88,6 @@ def usuario_crear(request):
             return redirect('admin_usuario_crear')
 
         with connection.cursor() as cursor:
-            # Un usuario creado directamente por el admin queda activo de una
             cursor.execute("""
                 INSERT INTO usuarios
                     (nombre, apellido, correoElectronico, contrasena, telefono, rol, estado)
@@ -140,11 +140,6 @@ def usuario_editar(request, idUsuario):
         usuario_editar_obj.estado = estado
         usuario_editar_obj.save()
 
-        # ── Aprobación de usuario pendiente ──────────────────────
-        # Si el admin le asigna un rol operativo (cliente/operario) y
-        # todavía no tiene su fila relacionada, se la creamos ahora.
-        # Esto cubre tanto usuarios recién registrados (rol='sin_asignar')
-        # como ediciones normales donde cambia el rol.
         with connection.cursor() as cursor:
             if rol == 'cliente':
                 cursor.execute(
@@ -278,11 +273,23 @@ def tarea_asignar(request):
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
         prioridad = request.POST.get('prioridad', 'Media')
+        tipo_prenda = request.POST.get('tipoPrenda')
+        cantidad = request.POST.get('cantidadPrendas')
         horas_estimadas = request.POST.get('horasEstimadas')
 
         try:
             tarea = Tarea.objects.get(idTarea=id_tarea)
             operario = Operario.objects.get(idOperario=id_operario)
+
+            cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
+
+            # Si no escribieron horas manualmente, se calculan solas:
+            # cantidad de prendas x minutos estándar del tipo / 60
+            if (not horas_estimadas or not horas_estimadas.strip()) and tipo_prenda and cantidad_int:
+                minutos_unidad = TIEMPOS_ESTANDAR_MINUTOS.get(tipo_prenda, 0)
+                horas_calculadas = round((cantidad_int * minutos_unidad) / 60, 2)
+            else:
+                horas_calculadas = horas_estimadas if horas_estimadas and horas_estimadas.strip() else None
 
             asignacion = AsignacionTarea(
                 idTarea=tarea,
@@ -290,7 +297,9 @@ def tarea_asignar(request):
                 descripcion=descripcion,
                 fechaInicio=fecha_inicio if fecha_inicio and fecha_inicio.strip() else None,
                 prioridad=prioridad,
-                horasEstimadas=horas_estimadas if horas_estimadas and horas_estimadas.strip() else None,
+                tipoPrenda=tipo_prenda or None,
+                cantidadPrendas=cantidad_int,
+                horasEstimadas=horas_calculadas,
                 estado='Pendiente'
             )
             asignacion.save()
@@ -308,6 +317,7 @@ def tarea_asignar(request):
         'usuario': usuario,
         'operarios': operarios,
         'tareas': tareas,
+        'tiempos_estandar': TIEMPOS_ESTANDAR_MINUTOS,
     })
 
 
@@ -318,8 +328,13 @@ def tarea_editar(request, idAsignacion):
         asignacion.descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fecha_inicio')
         horas_estimadas = request.POST.get('horas_estimadas')
+        tipo_prenda = request.POST.get('tipoPrenda')
+        cantidad = request.POST.get('cantidadPrendas')
+
         asignacion.fechaInicio = fecha_inicio if fecha_inicio and fecha_inicio.strip() else None
         asignacion.horasEstimadas = horas_estimadas if horas_estimadas and horas_estimadas.strip() else None
+        asignacion.tipoPrenda = tipo_prenda or None
+        asignacion.cantidadPrendas = int(cantidad) if cantidad and cantidad.strip() else None
         asignacion.prioridad = request.POST.get('prioridad')
         asignacion.estado = request.POST.get('estado')
         asignacion.save()
@@ -395,7 +410,6 @@ def incidencia_eliminar(request, idIncidencia):
 @admin_required
 def produccion_placeholder(request):
     return redirect('produccion_portal')
-
 
 
 # ── Exportar Órdenes a Excel ──────────────────────────────────

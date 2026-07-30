@@ -114,6 +114,8 @@ def api_tareas(request):
             'fechaFinalizacion': str(a.fechaFinalizacion) if a.fechaFinalizacion else None,
             'estado':            a.estado,
             'prioridad':         a.prioridad,
+            'tipoPrenda':        a.tipoPrenda,
+            'cantidadPrendas':   a.cantidadPrendas,
             'horasEstimadas':    float(a.horasEstimadas),
             'horasReales':       float(a.horasReales) if a.horasReales else None,
         }
@@ -124,7 +126,7 @@ def api_tareas(request):
 
 
 # ---------------------------------------------------------------------------
-# API — Registrar incidencia (Corregida)
+# API — Registrar incidencia
 # ---------------------------------------------------------------------------
 
 @operario_login_required_api
@@ -165,7 +167,6 @@ def api_guardar_reporte(request):
             idUsuario       = operario,
             tipoIncidencia  = tipo,
             descripcion     = descripcion,
-            # Se ha removido periodoEvaluado
             estado          = 'Generado',
             fechaGeneracion = date.today(),
         )
@@ -182,7 +183,7 @@ def api_guardar_reporte(request):
 
 
 # ---------------------------------------------------------------------------
-# API — Historial de reportes (Corregida)
+# API — Historial de reportes
 # ---------------------------------------------------------------------------
 
 @operario_login_required_api
@@ -201,7 +202,6 @@ def api_historial_reportes(request):
             'idIncidencia':    r.idIncidencia,
             'tipoIncidencia':  r.tipoIncidencia,
             'descripcion':     (r.descripcion[:100] + '...') if len(r.descripcion) > 100 else r.descripcion,
-            # Se ha removido periodoEvaluado
             'estado':          r.estado,
             'fechaGeneracion': str(r.fechaGeneracion),
             'fechaRevision':   str(r.fechaRevision) if r.fechaRevision else None,
@@ -252,7 +252,7 @@ def api_actualizar_estado(request, id_asignacion):
 
 
 # ---------------------------------------------------------------------------
-# API — Editar reporte (Corregida)
+# API — Editar reporte
 # ---------------------------------------------------------------------------
 
 @operario_login_required_api
@@ -304,7 +304,6 @@ def api_editar_reporte(request, id_incidencia):
     try:
         incidencia.tipoIncidencia  = tipo
         incidencia.descripcion     = descripcion
-        # Se ha removido periodoEvaluado
         incidencia.save()
     except Exception:
         logger.exception("Error al editar incidencia id=%s", id_incidencia)
@@ -351,7 +350,7 @@ def api_eliminar_reporte(request, id_incidencia):
     return JsonResponse({'ok': True, 'mensaje': 'Reporte eliminado correctamente'})
 
 
-# ── PDF — Generar y descargar incidencia (Corregida) ──────────────────────
+# ── PDF — Generar y descargar incidencia ──────────────────────
 @operario_login_required
 def generar_pdf_reporte(request, id_incidencia):
     operario = _get_operario_actual(request)
@@ -375,7 +374,6 @@ def generar_pdf_reporte(request, id_incidencia):
 
     story.append(Spacer(1, 0.5*cm))
 
-    # ── Paleta HebraTech ──────────────────────────────────────────────
     C_PURPLE = colors.HexColor('#7c3aed')
     C_PINK   = colors.HexColor('#db2777')
     C_LIGHT  = colors.HexColor('#f5f0ff')
@@ -416,13 +414,11 @@ def generar_pdf_reporte(request, id_incidencia):
         ]))
         return t
 
-    # ── Fecha ─────────────────────────────────────────────────────────
     if incidencia.fechaGeneracion and hasattr(incidencia.fechaGeneracion, 'strftime'):
         fecha_str = incidencia.fechaGeneracion.strftime('%d/%m/%Y')
     else:
         fecha_str = str(incidencia.fechaGeneracion) if incidencia.fechaGeneracion else datetime.now().strftime('%d/%m/%Y')
 
-    # ── ENCABEZADO ────────────────────────────────────────────────────
     story.append(Paragraph(
         "HebraTech",
         st('Brand', fontSize=26, leading=32, fontName='Helvetica-Bold',
@@ -443,7 +439,6 @@ def generar_pdf_reporte(request, id_incidencia):
         st('Fecha', fontSize=9, textColor=C_GRAY, alignment=TA_CENTER, spaceAfter=18)
     ))
 
-    # ── INFORMACIÓN DEL OPERARIO ──────────────────────────────────────
     story.append(bloque_encabezado('INFORMACIÓN DEL OPERARIO', C_PURPLE))
     story.append(bloque_filas([
         [Paragraph('Nombre:',       lbl), Paragraph(nombre_completo, val)],
@@ -451,7 +446,6 @@ def generar_pdf_reporte(request, id_incidencia):
     ]))
     story.append(Spacer(1, 0.5*cm))
 
-    # ── DETALLE DE LA INCIDENCIA (Sin período evaluado) ────────────────
     story.append(bloque_encabezado('DETALLE DE LA INCIDENCIA', C_PINK))
     story.append(bloque_filas([
         [Paragraph('Tipo de incidencia:', lbl), Paragraph(incidencia.tipoIncidencia or '—', val)],
@@ -460,7 +454,6 @@ def generar_pdf_reporte(request, id_incidencia):
     ]))
     story.append(Spacer(1, 0.4*cm))
 
-    # ── DESCRIPCIÓN ───────────────────────────────────────────────────
     story.append(bloque_encabezado('DESCRIPCIÓN DE LA INCIDENCIA', C_PURPLE))
     t_desc = Table(
         [[Paragraph(incidencia.descripcion or 'Sin descripción.',
@@ -477,7 +470,6 @@ def generar_pdf_reporte(request, id_incidencia):
     story.append(t_desc)
     story.append(Spacer(1, 1.2*cm))
 
-    # ── FIRMA ─────────────────────────────────────────────────────────
     story.append(Table([
         [Paragraph('_______________________________',
                    st('Ln', fontSize=10, alignment=TA_CENTER))],
@@ -489,7 +481,6 @@ def generar_pdf_reporte(request, id_incidencia):
     ], colWidths=[16*cm]))
     story.append(Spacer(1, 0.8*cm))
 
-    # ── PIE DE PÁGINA ─────────────────────────────────────────────────
     story.append(HRFlowable(width='100%', thickness=1, color=C_BORDER, spaceAfter=6))
     story.append(Paragraph(
         f"HebraTech  ·  Reporte #{incidencia.idIncidencia:04d}  ·  "

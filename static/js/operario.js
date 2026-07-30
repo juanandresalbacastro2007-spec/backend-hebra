@@ -4,6 +4,9 @@
  *   - Empty state se oculta/muestra correctamente
  *   - Botón ojo abre el modal de detalle
  *   - Contadores top bar se actualizan al arrastrar
+ * Nuevo:
+ *   - Tarjeta y modal de detalle muestran tipo de prenda y cantidad asignada
+ *   - Modal de detalle calcula días estimados y fecha de finalización (10h/día laboral)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,6 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
         historialReportes: '/operarios/api/reportes/',
         pdfReporte:        (id) => `/operarios/api/reporte/${id}/pdf/`,
     };
+
+    // ─── Constantes de negocio ─────────────────────────────────────
+    const HORAS_LABORALES_DIA = 10;
 
     // ─── Estado local ────────────────────────────────────────────────
     let completadasOcultas = false;
@@ -141,6 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const complejidadClass = `ht-badge-complex-${(tarea.complejidad || 'media').toLowerCase()}`;
         const prioClass        = `ht-badge-prio-${tarea.prioridad}`;
 
+        // Chip de cantidad de prendas (solo si la asignación tiene tipo/cantidad cargados)
+        const chipCantidad = (tarea.tipoPrenda && tarea.cantidadPrendas)
+            ? `<span class="ht-card-hours"><i class="bi bi-boxes"></i>${tarea.cantidadPrendas} ${tarea.tipoPrenda}</span>`
+            : '';
+
         div.innerHTML = `
             <div class="ht-card-header">
                 <span class="ht-card-name">${tarea.nombreTarea}</span>
@@ -155,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="ht-badge ${complejidadClass}">${tarea.complejidad || 'Media'}</span>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;">
+                    ${chipCantidad}
                     <span class="ht-card-hours"><i class="bi bi-clock"></i>${tarea.horasEstimadas}h</span>
                     <button class="ht-card-btn-detail" data-action="ver" title="Ver detalle">
                         <i class="bi bi-eye"></i>
@@ -205,12 +217,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. MODAL DETALLE DE TAREA
     // ═══════════════════════════════════════════════════════════════
 
+    // Calcula días laborales necesarios y la fecha estimada de finalización
+    // a partir de las horas estimadas, asumiendo jornadas de 10h.
+    function calcularEstimacionFinalizacion(fechaInicioStr, horasEstimadas) {
+        if (!fechaInicioStr || !horasEstimadas || Number(horasEstimadas) <= 0) return null;
+
+        const dias = Math.ceil(Number(horasEstimadas) / HORAS_LABORALES_DIA);
+
+        // Se parte del mediodía para evitar problemas de zona horaria al sumar días
+        const fecha = new Date(fechaInicioStr + 'T12:00:00');
+        fecha.setDate(fecha.getDate() + dias);
+
+        return {
+            dias,
+            fechaFin: fecha,
+        };
+    }
+
+    function formatearFecha(fecha) {
+        return fecha.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
     function abrirModalDetalle(tarea) {
         const label = document.getElementById('taskDetailModalLabel');
         const body  = document.getElementById('taskDetailBody');
         if (!label || !body) return;
 
         label.textContent = tarea.nombreTarea;
+
+        // Bloque opcional de prenda/cantidad — solo se muestra si la asignación lo tiene cargado
+        const bloquePrenda = (tarea.tipoPrenda && tarea.cantidadPrendas) ? `
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-shirt"></i> Tipo de prenda</div>
+                    <div class="ht-detail-value">${tarea.tipoPrenda}</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-boxes"></i> Cantidad asignada</div>
+                    <div class="ht-detail-value">${tarea.cantidadPrendas} unidades</div>
+                </div>` : '';
+
+        // Bloque de estimación de finalización (días laborales de 10h + fecha estimada)
+        const estimacion = calcularEstimacionFinalizacion(tarea.fechaInicio, tarea.horasEstimadas);
+        const bloqueEstimacion = estimacion ? `
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-calendar-range"></i> Días estimados</div>
+                    <div class="ht-detail-value">${estimacion.dias} día(s) (jornada de ${HORAS_LABORALES_DIA}h)</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-calendar-check"></i> Fecha estimada de fin</div>
+                    <div class="ht-detail-value">${formatearFecha(estimacion.fechaFin)}</div>
+                </div>` : '';
+
         body.innerHTML = `
             <div class="ht-detail-grid">
                 <div class="ht-detail-item">
@@ -229,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="ht-detail-label"><i class="bi bi-clock"></i> Horas estimadas</div>
                     <div class="ht-detail-value">${tarea.horasEstimadas}h</div>
                 </div>
+                ${bloquePrenda}
                 <div class="ht-detail-item">
                     <div class="ht-detail-label"><i class="bi bi-calendar"></i> Inicio</div>
                     <div class="ht-detail-value">${tarea.fechaInicio}</div>
@@ -237,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="ht-detail-label"><i class="bi bi-check2-circle"></i> Estado</div>
                     <div class="ht-detail-value">${tarea.estado}</div>
                 </div>
+                ${bloqueEstimacion}
             </div>
             <div class="ht-detail-desc">
                 <div class="ht-detail-label mb-2"><i class="bi bi-card-text"></i> Descripción</div>

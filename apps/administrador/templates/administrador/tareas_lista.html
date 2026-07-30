@@ -112,6 +112,8 @@
                 <th>Descripción</th>
                 <th>Fecha inicio</th>
                 <th>Horas est.</th>
+                <th>Tipo prenda</th>
+                <th>Cantidad</th>
                 <th>Prioridad</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -136,6 +138,8 @@
                 </td>
                 <td>{{ asig.fechaInicio }}</td>
                 <td>{{ asig.horasEstimadas }} h</td>
+                <td>{{ asig.tipoPrenda|default:"—" }}</td>
+                <td>{{ asig.cantidadPrendas|default:"—" }}</td>
                 <td>
                   {% if asig.prioridad == 'Urgente' %}
                   <span class="badge-ht badge-danger">Urgente</span>
@@ -199,6 +203,24 @@
                         </div>
 
                         <div class="mb-3">
+                          <label class="form-label fw-medium small">Tipo de prenda</label>
+                          <select name="tipoPrenda" class="form-select">
+                            <option value="">—</option>
+                            <option value="Camisas" {% if asig.tipoPrenda == 'Camisas' %}selected{% endif %}>Camisas</option>
+                            <option value="Pantalones" {% if asig.tipoPrenda == 'Pantalones' %}selected{% endif %}>Pantalones</option>
+                            <option value="Vestidos" {% if asig.tipoPrenda == 'Vestidos' %}selected{% endif %}>Vestidos</option>
+                            <option value="Chaquetas" {% if asig.tipoPrenda == 'Chaquetas' %}selected{% endif %}>Chaquetas</option>
+                            <option value="Bermudas" {% if asig.tipoPrenda == 'Bermudas' %}selected{% endif %}>Bermudas</option>
+                          </select>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-medium small">Cantidad de prendas</label>
+                          <input type="number" name="cantidadPrendas" class="form-control"
+                            value="{{ asig.cantidadPrendas|default:'' }}" placeholder="Ej: 300">
+                        </div>
+
+                        <div class="mb-3">
                           <label class="form-label fw-medium small">Horas Estimadas</label>
                           <input type="number" name="horas_estimadas" class="form-control"
                             value="{{ asig.horasEstimadas }}" placeholder="Ej: 8">
@@ -239,7 +261,7 @@
               </div>
               {% empty %}
               <tr>
-                <td colspan="9" class="text-center text-muted py-4">No hay tareas asignadas aún</td>
+                <td colspan="11" class="text-center text-muted py-4">No hay tareas asignadas aún</td>
               </tr>
               {% endfor %}
             </tbody>

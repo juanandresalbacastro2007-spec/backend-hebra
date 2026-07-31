@@ -313,8 +313,9 @@ body {
 .timeline li {
   display: flex;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 22px;
   padding-left: 0;
+  padding-bottom: 4px;
   position: relative;
 }
 .timeline li::before {
@@ -334,12 +335,14 @@ body {
   color: var(--inactive);
   min-width: 80px;
   padding-top: 2px;
+  line-height: 1.5;
 }
 .timeline-content {
   font-family: var(--ff-body);
   font-size: 0.83rem;
   color: var(--primary-dark);
   padding-left: 20px;
+  line-height: 1.6;
 }
 
 /* ── APROBACIÓN DE MUESTRA ── */
@@ -414,6 +417,8 @@ body {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.3px;
+  padding: 0.42em 0.85em;
+  line-height: 1.4;
 }
 .bg-info { background-color: #0ea5e9 !important; }
 

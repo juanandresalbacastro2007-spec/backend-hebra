@@ -332,10 +332,6 @@ function cerrarToast(id) {
     setTimeout(() => el.remove(), 400);
 }
 
-window.addEventListener('load', () => {
-    NOTIFICACIONES.forEach((n, i) => mostrarToast(n, i * 1200));
-});
-
 /* ══════════════════════════════════════════
    FORMULARIO DE CONTACTO
 ══════════════════════════════════════════ */

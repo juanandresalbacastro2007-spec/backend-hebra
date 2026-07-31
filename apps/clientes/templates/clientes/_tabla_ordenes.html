@@ -1,0 +1,93 @@
+{% if ordenes %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle mb-0" style="font-size:0.88rem;">
+    <thead class="table-light">
+      <tr>
+        <th class="ps-3"># Orden</th>
+        <th>Fecha</th>
+        <th>Cantidad</th>
+        <th>Subtotal</th>
+        <th>Entrega est.</th>
+        <th>Prioridad</th>
+        <th>Estado</th>
+        <th class="text-center">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for orden in ordenes %}
+      <tr>
+        <td class="ps-3"><strong>#{{ orden.idOrden }}</strong></td>
+        <td>{{ orden.fechaCreacion }}</td>
+        <td>{{ orden.cantidad|default:"—" }}</td>
+        <td>
+          {% if orden.cantidad and orden.precioUnitario %}
+          ${{ orden.cantidad|floatformat:0 }} × ${{ orden.precioUnitario|floatformat:0 }}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ orden.fechaEntregaEstimada|default:"—" }}</td>
+        <td>
+          {% if orden.prioridad == 'Urgente' %}
+          <span class="badge bg-danger">Urgente</span>
+          {% else %}
+          <span class="badge bg-secondary">Normal</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if orden.estado == 'Entregado' %}
+          <span class="badge bg-success">{{ orden.estado }}</span>
+          {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' %}
+          <span class="badge bg-info text-dark">{{ orden.estado }}</span>
+          {% elif orden.estado == 'Cancelado' %}
+          <span class="badge bg-danger">{{ orden.estado }}</span>
+          {% else %}
+          <span class="badge" style="background-color:#A5C9CA;color:#2C3333;">{{ orden.estado }}</span>
+          {% endif %}
+        </td>
+        <td class="text-center">
+          {% if orden.estado == 'Pendiente' %}
+          <a href="{% url 'editar_orden' orden.idOrden %}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+            data-bs-target="#deleteModal{{ orden.idOrden }}" title="Eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
+
+          <!-- Modal de eliminación -->
+          <div class="modal fade" id="deleteModal{{ orden.idOrden }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content" style="border-radius:14px;">
+                <div class="modal-body text-center p-4">
+                  <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2.5rem;"></i>
+                  <h5 class="mt-3">¿Eliminar orden #{{ orden.idOrden }}?</h5>
+                  <p class="text-muted small">Esta acción no se puede deshacer.</p>
+                  <form method="POST" action="{% url 'eliminar_orden' orden.idOrden %}">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <span class="text-muted small">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+  No tienes órdenes registradas aún.
+  <br>
+  <button class="btn btn-primary btn-sm mt-3" data-bs-toggle="modal" data-bs-target="#newOrderModal">
+    <i class="bi bi-plus-circle me-1"></i>Registrar primera orden
+  </button>
+</div>
+{% endif %}

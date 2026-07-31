@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    body { font-family: Helvetica, sans-serif; color: #2C3333; font-size: 13px; }
+    .header { border-bottom: 3px solid #395B64; padding-bottom: 15px; margin-bottom: 20px; }
+    .header h1 { color: #395B64; margin: 0; font-size: 22px; }
+    .header p { margin: 2px 0; color: #666; font-size: 11px; }
+    .info-box { width: 100%; margin-bottom: 20px; }
+    .info-box td { vertical-align: top; padding: 4px 0; }
+    table.datos { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table.datos th { background-color: #A5C9CA; color: #2C3333; padding: 8px; text-align: left; font-size: 11px; }
+    table.datos td { padding: 8px; border-bottom: 1px solid #E7F6F2; font-size: 12px; }
+    .total-row td { font-weight: bold; font-size: 15px; border-top: 2px solid #395B64; }
+    .footer { margin-top: 40px; font-size: 10px; color: #999; text-align: center; }
+</style>
+</head>
+<body>
+    <div class="header">
+        <h1>HebraTech</h1>
+        <p>Factura de venta — {{ factura.numeroFactura }}</p>
+        <p>Fecha de emisión: {{ factura.fechaEmision|date:"d/m/Y H:i" }}</p>
+    </div>
+
+    <table class="info-box">
+        <tr>
+            <td width="50%">
+                <strong>Cliente:</strong><br>
+                {{ orden.idCliente.nombre|default:orden.idCliente.empresa }}<br>
+                {{ orden.idCliente.correoElectronico }}<br>
+                {{ orden.idCliente.telefono }}<br>
+                {{ orden.idCliente.direccion }}
+            </td>
+            <td width="50%">
+                <strong>Orden:</strong> #{{ orden.idOrden }}<br>
+                <strong>Fecha creación:</strong> {{ orden.fechaCreacion }}<br>
+                <strong>Prioridad:</strong> {{ orden.prioridad }}<br>
+                <strong>Estado:</strong> {{ orden.estado }}
+            </td>
+        </tr>
+    </table>
+
+    <table class="datos">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ orden.idProducto.nombre }}</td>
+                <td>{{ orden.cantidad }}</td>
+                <td>${{ orden.precioUnitario|floatformat:0 }}</td>
+                <td>${{ subtotal|floatformat:0 }}</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="3" style="text-align:right;">TOTAL</td>
+                <td>${{ subtotal|floatformat:0 }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if orden.instrucciones %}
+    <p><strong>Instrucciones:</strong> {{ orden.instrucciones }}</p>
+    {% endif %}
+
+    <div class="footer">
+        HebraTech — Sistema de gestión de producción textil<br>
+        Este documento es generado automáticamente al registrar la orden.
+    </div>
+</body>
+</html>

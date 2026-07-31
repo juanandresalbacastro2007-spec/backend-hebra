@@ -128,3 +128,28 @@ class Orden(models.Model):
 
     def __str__(self):
         return f'Orden #{self.idOrden} - {self.estado}'
+
+class Factura(models.Model):
+    idFactura = models.AutoField(primary_key=True)
+    idOrden = models.ForeignKey(
+        Orden,
+        on_delete=models.CASCADE,
+        db_column='idOrden'
+    )
+    idCliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='idCliente'
+    )
+    numeroFactura = models.CharField(max_length=30, unique=True)
+    fechaEmision = models.DateTimeField(auto_now_add=True)
+    rutaPDF = models.CharField(max_length=255)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    estado = models.CharField(max_length=20, default='Emitida')
+
+    class Meta:
+        db_table = 'facturas'
+        managed = False
+
+    def __str__(self):
+        return f'Factura {self.numeroFactura}'    

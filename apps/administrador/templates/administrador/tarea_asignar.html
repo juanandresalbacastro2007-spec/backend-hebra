@@ -72,20 +72,38 @@
               <h6><i class="bi bi-clipboard2-plus me-2"></i>Nueva asignación</h6>
             </div>
             <div class="section-card-body">
-              <form method="POST">
+              <form method="POST" id="formAsignarTarea">
                 {% csrf_token %}
                 <div class="row g-3">
 
+                  <!-- Selector de Tarea (con opción "Otra") -->
                   <div class="col-md-6">
                     <label class="form-label">Tarea</label>
-                    <select name="tarea" class="form-select" required>
+                    <select name="tarea" id="selectTarea" class="form-select" required>
                       <option value="">Seleccionar tarea...</option>
                       {% for tarea in tareas %}
                       <option value="{{ tarea.idTarea }}">
                         {{ tarea.nombreTarea }} — {{ tarea.proceso }}
                       </option>
                       {% endfor %}
+                      <option value="otra" style="color: #395B64; font-weight: 600;">+ Otra (crear nueva)</option>
                     </select>
+                  </div>
+
+                  <!-- Campo para tarea personalizada (oculto por defecto) -->
+                  <div class="col-md-6" id="tareasPersonalizadasContainer" style="display: none;">
+                    <label class="form-label">Nombre de la tarea</label>
+                    <input type="text" name="tarea_personalizada" id="tareaPersonalizada" class="form-control"
+                      placeholder="Ej. Bordado personalizado, Teñido especial...">
+                    <small class="text-muted">Se creará como una nueva tarea en el sistema.</small>
+                  </div>
+
+                  <!-- Proceso para tarea personalizada -->
+                  <div class="col-md-6" id="procesoPersonalizadoContainer" style="display: none;">
+                    <label class="form-label">Proceso / Categoría</label>
+                    <input type="text" name="proceso_personalizado" id="procesoPersonalizado" class="form-control"
+                      placeholder="Ej. Bordado, Teñido, Confección...">
+                    <small class="text-muted">Categoría o tipo de proceso.</small>
                   </div>
 
                   <div class="col-md-6">
@@ -168,6 +186,48 @@
   <script>
     const TIEMPOS_ESTANDAR = { 'Camisas': 5, 'Pantalones': 10, 'Vestidos': 12, 'Chaquetas': 12, 'Bermudas': 15 };
 
+    // ── Mostrar/ocultar campos de tarea personalizada ─────
+    const selectTarea = document.getElementById('selectTarea');
+    const tareasPersonalizadasContainer = document.getElementById('tareasPersonalizadasContainer');
+    const procesoPersonalizadoContainer = document.getElementById('procesoPersonalizadoContainer');
+    const tareaPersonalizada = document.getElementById('tareaPersonalizada');
+    const procesoPersonalizado = document.getElementById('procesoPersonalizado');
+
+    selectTarea.addEventListener('change', function() {
+      if (this.value === 'otra') {
+        tareasPersonalizadasContainer.style.display = 'block';
+        procesoPersonalizadoContainer.style.display = 'block';
+        tareaPersonalizada.setAttribute('required', 'required');
+        procesoPersonalizado.setAttribute('required', 'required');
+      } else {
+        tareasPersonalizadasContainer.style.display = 'none';
+        procesoPersonalizadoContainer.style.display = 'none';
+        tareaPersonalizada.removeAttribute('required');
+        procesoPersonalizado.removeAttribute('required');
+        tareaPersonalizada.value = '';
+        procesoPersonalizado.value = '';
+      }
+    });
+
+    // ── Validación del formulario ─────────────────────────
+    document.getElementById('formAsignarTarea').addEventListener('submit', function(e) {
+      if (selectTarea.value === 'otra') {
+        if (!tareaPersonalizada.value.trim()) {
+          e.preventDefault();
+          alert('Por favor, ingresa el nombre de la tarea personalizada.');
+          tareaPersonalizada.focus();
+          return;
+        }
+        if (!procesoPersonalizado.value.trim()) {
+          e.preventDefault();
+          alert('Por favor, ingresa el proceso/categoría de la tarea.');
+          procesoPersonalizado.focus();
+          return;
+        }
+      }
+    });
+
+    // ── Cálculo automático de horas ──────────────────────
     function recalcularHoras() {
       const tipo = document.getElementById('tipoPrenda').value;
       const cantidad = parseInt(document.getElementById('cantidadPrendas').value, 10);

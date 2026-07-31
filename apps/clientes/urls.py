@@ -3,8 +3,12 @@ from . import views
 
 urlpatterns = [
     path('', views.cliente_portal, name='cliente_portal'),
+    path('editar-perfil/', views.editar_perfil_cliente, name='editar_perfil_cliente'),
     path('registrar/', views.registrar_orden, name='registrar_orden'),
     path('orden-exitosa/<int:idOrden>/', views.orden_exitosa, name='orden_exitosa'),
     path('orden/<int:idOrden>/editar/', views.editar_orden, name='editar_orden'),
     path('orden/<int:idOrden>/eliminar/', views.eliminar_orden, name='eliminar_orden'),
+    path('factura/<int:idFactura>/descargar/', views.descargar_factura, name='descargar_factura'),
+    path('actualizar-ordenes/', views.actualizar_ordenes, name='actualizar_ordenes'),
+
 ]

@@ -67,7 +67,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'hebratech',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': '12345',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }
@@ -112,5 +112,5 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = 'hebratechoficial@gmail.com'
-EMAIL_HOST_PASSWORD = 'xbdw dide skml xgfn'
+EMAIL_HOST_PASSWORD = 'cyfc zbkg xeps vnef'
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'

@@ -36,6 +36,13 @@
           <h3 style="font-family:var(--ff-display);color:var(--primary-dark);">¡Orden registrada!</h3>
           <p class="text-muted mb-4">Tu orden fue guardada exitosamente en el sistema de producción de HebraTech.</p>
 
+          {% if factura %}
+          <p class="text-muted small mb-0" id="avisoDescarga">
+            <i class="bi bi-file-earmark-pdf-fill me-1" style="color:#395B64;"></i>
+            Descargando tu factura {{ factura.numeroFactura }}...
+          </p>
+          {% endif %}
+
           <hr style="border-color:rgba(165,201,202,0.4);">
 
           <div class="text-start mt-3">
@@ -74,6 +81,12 @@
           </div>
 
           <div class="d-flex gap-2 justify-content-center mt-4">
+            {% if factura %}
+            <a href="{% url 'descargar_factura' factura.idFactura %}" id="btnDescargarFactura" class="btn btn-outline-primary px-4"
+               style="border-radius:10px;">
+              <i class="bi bi-file-earmark-pdf me-1"></i>Descargar factura
+            </a>
+            {% endif %}
             <a href="{% url 'cliente_portal' %}" class="btn btn-primary px-4"
                style="background-color:#395B64;border-color:#395B64;border-radius:10px;">
               <i class="bi bi-house me-1"></i>Volver al portal
@@ -84,6 +97,20 @@
       </div>
     </div>
   </div>
+
+  {% if factura %}
+  <script>
+    window.addEventListener('load', function() {
+      const link = document.getElementById('btnDescargarFactura');
+      if (!link) return;
+      // Descarga silenciosa vía iframe oculto, sin navegar fuera de esta página
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = link.href;
+      document.body.appendChild(iframe);
+    });
+  </script>
+  {% endif %}
 
 </body>
 </html>

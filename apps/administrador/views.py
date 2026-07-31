@@ -264,11 +264,13 @@ def tareas_lista(request):
 @admin_required
 def tarea_asignar(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    operarios = Operario.objects.filter(estado='activo')
+    operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
     tareas = Tarea.objects.all()
 
     if request.method == 'POST':
         id_tarea = request.POST.get('tarea')
+        tarea_personalizada = request.POST.get('tarea_personalizada', '').strip()
+        proceso_personalizado = request.POST.get('proceso_personalizado', '').strip()
         id_operario = request.POST.get('operario')
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
@@ -278,20 +280,53 @@ def tarea_asignar(request):
         horas_estimadas = request.POST.get('horasEstimadas')
 
         try:
-            tarea = Tarea.objects.get(idTarea=id_tarea)
-            operario = Operario.objects.get(idOperario=id_operario)
+            # ── Manejar tarea personalizada ──────────────────────
+            if id_tarea == 'otra':
+                if not tarea_personalizada:
+                    messages.error(request, 'Por favor, ingresa el nombre de la tarea personalizada.')
+                    return redirect('admin_tarea_asignar')
+                if not proceso_personalizado:
+                    messages.error(request, 'Por favor, ingresa el proceso/categoría de la tarea.')
+                    return redirect('admin_tarea_asignar')
 
+                # Crear nueva tarea
+                tarea = Tarea.objects.create(
+                    nombreTarea=tarea_personalizada,
+                    descripcionTarea=descripcion or f'Tarea personalizada: {tarea_personalizada}',
+                    proceso=proceso_personalizado,
+                    complejidad='media'  # Complejidad por defecto
+                )
+                mensaje_tarea = f'✓ Tarea personalizada "{tarea_personalizada}" creada. '
+            else:
+                # Usar tarea existente
+                try:
+                    tarea = Tarea.objects.get(idTarea=id_tarea)
+                    mensaje_tarea = ''
+                except Tarea.DoesNotExist:
+                    messages.error(request, 'La tarea seleccionada no existe.')
+                    return redirect('admin_tarea_asignar')
+
+            # ── Obtener operario ────────────────────────────────
+            try:
+                operario = Operario.objects.select_related('idUsuario').get(idOperario=id_operario)
+            except Operario.DoesNotExist:
+                messages.error(request, 'El operario seleccionado no existe.')
+                return redirect('admin_tarea_asignar')
+
+            # ── Convertir cantidad a entero si existe ─────────────
             cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
 
+            # ── Calcular horas estimadas ─────────────────────────
             # Si no escribieron horas manualmente, se calculan solas:
             # cantidad de prendas x minutos estándar del tipo / 60
             if (not horas_estimadas or not horas_estimadas.strip()) and tipo_prenda and cantidad_int:
                 minutos_unidad = TIEMPOS_ESTANDAR_MINUTOS.get(tipo_prenda, 0)
                 horas_calculadas = round((cantidad_int * minutos_unidad) / 60, 2)
             else:
-                horas_calculadas = horas_estimadas if horas_estimadas and horas_estimadas.strip() else None
+                horas_calculadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else 0.5
 
-            asignacion = AsignacionTarea(
+            # ── Crear la asignación ───────────────────────────────
+            asignacion = AsignacionTarea.objects.create(
                 idTarea=tarea,
                 idOperario=operario,
                 descripcion=descripcion,
@@ -302,16 +337,17 @@ def tarea_asignar(request):
                 horasEstimadas=horas_calculadas,
                 estado='Pendiente'
             )
-            asignacion.save()
 
             messages.success(
                 request,
-                f'Tarea "{tarea.nombreTarea}" asignada a {operario.idUsuario.nombre} correctamente.'
+                f'{mensaje_tarea}Asignación #{asignacion.idAsignacion} creada correctamente. '
+                f'Tarea asignada a {operario.idUsuario.nombre}.'
             )
             return redirect('admin_tareas')
 
         except Exception as e:
             messages.error(request, f'Error al asignar tarea: {str(e)}')
+            return redirect('admin_tarea_asignar')
 
     return render(request, 'administrador/tarea_asignar.html', {
         'usuario': usuario,

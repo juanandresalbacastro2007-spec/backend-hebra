@@ -814,9 +814,9 @@ moment.locale('es');
 
     const legendHTML = `
       <div class="etapas-legend-container">
-        <span class="etapa-badge etapa-1">Etapa 1</span>
-        <span class="etapa-badge etapa-2">Etapa 2</span>
-        <span class="etapa-badge etapa-3">Etapa 3</span>
+        <span class="etapa-badge etapa-1">Preparación</span>
+        <span class="etapa-badge etapa-2">Confección</span>
+        <span class="etapa-badge etapa-3">Finalización y entrega</span>
       </div>
     `;
     footer.prepend(legendHTML);

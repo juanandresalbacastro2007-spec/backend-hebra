@@ -63,7 +63,7 @@ def crear_proveedor(request):
             nuevo_proveedor.idUsuario_id = 1 
             nuevo_proveedor.save()
             messages.success(request, '✅ Proveedor creado exitosamente')
-            return redirect('proveedores')
+            return redirect('admin_proveedores')
     
     form = ProveedorForm()
     return render(request, 'proveedores/proveedores.html', {

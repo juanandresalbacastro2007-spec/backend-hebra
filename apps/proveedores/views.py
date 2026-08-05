@@ -81,7 +81,7 @@ def editar_proveedor(request, id):
         if form.is_valid():
             form.save()
             messages.success(request, f'✏️ {proveedor.nombreEmpresa} actualizado correctamente')
-            return redirect('proveedores')
+            return redirect('admin_proveedores')
     else:
         form = ProveedorForm(instance=proveedor)
     
@@ -101,4 +101,4 @@ def eliminar_proveedor(request, id):
     proveedor.save()
     
     messages.warning(request, f'🗑️ {proveedor.nombreEmpresa} desactivado correctamente')
-    return redirect('proveedores')
+    return redirect('admin_proveedores')

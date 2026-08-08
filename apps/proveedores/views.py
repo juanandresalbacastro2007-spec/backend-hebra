@@ -9,7 +9,6 @@ from django.contrib import messages
 from django.utils import timezone
 import json
 from apps.usuarios.models import Usuario
-
 from apps.core.decorators import login_required_rol, login_required_api
 
 # ── Decoradores de protección (gestionado por el administrador) ────
@@ -113,17 +112,18 @@ def crear_proveedor(request):
         if form.is_valid():
             proveedor = form.save(commit=False)
             
-            # Obtener ID del usuario desde la sesión o del objeto de usuario
-            usuario_id = getattr(request.user, 'idUsuario', None) or getattr(request.user, 'id', None) or request.session.get('usuario_id')
-            
-            # Si no hay usuario en sesión, puedes tomar el primer registro activo como respaldo
-            if not usuario_id:
-                from apps.usuarios.models import Usuario  # Ajusta a tu import real de Usuario
-                primer_usuario = Usuario.objects.first()
-                usuario_id = primer_usuario.pk if primer_usuario else 1
-
+            # Recuperar ID de usuario del input oculto o de la sesión
+            usuario_id = request.POST.get('idUsuario') or getattr(request.user, 'idUsuario', None) or request.user.id
             proveedor.idUsuario_id = usuario_id
-            proveedor.save()
             
+            proveedor.save()
             messages.success(request, '✅ Proveedor creado con éxito.')
             return redirect('admin_proveedores')
+        else:
+            # Si el nombre ya existe o falla la validación, envía los errores a la pantalla
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'⚠️ {error}')
+            return redirect('admin_proveedores')
+    
+    return redirect('admin_proveedores')

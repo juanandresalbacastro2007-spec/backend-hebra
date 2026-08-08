@@ -20,6 +20,18 @@
   </button>
 
   <div class="w-100 min-vh-100">
+ <!-- 🔔 Bloque de mensajes de alerta corregido -->
+{% if messages %}
+  <div class="container mt-3">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+        {{ message }}
+        <!-- 💡 CAMBIO AQUÍ: data-bs-dismiss="alert" -->
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
     <header class="container mt-4 mb-4">
       <div class="row justify-content-center">
         <div class="col-lg-8">

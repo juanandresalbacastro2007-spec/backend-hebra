@@ -8,6 +8,7 @@ from .forms import ProveedorForm
 from django.contrib import messages
 from django.utils import timezone
 import json
+from apps.usuarios.models import Usuario
 
 from apps.core.decorators import login_required_rol, login_required_api
 
@@ -102,3 +103,27 @@ def eliminar_proveedor(request, id):
     
     messages.warning(request, f'🗑️ {proveedor.nombreEmpresa} desactivado correctamente')
     return redirect('admin_proveedores')
+
+
+
+@admin_required
+def crear_proveedor(request):
+    if request.method == 'POST':
+        form = ProveedorForm(request.POST)
+        if form.is_valid():
+            proveedor = form.save(commit=False)
+            
+            # Obtener ID del usuario desde la sesión o del objeto de usuario
+            usuario_id = getattr(request.user, 'idUsuario', None) or getattr(request.user, 'id', None) or request.session.get('usuario_id')
+            
+            # Si no hay usuario en sesión, puedes tomar el primer registro activo como respaldo
+            if not usuario_id:
+                from apps.usuarios.models import Usuario  # Ajusta a tu import real de Usuario
+                primer_usuario = Usuario.objects.first()
+                usuario_id = primer_usuario.pk if primer_usuario else 1
+
+            proveedor.idUsuario_id = usuario_id
+            proveedor.save()
+            
+            messages.success(request, '✅ Proveedor creado con éxito.')
+            return redirect('admin_proveedores')

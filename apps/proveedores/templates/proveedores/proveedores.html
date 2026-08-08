@@ -203,58 +203,81 @@
 
   <!-- MODAL PARA AGREGAR PROVEEDOR -->
   <div class="modal fade" id="modalAgregarProveedor" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Agregar Nuevo Proveedor</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <form method="POST" action="{% url 'crear_proveedor' %}">
-          {% csrf_token %}
-          <div class="modal-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Nombre Empresa</label>
-                <input type="text" name="nombreEmpresa" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">NIT</label>
-                <input type="text" name="nit" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Contacto</label>
-                <input type="text" name="nombreContacto" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Teléfono</label>
-                <input type="text" name="telefono" class="form-control" required>
-              </div>
-              <div class="col-12">
-                <label class="form-label">Correo</label>
-                <input type="email" name="correo" class="form-control" required>
-              </div>
-              <div class="col-12">
-                <label class="form-label">Dirección</label>
-                <textarea name="direccion" class="form-control" rows="3" required></textarea>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Estado</label>
-                <select name="estado" class="form-select" required>
-                  <option value="">Selecciona estado</option>
-                  <option value="activo">ACTIVO</option>
-                  <option value="inactivo">INACTIVO</option>
-                </select>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white rounded-top-4">
+        <h5 class="modal-title fw-bold">➕ Agregar Nuevo Proveedor</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'crear_proveedor' %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="idUsuario" value="{{ request.user.idUsuario|default:request.user.id }}">
+        <div class="modal-body p-4">
+          <div id="alertaErrorModal" class="alert alert-danger d-none py-2 px-3 mb-3 small rounded-3" role="alert">
+                       <!-- El mensaje se inserta con JavaScript -->
+           </div>
+          <div class="row g-3">
+            
+            <!-- Nombre Empresa -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Nombre de la Empresa</label>
+              <input type="text" name="nombreEmpresa" class="form-control" placeholder="Ej. Textiles Del Valle S.A.S." required>
+            </div>
+
+            <!-- NIT con regla de 9 dígitos -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">NIT (Sin digito de verificación)</label>
+              <input type="tel" name="nit" class="form-control" placeholder="Ej. 900123456" pattern="[0-9]{9,10}" maxlength="10" title="Ingrese entre 9 y 10 dígitos numéricos" required>
+              <small class="form-text text-muted" style="font-size: 0.75rem;">9 dígitos principales del NIT en Colombia</small>
+            </div>
+
+            <!-- Contacto -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Persona de Contacto</label>
+              <input type="text" name="nombreContacto" class="form-control" placeholder="Ej. Carlos Mendoza" required>
+            </div>
+
+            <!-- Teléfono con prefijo +57 -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Teléfono de Contacto</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light fw-bold text-muted">+57</span>
+                <input type="tel" name="telefono" class="form-control" placeholder="300 123 4567" pattern="[0-9]{7,10}" maxlength="10" title="Ingrese un número celular (10 dígitos) o fijo (7 dígitos)" required>
               </div>
             </div>
+
+            <!-- Correo -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">Correo Electrónico</label>
+              <input type="email" name="correo" class="form-control" placeholder="contacto@empresa.com" required>
+            </div>
+
+            <!-- Dirección -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">Dirección Comercial</label>
+              <textarea name="direccion" class="form-control" rows="2" placeholder="Ej. Calle 45 # 12-34, Bodega 3, Medellín" required></textarea>
+            </div>
+
+            <!-- Estado -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Estado Inicial</label>
+              <select name="estado" class="form-select" required>
+                <option value="" disabled selected>Seleccione el estado...</option>
+                <option value="activo">🟢 ACTIVO</option>
+                <option value="inactivo">🔴 INACTIVO</option>
+              </select>
+            </div>
+
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar Proveedor</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div class="modal-footer bg-light rounded-bottom-4">
+          <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary rounded-3 px-4 fw-semibold">Guardar Proveedor</button>
+        </div>
+      </form>
     </div>
   </div>
+</div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
   <script src="{% static 'js/proveedores.js' %}"></script>

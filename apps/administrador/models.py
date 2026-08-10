@@ -195,3 +195,60 @@ class Incidencia(models.Model):
 
     def __str__(self):
         return f'Incidencia #{self.idIncidencia} — {self.tipoIncidencia}'
+
+class Producto(models.Model):
+    idProducto = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=150, db_column='nombre')  # O db_column='nombreProducto' según tu tabla
+    descripcion = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'productos'
+        managed = False
+
+    def __str__(self):
+        return self.nombre
+
+
+class Inventario(models.Model):
+    idInventario = models.AutoField(primary_key=True)
+    producto = models.ForeignKey(
+        Producto,
+        on_delete=models.CASCADE,
+        db_column='idProducto',
+        related_name='inventarios'
+    )
+    cantidadDisponible = models.IntegerField(default=0)
+    minimoDefinido = models.IntegerField(default=0)
+    nivelStock = models.IntegerField(default=0)
+    unidades = models.CharField(max_length=50, default='Unidades')
+    ubicacion = models.CharField(max_length=150)
+    fechaActualizacion = models.DateField(auto_now=True)
+    cantidadIngresada = models.IntegerField(default=0)
+    cantidadEgresada = models.IntegerField(default=0)
+    fechaIngreso = models.DateField()
+    fechaSalida = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'inventario'
+        managed = False
+
+    def __str__(self):
+        return f'Inventario #{self.idInventario} — Producto #{self.producto_id}'
+    
+class Material(models.Model):
+    idMaterial = models.AutoField(primary_key=True, db_column='idMaterial')
+    nombreMaterial = models.CharField(max_length=100, db_column='nombreMaterial')
+    descripcion = models.TextField(blank=True, null=True, db_column='descripcion')
+    stockActual = models.DecimalField(max_digits=10, decimal_places=2, db_column='stockActual')
+    stockMinimo = models.DecimalField(max_digits=10, decimal_places=2, db_column='stockMinimo')
+    unidadBase = models.CharField(max_length=50, db_column='unidadBase')
+    costoUnitario = models.DecimalField(max_digits=10, decimal_places=2, db_column='costoUnitario')
+    fechaActualizacion = models.DateField(auto_now=True, db_column='fechaActualizacion')
+
+    class Meta:
+        db_table = 'materiales'
+        verbose_name = 'Material'
+        verbose_name_plural = 'Materiales'
+
+    def __str__(self):
+        return self.nombreMaterial

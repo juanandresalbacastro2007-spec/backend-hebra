@@ -7,7 +7,7 @@ from django.db import connection
 from django.db.models import Q
 from .models import (
     Usuario, Operario, Tarea,
-    AsignacionTarea, Orden, Cliente, Incidencia,
+    AsignacionTarea, Orden, Cliente, Incidencia,Inventario,Material,
     TIEMPOS_ESTANDAR_MINUTOS,
 )
 import openpyxl
@@ -548,3 +548,29 @@ def exportar_ordenes_pdf(request):
     if pisa_status.err:
         return HttpResponse('Hubo un error al generar el PDF', status=500)
     return response
+
+def inventario_lista(request):
+    # Consulta optimizada trayendo la relación de Producto en una sola consulta SQL
+    inventario_list = Inventario.objects.all().select_related('producto')
+    
+    total_items = inventario_list.count()
+    
+    context = {
+        'inventario_list': inventario_list,
+        'total_items': total_items,
+    }
+    
+    return render(request, 'administrador/inventario_lista.html', context)
+
+
+def inventario_lista(request):
+    inventario_list = Inventario.objects.all()
+    materiales_list = Material.objects.all()
+
+    context = {
+        'inventario_list': inventario_list,
+        'total_items': inventario_list.count(),
+        'materiales_list': materiales_list,
+        'total_materiales': materiales_list.count(),
+    }
+    return render(request, 'administrador/inventario_lista.html', context)

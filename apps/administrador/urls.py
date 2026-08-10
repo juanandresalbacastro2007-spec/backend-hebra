@@ -30,6 +30,9 @@ urlpatterns = [
     path('incidencias/<int:idIncidencia>/editar/', views.incidencia_editar, name='admin_editar_incidencia'),
     path('incidencias/<int:idIncidencia>/eliminar/', views.incidencia_eliminar, name='admin_eliminar_incidencia'),
 
+    # Inventario
+    path('inventario/', views.inventario_lista, name='admin_inventario'),
+
     # Módulos externos
     path('produccion/', views.produccion_placeholder, name='admin_produccion'),
     path('proveedores/', include('apps.proveedores.urls')),

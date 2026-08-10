@@ -43,6 +43,10 @@
       <a href="{% url 'admin_incidencias' %}" class="nav-item">
         <i class="bi bi-building"></i> Incidencias
       </a>
+      <!-- Item Inventario Agregado -->
+      <a href="{% url 'admin_inventario' %}" class="nav-item">
+        <i class="bi bi-box-seam-fill"></i> Inventario
+      </a>
 
       <div class="nav-section-label">Módulos</div>
       <a href="{% url 'admin_produccion' %}" class="nav-item">
@@ -176,6 +180,9 @@
               </a>
               <a href="{% url 'admin_tareas' %}" class="btn btn-outline-ht">
                 <i class="bi bi-list-check me-1"></i>Ver tareas
+              </a>
+              <a href="{% url 'admin_inventario' %}" class="btn btn-outline-ht">
+                <i class="bi bi-box-seam me-1"></i>Ver inventario
               </a>
             </div>
           </div>

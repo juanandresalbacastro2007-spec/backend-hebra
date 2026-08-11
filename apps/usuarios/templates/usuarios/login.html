@@ -1,193 +1,127 @@
+{% extends "base_auth.html" %}
 {% load static %}
 {% load socialaccount %}
-<!DOCTYPE html>
-<html lang="es">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HebraTech | Acceder</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/usuarios/login.css' %}">
-</head>
+{% block title %}HebraTech | Acceder{% endblock %}
+{% block logo_text %}Iniciar Sesión{% endblock %}
 
-<body>
+{% block content %}
 
-  <main class="auth-container d-flex" style="min-height: 100vh;">
+  <!-- LOGIN VIEW -->
+  <div id="login-view">
+    <h1 class="mb-4">¡Bienvenido/a de nuevo!</h1>
 
-    <!-- ── FORM SIDE ── -->
-    <section class="form-side d-flex align-items-center justify-content-center p-4 p-md-5">
-      <div class="form-wrapper w-100" style="max-width: 420px;">
+    <!-- Botón Iniciar Sesión con Google -->
+    <a href="{% provider_login_url 'google' %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2 mb-3 fw-medium">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Continuar con Google
+    </a>
 
-        <a href="#" class="logo d-inline-flex align-items-center gap-2 text-decoration-none mb-4">
-          <div class="logo-icon">
-            <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;" />
-          </div>
-          Iniciar Sesión
-        </a>
+    <div class="divider d-flex align-items-center gap-2 my-3">
+      <span>o usa tu email & Contraseña</span>
+    </div>
 
-        <!-- Mensajes de error/éxito Django -->
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} py-2 small mb-3">
-              {{ message }}
-            </div>
-          {% endfor %}
-        {% endif %}
-
-        <!-- LOGIN VIEW -->
-        <div id="login-view">
-          <h1 class="mb-4">¡Bienvenido/a de nuevo!</h1>
-
-          <!-- Botón Iniciar Sesión con Google -->
-          <a href="{% provider_login_url 'google' %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2 mb-3 fw-medium">
-            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            Continuar con Google
-          </a>
-
-          <div class="divider d-flex align-items-center gap-2 my-3">
-            <span>o usa tu email & Contraseña</span>
-          </div>
-
-          <!-- Formulario LOGIN conectado a Django -->
-          <form method="POST" action="{% url 'login' %}" class="auth-form">
-            {% csrf_token %}
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" name="correo" class="form-control"
-                placeholder="ejemplo@correo.com" required>
-            </div>
-            <div class="mb-2">
-              <label class="form-label">Contraseña</label>
-              <div class="password-wrapper position-relative">
-                <input type="password" name="contrasena" id="login-pass" class="form-control"
-                  placeholder="Mínimo 8 caracteres" required>
-                <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
-                  onclick="togglePass('login-pass')" style="cursor:pointer;"></i>
-              </div>
-            </div>
-            <a href="{% url 'recuperar' %}" class="forgot-link d-block text-end mb-3">
-              ¿Olvidaste tu contraseña?
-            </a>
-            <button type="submit" class="btn-primary w-100">Iniciar sesión</button>
-          </form>
-
-          <p class="legal text-center mt-3 small">
-            Al continuar, aceptas nuestros <a href="#">Términos de servicio</a> y
-            <a href="#">Política de privacidad</a>.
-          </p>
-          <p class="switch-text text-center mt-2">
-            ¿No tienes cuenta?
-            <a href="javascript:void(0)" onclick="switchAuth()">Regístrate</a>
-          </p>
-        </div>
-
-        <!-- REGISTER VIEW -->
-        <div id="register-view" style="display: none;">
-          <h1 class="mb-4">Crea tu cuenta</h1>
-
-          <!-- Botón Registrase con Google -->
-          <a href="{% provider_login_url 'google' %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2 mb-3 fw-medium">
-            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            Registrarse con Google
-          </a>
-
-          <div class="divider d-flex align-items-center gap-2 my-3">
-            <span>o completa tus datos</span>
-          </div>
-
-          <!-- Formulario REGISTRO conectado a Django -->
-          <form method="POST" action="{% url 'registro' %}" class="auth-form">
-            {% csrf_token %}
-            <div class="mb-3">
-              <label class="form-label">Nombre</label>
-              <input type="text" name="nombre" class="form-control"
-                placeholder="Tu nombre" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Apellido</label>
-              <input type="text" name="apellido" class="form-control"
-                placeholder="Tu apellido" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" name="correo" class="form-control"
-                placeholder="ejemplo@correo.com" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Contraseña</label>
-              <div class="password-wrapper position-relative">
-                <input type="password" name="contrasena" id="reg-pass" class="form-control"
-                  placeholder="Mínimo 8 caracteres" required>
-                <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
-                  onclick="togglePass('reg-pass')" style="cursor:pointer;"></i>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Confirmar contraseña</label>
-              <input type="password" name="confirmar" class="form-control"
-                placeholder="Repite tu contraseña" required>
-            </div>
-            <button type="submit" class="btn-primary w-100">Crear cuenta</button>
-          </form>
-
-          <p class="switch-text text-center mt-3">
-            ¿Ya tienes cuenta?
-            <a href="javascript:void(0)" onclick="switchAuth()">Inicia sesión</a>
-          </p>
-        </div>
-
+    <!-- Formulario LOGIN conectado a Django -->
+    <form method="POST" action="{% url 'login' %}" class="auth-form">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="correo" class="form-control"
+          placeholder="ejemplo@correo.com" required>
       </div>
-    </section>
-
-    <!-- ── VISUAL SIDE ── -->
-    <section class="visual-side d-none d-lg-flex flex-column align-items-center justify-content-center p-5 position-relative">
-      <div class="cards-container mb-4">
-        <div class="task-card card-1 d-flex align-items-center gap-2">
-          <i class="far fa-circle"></i>
-          <span>Asignar las tareas</span>
-          <span class="tag ms-auto">Finanzas</span>
-        </div>
-        <div class="task-card card-2 d-flex align-items-center gap-2">
-          <i class="far fa-circle"></i>
-          <span>Programar reunión de personal</span>
-          <span class="tag ms-auto">Trabajo</span>
-        </div>
-        <div class="task-card card-3 d-flex align-items-center gap-2">
-          <i class="far fa-circle"></i>
-          <span>Comprar Materiales</span>
-          <span class="tag ms-auto">Compras</span>
+      <div class="mb-2">
+        <label class="form-label">Contraseña</label>
+        <div class="password-wrapper position-relative">
+          <input type="password" name="contrasena" id="login-pass" class="form-control"
+            placeholder="Mínimo 8 caracteres" required>
+          <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+            onclick="togglePass('login-pass')" style="cursor:pointer;"></i>
         </div>
       </div>
+      <a href="{% url 'recuperar' %}" class="forgot-link d-block text-end mb-3">
+        ¿Olvidaste tu contraseña?
+      </a>
+      <button type="submit" class="btn-primary w-100">Iniciar sesión</button>
+    </form>
 
-      <div class="promo-text text-center position-relative" style="z-index: 2;">
-        <h3>Organiza tu empresa y tu trabajo, finalmente.</h3>
-        <p>Únete a millones de personas que confían en HebraTech para mantener la calma y el orden.</p>
+    <p class="legal text-center mt-3 small">
+      Al continuar, aceptas nuestros <a href="#">Términos de servicio</a> y
+      <a href="#">Política de privacidad</a>.
+    </p>
+    <p class="switch-text text-center mt-2">
+      ¿No tienes cuenta?
+      <a href="javascript:void(0)" onclick="switchAuth()">Regístrate</a>
+    </p>
+  </div>
+
+  <!-- REGISTER VIEW -->
+  <div id="register-view" style="display: none;">
+    <h1 class="mb-4">Crea tu cuenta</h1>
+
+    <!-- Botón Registrase con Google -->
+    <a href="{% provider_login_url 'google' %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2 mb-3 fw-medium">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Registrarse con Google
+    </a>
+
+    <div class="divider d-flex align-items-center gap-2 my-3">
+      <span>o completa tus datos</span>
+    </div>
+
+    <!-- Formulario REGISTRO conectado a Django -->
+    <form method="POST" action="{% url 'registro' %}" class="auth-form">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Nombre</label>
+        <input type="text" name="nombre" class="form-control"
+          placeholder="Tu nombre" required>
       </div>
+      <div class="mb-3">
+        <label class="form-label">Apellido</label>
+        <input type="text" name="apellido" class="form-control"
+          placeholder="Tu apellido" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="correo" class="form-control"
+          placeholder="ejemplo@correo.com" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Contraseña</label>
+        <div class="password-wrapper position-relative">
+          <input type="password" name="contrasena" id="reg-pass" class="form-control"
+            placeholder="Mínimo 8 caracteres" required>
+          <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+            onclick="togglePass('reg-pass')" style="cursor:pointer;"></i>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Confirmar contraseña</label>
+        <input type="password" name="confirmar" class="form-control"
+          placeholder="Repite tu contraseña" required>
+      </div>
+      <button type="submit" class="btn-primary w-100">Crear cuenta</button>
+    </form>
 
-      <div class="blob"></div>
-    </section>
+    <p class="switch-text text-center mt-3">
+      ¿Ya tienes cuenta?
+      <a href="javascript:void(0)" onclick="switchAuth()">Inicia sesión</a>
+    </p>
+  </div>
 
-  </main>
-  <a href="{% url 'home' %}" class="back-arrow" title="Volver">
-    <i class="fas fa-arrow-left"></i>
-  </a>
+{% endblock %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}
   <script src="{% static 'js/login.js' %}"></script>
   <script>
     function switchAuth() {
@@ -209,6 +143,4 @@
       input.type = input.type === 'password' ? 'text' : 'password';
     }
   </script>
-
-</body>
-</html>
+{% endblock %}

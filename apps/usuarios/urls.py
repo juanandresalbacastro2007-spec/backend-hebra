@@ -14,6 +14,6 @@ urlpatterns = [
     path('recuperar/<str:token>/procesar/', views.procesar_reset_view, name='procesar_reset'),
 
     # --- Endpoints API REST (Google Login & JWT) ---
-    path('api/auth/google/', views.GoogleLoginView.as_view(), name='google_login'),
+    path('api/auth/google/', views.GoogleLoginView.as_view(), name='google_login_api'),
     path('api/auth/', include('dj_rest_auth.urls')),
 ]

@@ -1,0 +1,19 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}HebraTech | Inicio de sesión cancelado{% endblock %}
+{% block logo_text %}HebraTech{% endblock %}
+
+{% block content %}
+
+  <h1 class="mb-3">Cancelaste el inicio de sesión</h1>
+  <p class="text-muted mb-4">
+    No completaste el acceso con tu cuenta de Google. No pasa nada, podés
+    volver a intentarlo o iniciar sesión con tu email y contraseña.
+  </p>
+
+  <a href="{% url 'login' %}" class="btn-primary w-100 d-inline-block text-center text-decoration-none">
+    Volver al inicio de sesión
+  </a>
+
+{% endblock %}

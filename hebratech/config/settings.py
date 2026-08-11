@@ -1,12 +1,12 @@
 from pathlib import Path
-import os
+from decouple import config
 
 # --- RUTAS PRINCIPALES ---
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # --- CONFIGURACIÓN DE SEGURIDAD ---
-SECRET_KEY = 'khu0^e#r85^iv@0b6ddi*ld%(g$ta2fz_8(hn7wcm&zzsxjj7%'
-DEBUG = True
+SECRET_KEY = config('SECRET_KEY', default='khu0^e#r85^iv@0b6ddi*ld%(g$ta2fz_8(hn7wcm&zzsxjj7%')
+DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 SITE_ID = 1
@@ -82,11 +82,11 @@ WSGI_APPLICATION = 'hebratech.config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'hebratech',
-        'USER': 'root',
-        'PASSWORD': '12345',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': config('DB_NAME', default='hebratech'),
+        'USER': config('DB_USER', default='root'),
+        'PASSWORD': config('DB_PASSWORD', default='12345'),
+        'HOST': config('DB_HOST', default='127.0.0.1'),
+        'PORT': config('DB_PORT', default='3306'),
     }
 }
 
@@ -125,14 +125,18 @@ DatabaseFeatures._mysql_storage_engine = property(lambda self: "InnoDB")
 
 SILENCED_SYSTEM_CHECKS = ['models.W036']
 
+# --- FIX: forzar detección correcta de MySQL (no MariaDB) ---
+from django.db.backends.mysql.base import DatabaseWrapper
+DatabaseWrapper.mysql_is_mariadb = property(lambda self: False)
+
 # --- CONFIGURACIÓN DE CORREO ELECTRÓNICO ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = 'hebratechoficial@gmail.com'
-EMAIL_HOST_PASSWORD = 'cyfc zbkg xeps vnef'
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='hebratechoficial@gmail.com')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='gggg yday szyr fngm')
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
 
 # --- CONFIGURACIÓN DE REST FRAMEWORK Y JWT ---
@@ -151,15 +155,11 @@ REST_AUTH = {
 LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
 SOCIALACCOUNT_LOGIN_ON_GET = True  # Permite clic directo en enlaces <a> para iniciar sesión con Google
-
+SOCIALACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomSocialAccountAdapter'
+SOCIALACCOUNT_FORMS = {'signup': 'apps.usuarios.forms.SocialSignupForm'}
 # --- CONFIGURACIÓN DE LOGIN SOCIAL CON GOOGLE ---
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
-        'APP': {
-            'client_id': '',
-            'secret': '',
-            'key': ''
-        },
         'SCOPE': [
             'profile',
             'email',

@@ -1186,3 +1186,17 @@ html, body {
   .ht-page-title  { font-size: 1.4rem; }
   .ht-btn-toggle span { display: none; }
 }
+/* Estilos para errores de validación de operario */
+.ht-input-error {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(224, 92, 92, 0.15) !important;
+}
+
+.ht-field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

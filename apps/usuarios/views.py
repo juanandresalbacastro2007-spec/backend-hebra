@@ -9,6 +9,35 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from .models import Usuario, PasswordResetToken
 
+# Importaciones para API de Google con dj-rest-auth y allauth
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from dj_rest_auth.registration.views import SocialLoginView
+
+
+# ==========================================
+# VISTAS DE API (LOGIN CON GOOGLE)
+# ==========================================
+
+class GoogleLoginView(SocialLoginView):
+    """
+    Endpoint API para procesar el login con Google.
+    
+    El cliente/frontend envía un POST a '/api/auth/google/' con el token obtenido de Google:
+    {
+        "access_token": "TOKEN_DE_GOOGLE"
+    }
+    
+    Responde con los tokens JWT del sistema (access y refresh).
+    """
+    adapter_class = GoogleOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = 'http://127.0.0.1:8000/accounts/google/login/callback/'
+
+
+# ==========================================
+# VISTAS TRADICIONALES Y DE SESIÓN
+# ==========================================
 
 def login_view(request):
     if request.method == 'POST':
@@ -89,6 +118,7 @@ def registro_view(request):
         return redirect('login')
 
     return redirect('login')
+
 
 def home_view(request):
     return render(request, 'usuarios/home.html')

@@ -2,16 +2,14 @@ from pathlib import Path
 import os
 
 # --- RUTAS PRINCIPALES ---
-# Raíz del proyecto: backend-hebra/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # --- CONFIGURACIÓN DE SEGURIDAD ---
 SECRET_KEY = 'khu0^e#r85^iv@0b6ddi*ld%(g$ta2fz_8(hn7wcm&zzsxjj7%'
-
-# Habilitar el modo de depuración para desarrollo local
 DEBUG = True
-
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+
+SITE_ID = 1
 
 # --- APLICACIONES ---
 INSTALLED_APPS = [
@@ -21,6 +19,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Requerido por allauth
+
+    # Librerías de Autenticación y API
+    'rest_framework',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+
     # Tus aplicaciones
     'apps.usuarios',
     'apps.clientes',
@@ -39,6 +49,13 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # Requerido por allauth
+]
+
+# --- BACKENDS DE AUTENTICACIÓN ---
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 ROOT_URLCONF = 'hebratech.config.urls'
@@ -100,10 +117,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- PARCHE DE COMPATIBILIDAD MARIADB/MYSQL ---
 import django.db.backends.mysql.base
-from django.db.backends.mysql.base import DatabaseFeatures
+from django.db.backends.mysql.features import DatabaseFeatures
 
 DatabaseFeatures.can_return_rows_from_bulk_insert = False
 DatabaseFeatures.has_select_for_update_returning = False
+DatabaseFeatures._mysql_storage_engine = property(lambda self: "InnoDB")
+
+SILENCED_SYSTEM_CHECKS = ['models.W036']
 
 # --- CONFIGURACIÓN DE CORREO ELECTRÓNICO ---
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -114,3 +134,38 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'hebratechoficial@gmail.com'
 EMAIL_HOST_PASSWORD = 'cyfc zbkg xeps vnef'
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
+
+# --- CONFIGURACIÓN DE REST FRAMEWORK Y JWT ---
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_HTTPONLY': False,
+}
+
+# --- REDIRECCIONES DE ALLAUTH ---
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
+SOCIALACCOUNT_LOGIN_ON_GET = True  # Permite clic directo en enlaces <a> para iniciar sesión con Google
+
+# --- CONFIGURACIÓN DE LOGIN SOCIAL CON GOOGLE ---
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': '',
+            'secret': '',
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}

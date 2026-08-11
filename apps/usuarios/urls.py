@@ -1,12 +1,19 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    # --- Vistas Web Estándar ---
     path('', views.home_view, name='home'),
     path('login/', views.login_view, name='login'),
     path('registro/', views.registro_view, name='registro'),
+    path('logout/', views.logout_view, name='logout'),
+
+    # --- Flujo de Recuperación de Contraseña ---
     path('recuperar/', views.recuperar_view, name='recuperar'),
     path('recuperar/<str:token>/', views.validar_reset_view, name='validar_reset'),
     path('recuperar/<str:token>/procesar/', views.procesar_reset_view, name='procesar_reset'),
-    path('logout/', views.logout_view, name='logout'),
+
+    # --- Endpoints API REST (Google Login & JWT) ---
+    path('api/auth/google/', views.GoogleLoginView.as_view(), name='google_login'),
+    path('api/auth/', include('dj_rest_auth.urls')),
 ]

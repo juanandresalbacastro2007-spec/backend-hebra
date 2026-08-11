@@ -1,5 +1,5 @@
 /* ================================================================
-   HEBRATECH — MÓDULO OPERARIO
+   HEBRATECH — MÓDULO OPERARIO (Tablero & Perfil)
    Paleta: #2C3333 bg · #395B64 accent · #A5C9CA highlight · #E7F6F2 light
    Fuentes: Fredoka (títulos) · Roboto (cuerpo)
    ================================================================ */
@@ -13,7 +13,7 @@
   --accent:       #A5C9CA;
   --bg-light:     #E7F6F2;
 
-  /* Derivados para UI clara (acorde a admin.css) */
+  /* Derivados para UI clara */
   --bg:           #f0f4f5;
   --surface:      #ffffff;
   --surface2:     #E7F6F2;
@@ -24,13 +24,13 @@
   --text:         #2C3333;
   --text-muted:   #7a8c8d;
 
-  /* Semánticos (oscurecidos para buen contraste sobre fondo claro) */
+  /* Semánticos */
   --danger:       #b02a37;
   --warn:         #a07800;
   --ok:           #157347;
   --info:         #2f6690;
 
-  /* Alias de conveniencia — ahora orientados a texto sobre fondo claro */
+  /* Alias de conveniencia */
   --hi:           #395B64;
   --hi2:          #2f4d55;
   --accent2:      #2C4A52;
@@ -47,7 +47,6 @@ html, body {
   margin: 0; padding: 0;
   background: var(--bg);
   color: var(--text);
-  /* ✅ Roboto como fuente base del cuerpo */
   font-family: 'Roboto', system-ui, sans-serif;
   font-size: 14px;
   min-height: 100vh;
@@ -56,13 +55,14 @@ html, body {
 
 /* ================================================================ NAVBAR */
 .ht-navbar-top {
-  background: var(--primary-dark);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-md);
   position: sticky;
   top: 0;
   z-index: 1040;
   padding: 0 24px;
-  height: 56px;
+  height: 60px;
+  box-shadow: 0 2px 10px rgba(44, 51, 51, 0.05);
 }
 
 .ht-navbar-inner {
@@ -74,110 +74,126 @@ html, body {
   margin: 0 auto;
 }
 
-/* Brand — usa Fredoka */
+/* Brand */
 .ht-brand {
   display: flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: var(--accent);
   font-family: 'Fredoka', sans-serif;
   font-weight: 600;
-  font-size: 1.2rem;
-  letter-spacing: .02em;
+  font-size: 1.25rem;
+  letter-spacing: .01em;
+}
+
+.ht-brand-name {
+  color: var(--primary);
 }
 
 .brand-icon {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface2);
+  border: 1px solid var(--border);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-
-.ht-brand-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--primary), var(--accent2));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1rem;
-  color: var(--accent);
-  box-shadow: var(--shadow-sm);
+  padding: 3px;
 }
 
 .ht-nav-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
+.ht-nav-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-md);
+  margin: 0 4px;
+}
+
+/* Botones genéricos de la barra superior */
 .ht-nav-btn {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.22);
-  color: rgba(255,255,255,.85);
+  background: var(--surface2);
+  border: 1px solid var(--border-md);
+  color: var(--text);
   border-radius: var(--radius-xs);
-  padding: 6px 12px;
+  padding: 7px 14px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-size: .85rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background .15s, border-color .15s;
+  transition: all .15s ease;
   position: relative;
   font-family: 'Roboto', sans-serif;
+  text-decoration: none;
 }
 
 .ht-nav-btn:hover {
-  background: rgba(165,201,202,.14);
-  border-color: var(--accent);
+  background: rgba(165, 201, 202, 0.25);
+  border-color: var(--primary);
+  color: var(--primary-dark);
 }
 
-.ht-nav-btn-icon { padding: 6px 9px; border-radius: 50%; }
+.ht-nav-btn-label { 
+  display: none; 
+}
 
-.ht-nav-btn-label { display: none; }
-@media (min-width: 768px) { .ht-nav-btn-label { display: inline; } }
+@media (min-width: 768px) { 
+  .ht-nav-btn-label { 
+    display: inline; 
+  } 
+}
 
 .ht-badge-count {
   background: var(--primary);
-  color: var(--accent);
+  color: #ffffff;
   font-size: .72rem;
   font-weight: 700;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
+  min-width: 19px;
+  height: 19px;
+  border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0 5px;
 }
 
+/* Botón del perfil */
 .ht-profile-btn {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.22);
-  color: rgba(255,255,255,.9);
+  background: var(--surface2);
+  border: 1px solid var(--border-md);
+  color: var(--text);
   border-radius: 20px;
-  padding: 5px 12px 5px 5px;
+  padding: 4px 12px 4px 4px;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: .85rem;
   cursor: pointer;
-  transition: background .15s;
+  transition: all .15s ease;
   font-family: 'Roboto', sans-serif;
 }
 
-.ht-profile-btn:hover { background: rgba(255,255,255,.08); }
+.ht-profile-btn:hover {
+  background: rgba(165, 201, 202, 0.25);
+  border-color: var(--primary);
+}
 
 .ht-avatar {
-  width: 28px; height: 28px;
+  width: 30px; 
+  height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--hi2));
-  color: #fff;
-  font-size: .72rem;
+  background: linear-gradient(135deg, var(--primary), var(--accent2));
+  color: #ffffff;
+  font-size: .75rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -185,59 +201,25 @@ html, body {
   flex-shrink: 0;
 }
 
-.ht-avatar-lg { width: 40px; height: 40px; font-size: .9rem; }
-.ht-chevron { font-size: .7rem; color: rgba(255,255,255,.55); margin-left: 2px; }
-
-/* Dropdowns */
-.ht-dropdown-panel {
-  background: var(--surface) !important;
-  border: 1px solid var(--border-md) !important;
-  border-radius: var(--radius) !important;
-  box-shadow: var(--shadow) !important;
-  min-width: 340px;
-  max-height: 480px;
-  overflow-y: auto;
-  padding: 0 !important;
+.ht-chevron { 
+  font-size: .72rem; 
+  color: var(--text-muted); 
+  transition: transform .2s ease;
 }
 
-.ht-dropdown-panel--wide { min-width: 380px; }
-
-.ht-dropdown-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  font-size: .95rem;
-  color: var(--primary);
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-  z-index: 1;
+.dropdown.show .ht-chevron {
+  transform: rotate(180deg);
 }
 
-.ht-profile-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
+.ht-dropdown-panel .dropdown-item {
+  font-size: .85rem;
+  color: var(--text);
+  transition: background .12s ease;
 }
 
-.ht-profile-header strong { display: block; font-size: .9rem; color: var(--text); }
-.ht-profile-header small  { color: var(--text-muted); font-size: .8rem; }
-
-.dropdown-item.ht-logout-item {
-  color: var(--danger);
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: .88rem;
-  transition: background .12s;
+.ht-dropdown-panel .dropdown-item:hover {
+  background: var(--surface2);
 }
-.dropdown-item.ht-logout-item:hover { background: rgba(224,92,92,.12); }
 
 .ht-empty-state {
   display: flex;
@@ -278,7 +260,6 @@ html, body {
   flex-shrink: 0;
 }
 
-/* Botones de acción en card de reporte */
 .ht-report-action-btn {
   background: transparent;
   border: 1px solid var(--border-md);
@@ -380,7 +361,6 @@ html, body {
   flex-wrap: wrap;
 }
 
-/* ✅ Botón toggle ocultar completadas */
 .ht-btn-toggle {
   display: flex;
   align-items: center;
@@ -488,7 +468,6 @@ html, body {
   gap: 12px;
 }
 
-/* ✅ Título usa Fredoka */
 .ht-page-title {
   font-family: 'Fredoka', sans-serif;
   font-size: 1.7rem;
@@ -580,7 +559,6 @@ html, body {
   transition: min-height .3s ease;
 }
 
-/* ✅ Columna completada colapsada */
 .ht-kanban-col--completada.collapsed {
   min-height: unset;
 }
@@ -598,7 +576,6 @@ html, body {
   transform: rotate(180deg);
 }
 
-/* Column headers — títulos con Fredoka */
 .ht-col-header {
   display: flex;
   align-items: center;
@@ -630,7 +607,6 @@ html, body {
   padding: 0 7px;
 }
 
-/* Drop zone */
 .ht-drop-zone {
   padding: 12px;
   flex: 1;
@@ -683,7 +659,6 @@ html, body {
 .ht-card:active { cursor: grabbing; transform: translateY(0); }
 .ht-card.dragging { opacity: .5; transform: rotate(2deg) scale(.98); }
 
-/* ✅ Tarjetas completadas ocultas */
 .ht-card.hidden-completed {
   opacity: 0;
   pointer-events: none;
@@ -694,7 +669,6 @@ html, body {
   overflow: hidden;
 }
 
-/* Priority left edge */
 .ht-card::before {
   content: '';
   position: absolute;
@@ -714,7 +688,6 @@ html, body {
   margin-bottom: 6px;
 }
 
-/* Nombre de tarea con Fredoka */
 .ht-card-name {
   font-family: 'Fredoka', sans-serif;
   font-weight: 500;
@@ -759,7 +732,6 @@ html, body {
   flex-wrap: wrap;
 }
 
-/* Badges */
 .ht-badge {
   display: inline-flex;
   align-items: center;
@@ -833,7 +805,6 @@ html, body {
   letter-spacing: .06em;
 }
 
-/* Modal title con Fredoka */
 .ht-modal-title {
   font-family: 'Fredoka', sans-serif !important;
   font-size: 1.15rem !important;
@@ -851,7 +822,6 @@ html, body {
   gap: 10px !important;
 }
 
-/* Task detail grid */
 .ht-detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -889,7 +859,166 @@ html, body {
 }
 .ht-detail-desc p { margin: 0; font-size: .87rem; line-height: 1.6; color: var(--text-muted); }
 
-/* ================================================================ FORM */
+/* ================================================================ EDITAR PERFIL LAYOUT */
+.ht-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .ht-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ht-card-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: border-color .2s ease;
+}
+
+.ht-card-panel:hover {
+  border-color: var(--primary);
+}
+
+.ht-panel-header {
+  background: var(--surface2);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+}
+
+.ht-panel-body {
+  padding: 24px;
+}
+
+.ht-panel-footer {
+  padding: 16px 24px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.ht-avatar-uploader {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto;
+}
+
+.ht-avatar-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent2));
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: 'Fredoka', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--primary);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.ht-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ht-avatar-upload-btn {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: var(--primary);
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all .2s ease;
+}
+
+.ht-avatar-upload-btn:hover {
+  background: var(--primary-dark);
+  transform: scale(1.08);
+}
+
+.ht-user-fullname {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.ht-badge-role {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface2);
+  color: var(--primary);
+  border: 1px solid var(--border-md);
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 500;
+}
+
+.ht-divider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 18px 0;
+  opacity: 1;
+}
+
+.ht-quick-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+}
+
+.ht-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ht-stat-label {
+  font-size: .75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 2px;
+}
+
+.ht-stat-value {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ================================================================ FORM & INPUTS */
 .ht-form-group { margin-bottom: 18px; }
 
 .ht-label {
@@ -925,6 +1054,24 @@ html, body {
   box-shadow: 0 0 0 3px rgba(224,92,92,.1);
 }
 
+.ht-input-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ht-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  font-size: .95rem;
+  pointer-events: none;
+}
+
+.ht-input-padded {
+  padding-left: 36px !important;
+}
+
 .ht-textarea { resize: vertical; min-height: 100px; }
 
 .ht-field-hint  { margin-top: 4px; font-size: .76rem; color: var(--text-muted); text-align: right; }
@@ -958,8 +1105,9 @@ html, body {
   align-items: center;
   gap: 6px;
   transition: background .15s, transform .1s;
+  text-decoration: none;
 }
-.ht-btn-primary:hover  { background: var(--accent2); transform: translateY(-1px); }
+.ht-btn-primary:hover  { background: var(--accent2); transform: translateY(-1px); color: #fff; }
 .ht-btn-primary:active { transform: translateY(0); }
 .ht-btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
@@ -973,10 +1121,12 @@ html, body {
   font-family: 'Roboto', sans-serif;
   cursor: pointer;
   transition: background .15s, color .15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 .ht-btn-secondary:hover { background: rgba(165,201,202,.08); color: var(--text); }
 
-/* ✅ Botón de eliminar */
 .ht-btn-danger {
   background: var(--danger);
   color: #fff;
@@ -1000,25 +1150,7 @@ html, body {
 .ht-badge-status-Revisado  { background: rgba(79,171,126,.15); color: #4FAB7E; border: 1px solid rgba(79,171,126,.3); padding: 1px 8px; border-radius: 20px; font-size: .72rem; }
 .ht-badge-status-Pendiente { background: rgba(212,146,58,.15); color: #D4923A; border: 1px solid rgba(212,146,58,.3); padding: 1px 8px; border-radius: 20px; font-size: .72rem; }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--hi2); }
-
-/* ================================================================ RESPONSIVE */
-@media (max-width: 640px) {
-  .ht-navbar-top  { padding: 0 12px; }
-  .ht-controls-bar { padding: 8px 12px; }
-  .ht-main        { padding: 16px 12px 32px; }
-  .ht-stats-row   { gap: 4px; }
-  .ht-stat        { padding: 4px 8px; font-size: .78rem; }
-  .ht-search-input { width: 140px; }
-  .ht-page-title  { font-size: 1.4rem; }
-  .ht-btn-toggle span { display: none; }
-}
-
-/* — Botón descargar PDF en historial ————————————————— */
+/* Botón descargar PDF en historial */
 .ht-report-action-btn--pdf {
     background:    transparent;
     border:        1px solid rgba(124, 58, 237, 0.35);
@@ -1035,4 +1167,22 @@ html, body {
     background:    #7c3aed;
     color:         #fff;
     border-color:  #7c3aed;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--hi2); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .ht-navbar-top  { padding: 0 12px; }
+  .ht-controls-bar { padding: 8px 12px; }
+  .ht-main        { padding: 16px 12px 32px; }
+  .ht-stats-row   { gap: 4px; }
+  .ht-stat        { padding: 4px 8px; font-size: .78rem; }
+  .ht-search-input { width: 140px; }
+  .ht-page-title  { font-size: 1.4rem; }
+  .ht-btn-toggle span { display: none; }
 }

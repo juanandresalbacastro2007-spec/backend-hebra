@@ -1,239 +1,131 @@
-{% load static %}
-<!doctype html>
-<html lang="es">
+{% extends "administrador/admin_base.html" %}
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HebraTech — {{ accion }} Usuario</title>
+{% block titulo %}{{ accion }} Usuario{% endblock %}
+{% block topbar_titulo %}{{ accion }} Usuario{% endblock %}
+{% block topbar_sub %}
+  {% if accion == 'Crear' %}Registra un nuevo usuario en el sistema{% else %}Modifica los datos del usuario{% endif %}
+{% endblock %}
 
-  <!-- Estilos Externos -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  
-  <!-- Estilos Personalizados -->
-  <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
-</head>
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="section-card">
 
-<body>
-
-  <!-- Barra Lateral (Sidebar) -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">
-        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%; height:auto;">
+      <div class="section-card-header">
+        <h6>
+          <i class="bi bi-person-{% if accion == 'Crear' %}plus{% else %}gear{% endif %} me-2"></i>
+          {{ accion }} usuario
+        </h6>
       </div>
-      <div>
-        <div class="brand-title">HebraTech</div>
-        <div class="brand-sub">Administración</div>
-      </div>
-    </div>
 
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Principal</div>
-      <a href="{% url 'admin_portal' %}" class="nav-item">
-        <i class="bi bi-grid-1x2-fill"></i> Dashboard
-      </a>
+      <div class="section-card-body">
 
-      <div class="nav-section-label">Gestión</div>
-      <a href="{% url 'admin_usuarios' %}" class="nav-item active">
-        <i class="bi bi-people-fill"></i> Usuarios
-      </a>
-      <a href="{% url 'admin_ordenes' %}" class="nav-item">
-        <i class="bi bi-bag-fill"></i> Órdenes
-      </a>
-      <a href="{% url 'admin_tareas' %}" class="nav-item">
-        <i class="bi bi-clipboard2-check-fill"></i> Tareas
-      </a>
-      <a href="{% url 'admin_incidencias' %}" class="nav-item">
-        <i class="bi bi-building"></i> Incidencias
-      </a>
-
-      <div class="nav-section-label">Módulos</div>
-      <a href="{% url 'admin_produccion' %}" class="nav-item">
-        <i class="bi bi-gear-wide-connected"></i> Producción
-      </a>
-      <a href="{% url 'admin_proveedores' %}" class="nav-item">
-        <i class="bi bi-truck"></i> Proveedores
-      </a>
-
-      <div class="sidebar-footer">
-        <div class="admin-info">
-          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
+        {% if usuario_editar.estado == 'pendiente' %}
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-hourglass-split fs-5"></i>
           <div>
-            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
-            <div class="admin-role">Administrador</div>
+            Este usuario está <strong>pendiente de aprobación</strong>. Asignale un rol y cambiá el estado a "Activo" para que pueda iniciar sesión.
           </div>
         </div>
-        <a href="{% url 'logout' %}" class="btn-logout">
-          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
-        </a>
-      </div>
-    </nav>
-  </aside>
+        {% endif %}
 
-  <!-- Contenido Principal -->
-  <div class="main-content">
-    
-    <!-- Header Topbar -->
-    <header class="topbar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <i class="bi bi-list fs-4"></i>
-      </button>
-      <div>
-        <h5 class="topbar-title">{{ accion }} Usuario</h5>
-        <small class="topbar-sub">
-          {% if accion == 'Crear' %}
-            Registra un nuevo usuario en el sistema
-          {% else %}
-            Modifica los datos del usuario
-          {% endif %}
-        </small>
-      </div>
-    </header>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="row g-3">
 
-    <!-- Mensajes Flash de Django -->
-    {% if messages %}
-    <div class="px-4 pt-3">
-      {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Wrapping del Contenido -->
-    <div class="content-wrap">
-      <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-          <div class="section-card">
-            
-            <div class="section-card-header">
-              <h6>
-                <i class="bi bi-person-{% if accion == 'Crear' %}plus{% else %}gear{% endif %} me-2"></i>
-                {{ accion }} usuario
-              </h6>
+            <div class="col-md-6">
+              <label for="id_nombre" class="form-label">Nombre</label>
+              <input type="text" id="id_nombre" name="nombre" class="form-control" value="{{ usuario_editar.nombre|default:'' }}" required>
             </div>
 
-            <div class="section-card-body">
-
-              {% if usuario_editar.estado == 'pendiente' %}
-              <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
-                <i class="bi bi-hourglass-split fs-5"></i>
-                <div>
-                  Este usuario está <strong>pendiente de aprobación</strong>. Asignale un rol y cambiá el estado a "Activo" para que pueda iniciar sesión.
-                </div>
-              </div>
-              {% endif %}
-
-              <!-- Formulario de Usuario -->
-              <form method="POST">
-                {% csrf_token %}
-                <div class="row g-3">
-
-                  <div class="col-md-6">
-                    <label for="id_nombre" class="form-label">Nombre</label>
-                    <input type="text" id="id_nombre" name="nombre" class="form-control" value="{{ usuario_editar.nombre|default:'' }}" required>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label for="id_apellido" class="form-label">Apellido</label>
-                    <input type="text" id="id_apellido" name="apellido" class="form-control" value="{{ usuario_editar.apellido|default:'' }}" required>
-                  </div>
-
-                  <div class="col-12">
-                    <label for="id_correo" class="form-label">Correo electrónico</label>
-                    <input type="email" id="id_correo" name="correoElectronico" class="form-control" value="{{ usuario_editar.correoElectronico|default:'' }}" required>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label for="id_telefono" class="form-label">Teléfono</label>
-                    <input type="tel" id="id_telefono" name="telefono" class="form-control" value="{{ usuario_editar.telefono|default:'' }}" placeholder="+57 300 000 0000">
-                  </div>
-
-                  <div class="col-md-6">
-                    <label for="rolSelect" class="form-label">Rol</label>
-                    <select name="rol" class="form-select" id="rolSelect" onchange="toggleEspecialidad()">
-                      {% if usuario_editar.rol == 'sin_asignar' or not usuario_editar.rol %}
-                        <option value="sin_asignar" selected disabled>Sin asignar (pendiente)</option>
-                      {% endif %}
-                      <option value="cliente" {% if usuario_editar.rol == 'cliente' %}selected{% endif %}>Cliente</option>
-                      <option value="operario" {% if usuario_editar.rol == 'operario' %}selected{% endif %}>Operario</option>
-                      <option value="administrador" {% if usuario_editar.rol == 'administrador' %}selected{% endif %}>Administrador</option>
-                    </select>
-                  </div>
-
-                  <!-- Campo visible solo si rol = operario -->
-                  <div class="col-12" id="especialidadField" style="display: none;">
-                    <label for="id_especialidad" class="form-label">Especialidad</label>
-                    <select name="especialidad" id="id_especialidad" class="form-select">
-                      <option value="Corte" {% if usuario_editar.especialidad == 'Corte' %}selected{% endif %}>Corte</option>
-                      <option value="Confección" {% if usuario_editar.especialidad == 'Confección' %}selected{% endif %}>Confección</option>
-                      <option value="Bordado" {% if usuario_editar.especialidad == 'Bordado' %}selected{% endif %}>Bordado</option>
-                      <option value="Estampado" {% if usuario_editar.especialidad == 'Estampado' %}selected{% endif %}>Estampado</option>
-                      <option value="Planchado" {% if usuario_editar.especialidad == 'Planchado' %}selected{% endif %}>Planchado</option>
-                      <option value="Control de Calidad" {% if usuario_editar.especialidad == 'Control de Calidad' %}selected{% endif %}>Control de Calidad</option>
-                      <option value="Empaque" {% if usuario_editar.especialidad == 'Empaque' %}selected{% endif %}>Empaque</option>
-                      <option value="General" {% if usuario_editar.especialidad == 'General' %}selected{% endif %}>General</option>
-                    </select>
-                  </div>
-
-                  {% if accion == 'Editar' %}
-                  <div class="col-md-6">
-                    <label for="id_estado" class="form-label">Estado</label>
-                    <select name="estado" id="id_estado" class="form-select">
-                      <option value="pendiente" {% if usuario_editar.estado == 'pendiente' %}selected{% endif %}>Pendiente de aprobación</option>
-                      <option value="activo" {% if usuario_editar.estado == 'activo' %}selected{% endif %}>Activo</option>
-                      <option value="inactivo" {% if usuario_editar.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
-                      <option value="reportado" {% if usuario_editar.estado == 'reportado' %}selected{% endif %}>Reportado</option>
-                    </select>
-                  </div>
-                  {% endif %}
-
-                  {% if accion == 'Crear' %}
-                  <div class="col-md-6">
-                    <label for="id_contrasena" class="form-label">Contraseña</label>
-                    <input type="password" id="id_contrasena" name="contrasena" class="form-control" placeholder="Mínimo 8 caracteres" required>
-                  </div>
-                  {% endif %}
-
-                </div>
-
-                <!-- Botones de Acción -->
-                <div class="d-flex gap-2 justify-content-end mt-4">
-                  <a href="{% url 'admin_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
-                  <button type="submit" class="btn btn-primary-ht">
-                    <i class="bi bi-check-lg me-1"></i>{{ accion }} usuario
-                  </button>
-                </div>
-              </form>
-
+            <div class="col-md-6">
+              <label for="id_apellido" class="form-label">Apellido</label>
+              <input type="text" id="id_apellido" name="apellido" class="form-control" value="{{ usuario_editar.apellido|default:'' }}" required>
             </div>
+
+            <div class="col-12">
+              <label for="id_correo" class="form-label">Correo electrónico</label>
+              <input type="email" id="id_correo" name="correoElectronico" class="form-control" value="{{ usuario_editar.correoElectronico|default:'' }}" required>
+            </div>
+
+            <div class="col-md-6">
+              <label for="id_telefono" class="form-label">Teléfono</label>
+              <input type="tel" id="id_telefono" name="telefono" class="form-control" value="{{ usuario_editar.telefono|default:'' }}" placeholder="+57 300 000 0000">
+            </div>
+
+            <div class="col-md-6">
+              <label for="rolSelect" class="form-label">Rol</label>
+              <select name="rol" class="form-select" id="rolSelect" onchange="toggleEspecialidad()">
+                {% if usuario_editar.rol == 'sin_asignar' or not usuario_editar.rol %}
+                  <option value="sin_asignar" selected disabled>Sin asignar (pendiente)</option>
+                {% endif %}
+                <option value="cliente" {% if usuario_editar.rol == 'cliente' %}selected{% endif %}>Cliente</option>
+                <option value="operario" {% if usuario_editar.rol == 'operario' %}selected{% endif %}>Operario</option>
+                <option value="administrador" {% if usuario_editar.rol == 'administrador' %}selected{% endif %}>Administrador</option>
+              </select>
+            </div>
+
+            <!-- Campo visible solo si rol = operario -->
+            <div class="col-12" id="especialidadField" style="display: none;">
+              <label for="id_especialidad" class="form-label">Especialidad</label>
+              <select name="especialidad" id="id_especialidad" class="form-select">
+                <option value="Corte" {% if usuario_editar.especialidad == 'Corte' %}selected{% endif %}>Corte</option>
+                <option value="Confección" {% if usuario_editar.especialidad == 'Confección' %}selected{% endif %}>Confección</option>
+                <option value="Bordado" {% if usuario_editar.especialidad == 'Bordado' %}selected{% endif %}>Bordado</option>
+                <option value="Estampado" {% if usuario_editar.especialidad == 'Estampado' %}selected{% endif %}>Estampado</option>
+                <option value="Planchado" {% if usuario_editar.especialidad == 'Planchado' %}selected{% endif %}>Planchado</option>
+                <option value="Control de Calidad" {% if usuario_editar.especialidad == 'Control de Calidad' %}selected{% endif %}>Control de Calidad</option>
+                <option value="Empaque" {% if usuario_editar.especialidad == 'Empaque' %}selected{% endif %}>Empaque</option>
+                <option value="General" {% if usuario_editar.especialidad == 'General' %}selected{% endif %}>General</option>
+              </select>
+            </div>
+
+            {% if accion == 'Editar' %}
+            <div class="col-md-6">
+              <label for="id_estado" class="form-label">Estado</label>
+              <select name="estado" id="id_estado" class="form-select">
+                <option value="pendiente" {% if usuario_editar.estado == 'pendiente' %}selected{% endif %}>Pendiente de aprobación</option>
+                <option value="activo" {% if usuario_editar.estado == 'activo' %}selected{% endif %}>Activo</option>
+                <option value="inactivo" {% if usuario_editar.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                <option value="reportado" {% if usuario_editar.estado == 'reportado' %}selected{% endif %}>Reportado</option>
+              </select>
+            </div>
+            {% endif %}
+
+            {% if accion == 'Crear' %}
+            <div class="col-md-6">
+              <label for="id_contrasena" class="form-label">Contraseña</label>
+              <input type="password" id="id_contrasena" name="contrasena" class="form-control" placeholder="Mínimo 8 caracteres" required>
+            </div>
+            {% endif %}
+
           </div>
-        </div>
+
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'admin_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary-ht">
+              <i class="bi bi-check-lg me-1"></i>{{ accion }} usuario
+            </button>
+          </div>
+        </form>
+
       </div>
     </div>
   </div>
+</div>
+{% endblock %}
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{% static 'js/admin.js' %}"></script>
-  <script>
-    function toggleEspecialidad() {
-      const rolSelect = document.getElementById('rolSelect');
-      const campoEspecialidad = document.getElementById('especialidadField');
-      
-      if (rolSelect && campoEspecialidad) {
-        campoEspecialidad.style.display = (rolSelect.value === 'operario') ? 'block' : 'none';
-      }
+{% block extra_js %}
+<script>
+  function toggleEspecialidad() {
+    const rolSelect = document.getElementById('rolSelect');
+    const campoEspecialidad = document.getElementById('especialidadField');
+
+    if (rolSelect && campoEspecialidad) {
+      campoEspecialidad.style.display = (rolSelect.value === 'operario') ? 'block' : 'none';
     }
+  }
 
-    // Ejecutar al cargar la página para reflejar el estado actual
-    document.addEventListener('DOMContentLoaded', toggleEspecialidad);
-  </script>
-</body>
-
-</html>
+  document.addEventListener('DOMContentLoaded', toggleEspecialidad);
+</script>
+{% endblock %}

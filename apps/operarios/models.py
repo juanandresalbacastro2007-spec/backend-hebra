@@ -13,6 +13,12 @@ class Usuario(models.Model):
     direccion = models.CharField(max_length=255, null=True, blank=True)
     rol = models.CharField(max_length=20, default='operario')
     estado = models.CharField(max_length=20, default='activo')
+    fotoPerfil = models.ImageField(
+        upload_to='perfiles/',
+        null=True,
+        blank=True,
+        db_column='fotoPerfil'
+    )
 
     class Meta:
         db_table = 'usuarios'

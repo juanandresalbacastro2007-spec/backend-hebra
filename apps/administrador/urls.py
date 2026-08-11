@@ -1,7 +1,7 @@
 # apps/administrador/urls.py
 
 from django.urls import path, include
-from . import views  
+from . import views
 
 urlpatterns = [
     path('', views.admin_portal, name='admin_portal'),
@@ -35,5 +35,8 @@ urlpatterns = [
 
     # Módulos externos
     path('produccion/', views.produccion_placeholder, name='admin_produccion'),
+    # OJO: admin_base.html usa {% url 'admin_proveedores' %} en el sidebar.
+    # Ese 'name' debe existir DENTRO de apps/proveedores/urls.py (p.ej. en la
+    # ruta raíz de ese include), o el sidebar romperá con NoReverseMatch.
     path('proveedores/', include('apps.proveedores.urls')),
 ]

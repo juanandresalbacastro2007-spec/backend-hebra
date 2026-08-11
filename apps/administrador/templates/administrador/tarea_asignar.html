@@ -1,247 +1,183 @@
-{% load static %}
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HebraTech — Asignar Tarea</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
-</head>
-<body>
+{% extends "administrador/admin_base.html" %}
 
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">
-        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
-      </div>
-      <div>
-        <div class="brand-title">HebraTech</div>
-        <div class="brand-sub">Administración</div>
-      </div>
-    </div>
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Principal</div>
-      <a href="{% url 'admin_portal' %}" class="nav-item"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-      <div class="nav-section-label">Gestión</div>
-      <a href="{% url 'admin_usuarios' %}" class="nav-item"><i class="bi bi-people-fill"></i> Usuarios</a>
-      <a href="{% url 'admin_ordenes' %}" class="nav-item"><i class="bi bi-bag-fill"></i> Órdenes</a>
-      <a href="{% url 'admin_tareas' %}" class="nav-item active"><i class="bi bi-clipboard2-check-fill"></i> Tareas</a>
-      <div class="nav-section-label">Módulos</div>
-      <a href="{% url 'admin_produccion' %}" class="nav-item"><i class="bi bi-gear-wide-connected"></i> Producción</a>
-      <a href="{% url 'admin_proveedores' %}" class="nav-item"><i class="bi bi-truck"></i> Proveedores</a>
-      <div class="sidebar-footer">
-        <div class="admin-info">
-          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
-          <div>
-            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
-            <div class="admin-role">Administrador</div>
-          </div>
-        </div>
-        <a href="{% url 'logout' %}" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
-      </div>
-    </nav>
-  </aside>
+{% block titulo %}Asignar Tarea{% endblock %}
+{% block topbar_titulo %}Asignar tarea{% endblock %}
+{% block topbar_sub %}Asigna una tarea a un operario activo{% endblock %}
 
-  <div class="main-content">
-    <header class="topbar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list fs-4"></i></button>
-      <div>
-        <h5 class="topbar-title">Asignar tarea</h5>
-        <small class="topbar-sub">Asigna una tarea a un operario activo</small>
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h6><i class="bi bi-clipboard2-plus me-2"></i>Nueva asignación</h6>
       </div>
-    </header>
+      <div class="section-card-body">
+        <form method="POST" id="formAsignarTarea">
+          {% csrf_token %}
+          <div class="row g-3">
 
-    {% if messages %}
-    <div class="px-4 pt-3">
-      {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
-        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="content-wrap">
-      <div class="row justify-content-center">
-        <div class="col-md-8">
-          <div class="section-card">
-            <div class="section-card-header">
-              <h6><i class="bi bi-clipboard2-plus me-2"></i>Nueva asignación</h6>
+            <!-- Selector de Tarea (con opción "Otra") -->
+            <div class="col-md-6">
+              <label class="form-label">Tarea</label>
+              <select name="tarea" id="selectTarea" class="form-select" required>
+                <option value="">Seleccionar tarea...</option>
+                {% for tarea in tareas %}
+                <option value="{{ tarea.idTarea }}">
+                  {{ tarea.nombreTarea }} — {{ tarea.proceso }}
+                </option>
+                {% endfor %}
+                <option value="otra" style="color: #395B64; font-weight: 600;">+ Otra (crear nueva)</option>
+              </select>
             </div>
-            <div class="section-card-body">
-              <form method="POST" id="formAsignarTarea">
-                {% csrf_token %}
-                <div class="row g-3">
 
-                  <!-- Selector de Tarea (con opción "Otra") -->
-                  <div class="col-md-6">
-                    <label class="form-label">Tarea</label>
-                    <select name="tarea" id="selectTarea" class="form-select" required>
-                      <option value="">Seleccionar tarea...</option>
-                      {% for tarea in tareas %}
-                      <option value="{{ tarea.idTarea }}">
-                        {{ tarea.nombreTarea }} — {{ tarea.proceso }}
-                      </option>
-                      {% endfor %}
-                      <option value="otra" style="color: #395B64; font-weight: 600;">+ Otra (crear nueva)</option>
-                    </select>
-                  </div>
-
-                  <!-- Campo para tarea personalizada (oculto por defecto) -->
-                  <div class="col-md-6" id="tareasPersonalizadasContainer" style="display: none;">
-                    <label class="form-label">Nombre de la tarea</label>
-                    <input type="text" name="tarea_personalizada" id="tareaPersonalizada" class="form-control"
-                      placeholder="Ej. Bordado personalizado, Teñido especial...">
-                    <small class="text-muted">Se creará como una nueva tarea en el sistema.</small>
-                  </div>
-
-                  <!-- Proceso para tarea personalizada -->
-                  <div class="col-md-6" id="procesoPersonalizadoContainer" style="display: none;">
-                    <label class="form-label">Proceso / Categoría</label>
-                    <input type="text" name="proceso_personalizado" id="procesoPersonalizado" class="form-control"
-                      placeholder="Ej. Bordado, Teñido, Confección...">
-                    <small class="text-muted">Categoría o tipo de proceso.</small>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label class="form-label">Operario</label>
-                    <select name="operario" class="form-select" required>
-                      <option value="">Seleccionar operario...</option>
-                      {% for op in operarios %}
-                      <option value="{{ op.idOperario }}">
-                        {{ op.idUsuario.nombre }} {{ op.idUsuario.apellido }} — {{ op.especialidad }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label class="form-label">Fecha de inicio</label>
-                    <input type="date" name="fechaInicio" class="form-control" required>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label class="form-label">Prioridad</label>
-                    <select name="prioridad" class="form-select" required>
-                      <option value="Baja">Baja</option>
-                      <option value="Media" selected>Media</option>
-                      <option value="Alta">Alta</option>
-                      <option value="Urgente">Urgente</option>
-                    </select>
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Tipo de prenda</label>
-                    <select name="tipoPrenda" id="tipoPrenda" class="form-select">
-                      <option value="">Seleccionar tipo...</option>
-                      <option value="Camisas">Camisas (5 min/u)</option>
-                      <option value="Pantalones">Pantalones (10 min/u)</option>
-                      <option value="Vestidos">Vestidos (12 min/u)</option>
-                      <option value="Chaquetas">Chaquetas (12 min/u)</option>
-                      <option value="Bermudas">Bermudas (15 min/u)</option>
-                    </select>
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Cantidad de prendas</label>
-                    <input type="number" name="cantidadPrendas" id="cantidadPrendas" class="form-control"
-                      min="1" step="1" placeholder="Ej. 300">
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Horas estimadas</label>
-                    <input type="number" name="horasEstimadas" id="horasEstimadas" class="form-control"
-                      min="0.5" step="0.5" placeholder="Se calcula sola o edítala">
-                    <small class="text-muted">Se calcula automáticamente; puedes ajustarla.</small>
-                  </div>
-
-                  <div class="col-12">
-                    <label class="form-label">Descripción / instrucciones</label>
-                    <textarea name="descripcion" class="form-control" rows="3"
-                      placeholder="Detalla las instrucciones para el operario..." required></textarea>
-                  </div>
-
-                </div>
-
-                <div class="d-flex gap-2 justify-content-end mt-4">
-                  <a href="{% url 'admin_tareas' %}" class="btn btn-outline-secondary">Cancelar</a>
-                  <button type="submit" class="btn btn-primary-ht">
-                    <i class="bi bi-send me-1"></i>Asignar tarea
-                  </button>
-                </div>
-              </form>
+            <!-- Campo para tarea personalizada (oculto por defecto) -->
+            <div class="col-md-6" id="tareasPersonalizadasContainer" style="display: none;">
+              <label class="form-label">Nombre de la tarea</label>
+              <input type="text" name="tarea_personalizada" id="tareaPersonalizada" class="form-control"
+                placeholder="Ej. Bordado personalizado, Teñido especial...">
+              <small class="text-muted">Se creará como una nueva tarea en el sistema.</small>
             </div>
+
+            <!-- Proceso para tarea personalizada -->
+            <div class="col-md-6" id="procesoPersonalizadoContainer" style="display: none;">
+              <label class="form-label">Proceso / Categoría</label>
+              <input type="text" name="proceso_personalizado" id="procesoPersonalizado" class="form-control"
+                placeholder="Ej. Bordado, Teñido, Confección...">
+              <small class="text-muted">Categoría o tipo de proceso.</small>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Operario</label>
+              <select name="operario" class="form-select" required>
+                <option value="">Seleccionar operario...</option>
+                {% for op in operarios %}
+                <option value="{{ op.idOperario }}">
+                  {{ op.idUsuario.nombre }} {{ op.idUsuario.apellido }} — {{ op.especialidad }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Fecha de inicio</label>
+              <input type="date" name="fechaInicio" class="form-control" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Prioridad</label>
+              <select name="prioridad" class="form-select" required>
+                <option value="Baja">Baja</option>
+                <option value="Media" selected>Media</option>
+                <option value="Alta">Alta</option>
+                <option value="Urgente">Urgente</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Tipo de prenda</label>
+              <select name="tipoPrenda" id="tipoPrenda" class="form-select">
+                <option value="">Seleccionar tipo...</option>
+                <option value="Camisas">Camisas (5 min/u)</option>
+                <option value="Pantalones">Pantalones (10 min/u)</option>
+                <option value="Vestidos">Vestidos (12 min/u)</option>
+                <option value="Chaquetas">Chaquetas (12 min/u)</option>
+                <option value="Bermudas">Bermudas (15 min/u)</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Cantidad de prendas</label>
+              <input type="number" name="cantidadPrendas" id="cantidadPrendas" class="form-control"
+                min="1" step="1" placeholder="Ej. 300">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Horas estimadas</label>
+              <input type="number" name="horasEstimadas" id="horasEstimadas" class="form-control"
+                min="0.5" step="0.5" placeholder="Se calcula sola o edítala">
+              <small class="text-muted">Se calcula automáticamente; puedes ajustarla.</small>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Descripción / instrucciones</label>
+              <textarea name="descripcion" class="form-control" rows="3"
+                placeholder="Detalla las instrucciones para el operario..." required></textarea>
+            </div>
+
           </div>
-        </div>
+
+          <div class="d-flex gap-2 justify-content-end mt-4">
+            <a href="{% url 'admin_tareas' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary-ht">
+              <i class="bi bi-send me-1"></i>Asignar tarea
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
+</div>
+{% endblock %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{% static 'js/admin.js' %}"></script>
+{% block extra_js %}
+<script>
+  const TIEMPOS_ESTANDAR = { 'Camisas': 5, 'Pantalones': 10, 'Vestidos': 12, 'Chaquetas': 12, 'Bermudas': 15 };
 
-  <script>
-    const TIEMPOS_ESTANDAR = { 'Camisas': 5, 'Pantalones': 10, 'Vestidos': 12, 'Chaquetas': 12, 'Bermudas': 15 };
+  // ── Mostrar/ocultar campos de tarea personalizada ─────
+  const selectTarea = document.getElementById('selectTarea');
+  const tareasPersonalizadasContainer = document.getElementById('tareasPersonalizadasContainer');
+  const procesoPersonalizadoContainer = document.getElementById('procesoPersonalizadoContainer');
+  const tareaPersonalizada = document.getElementById('tareaPersonalizada');
+  const procesoPersonalizado = document.getElementById('procesoPersonalizado');
 
-    // ── Mostrar/ocultar campos de tarea personalizada ─────
-    const selectTarea = document.getElementById('selectTarea');
-    const tareasPersonalizadasContainer = document.getElementById('tareasPersonalizadasContainer');
-    const procesoPersonalizadoContainer = document.getElementById('procesoPersonalizadoContainer');
-    const tareaPersonalizada = document.getElementById('tareaPersonalizada');
-    const procesoPersonalizado = document.getElementById('procesoPersonalizado');
+  selectTarea.addEventListener('change', function() {
+    if (this.value === 'otra') {
+      tareasPersonalizadasContainer.style.display = 'block';
+      procesoPersonalizadoContainer.style.display = 'block';
+      tareaPersonalizada.setAttribute('required', 'required');
+      procesoPersonalizado.setAttribute('required', 'required');
+    } else {
+      tareasPersonalizadasContainer.style.display = 'none';
+      procesoPersonalizadoContainer.style.display = 'none';
+      tareaPersonalizada.removeAttribute('required');
+      procesoPersonalizado.removeAttribute('required');
+      tareaPersonalizada.value = '';
+      procesoPersonalizado.value = '';
+    }
+  });
 
-    selectTarea.addEventListener('change', function() {
-      if (this.value === 'otra') {
-        tareasPersonalizadasContainer.style.display = 'block';
-        procesoPersonalizadoContainer.style.display = 'block';
-        tareaPersonalizada.setAttribute('required', 'required');
-        procesoPersonalizado.setAttribute('required', 'required');
-      } else {
-        tareasPersonalizadasContainer.style.display = 'none';
-        procesoPersonalizadoContainer.style.display = 'none';
-        tareaPersonalizada.removeAttribute('required');
-        procesoPersonalizado.removeAttribute('required');
-        tareaPersonalizada.value = '';
-        procesoPersonalizado.value = '';
+  // ── Validación del formulario ─────────────────────────
+  document.getElementById('formAsignarTarea').addEventListener('submit', function(e) {
+    if (selectTarea.value === 'otra') {
+      if (!tareaPersonalizada.value.trim()) {
+        e.preventDefault();
+        alert('Por favor, ingresa el nombre de la tarea personalizada.');
+        tareaPersonalizada.focus();
+        return;
       }
-    });
-
-    // ── Validación del formulario ─────────────────────────
-    document.getElementById('formAsignarTarea').addEventListener('submit', function(e) {
-      if (selectTarea.value === 'otra') {
-        if (!tareaPersonalizada.value.trim()) {
-          e.preventDefault();
-          alert('Por favor, ingresa el nombre de la tarea personalizada.');
-          tareaPersonalizada.focus();
-          return;
-        }
-        if (!procesoPersonalizado.value.trim()) {
-          e.preventDefault();
-          alert('Por favor, ingresa el proceso/categoría de la tarea.');
-          procesoPersonalizado.focus();
-          return;
-        }
-      }
-    });
-
-    // ── Cálculo automático de horas ──────────────────────
-    function recalcularHoras() {
-      const tipo = document.getElementById('tipoPrenda').value;
-      const cantidad = parseInt(document.getElementById('cantidadPrendas').value, 10);
-      const horasInput = document.getElementById('horasEstimadas');
-
-      if (tipo && cantidad > 0) {
-        const minutos = TIEMPOS_ESTANDAR[tipo] || 0;
-        const horas = (cantidad * minutos) / 60;
-        horasInput.value = horas.toFixed(2);
+      if (!procesoPersonalizado.value.trim()) {
+        e.preventDefault();
+        alert('Por favor, ingresa el proceso/categoría de la tarea.');
+        procesoPersonalizado.focus();
+        return;
       }
     }
+  });
 
-    document.getElementById('tipoPrenda').addEventListener('change', recalcularHoras);
-    document.getElementById('cantidadPrendas').addEventListener('input', recalcularHoras);
-  </script>
-</body>
-</html>
+  // ── Cálculo automático de horas ──────────────────────
+  function recalcularHoras() {
+    const tipo = document.getElementById('tipoPrenda').value;
+    const cantidad = parseInt(document.getElementById('cantidadPrendas').value, 10);
+    const horasInput = document.getElementById('horasEstimadas');
+
+    if (tipo && cantidad > 0) {
+      const minutos = TIEMPOS_ESTANDAR[tipo] || 0;
+      const horas = (cantidad * minutos) / 60;
+      horasInput.value = horas.toFixed(2);
+    }
+  }
+
+  document.getElementById('tipoPrenda').addEventListener('change', recalcularHoras);
+  document.getElementById('cantidadPrendas').addEventListener('input', recalcularHoras);
+</script>
+{% endblock %}

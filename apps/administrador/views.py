@@ -549,25 +549,16 @@ def exportar_ordenes_pdf(request):
         return HttpResponse('Hubo un error al generar el PDF', status=500)
     return response
 
+@admin_required
 def inventario_lista(request):
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+
     # Consulta optimizada trayendo la relación de Producto en una sola consulta SQL
     inventario_list = Inventario.objects.all().select_related('producto')
-    
-    total_items = inventario_list.count()
-    
-    context = {
-        'inventario_list': inventario_list,
-        'total_items': total_items,
-    }
-    
-    return render(request, 'administrador/inventario_lista.html', context)
-
-
-def inventario_lista(request):
-    inventario_list = Inventario.objects.all()
     materiales_list = Material.objects.all()
 
     context = {
+        'usuario': usuario,
         'inventario_list': inventario_list,
         'total_items': inventario_list.count(),
         'materiales_list': materiales_list,

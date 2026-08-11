@@ -16,6 +16,16 @@ urlpatterns = [
     ),
 
     # ------------------------------------------------------------------
+    # Perfil — ver/editar datos del operario logueado + foto
+    # GET/POST /operarios/perfil/
+    # ------------------------------------------------------------------
+    path(
+        'perfil/',
+        views.perfil_operario,
+        name='perfil'
+    ),
+
+    # ------------------------------------------------------------------
     # API — Tareas asignadas al operario logueado
     # GET /operarios/api/tareas/
     # ------------------------------------------------------------------

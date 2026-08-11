@@ -4,10 +4,12 @@ import io
 from datetime import date, datetime
 
 from django.conf import settings
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password, check_password
+from django.contrib import messages
 
 # --- Imports nuevos para el PDF (ReportLab) ---
 from reportlab.lib.pagesizes import letter
@@ -20,7 +22,7 @@ from reportlab.platypus import (
 )
 from reportlab.lib.enums import TA_CENTER
 
-from .models import Operario, AsignacionTarea, Incidencia
+from .models import Operario, AsignacionTarea, Incidencia, Usuario
 from apps.core.decorators import login_required_rol, login_required_api
 
 logger = logging.getLogger(__name__)
@@ -83,6 +85,75 @@ def tablero_operario(request):
     }
 
     return render(request, 'operarios/operario.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Vista — Editar perfil del operario
+# ---------------------------------------------------------------------------
+
+@operario_login_required
+def perfil_operario(request):
+    """GET/POST /operarios/perfil/"""
+    operario = _get_operario_actual(request)
+    if not operario:
+        messages.error(request, 'No se pudo cargar tu perfil.')
+        return redirect('operarios:tablero')
+
+    usuario = operario.idUsuario
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+        especialidad = request.POST.get('especialidad', '').strip()
+
+        password_actual = request.POST.get('password_actual', '')
+        password_nueva = request.POST.get('password_nueva', '')
+        password_confirmar = request.POST.get('password_confirmar', '')
+
+        if not nombre or not apellido:
+            messages.error(request, 'Nombre y apellido son obligatorios.')
+            return render(request, 'operarios/perfil.html', {'operario': operario})
+
+        # Cambio de contraseña (opcional)
+        if password_actual or password_nueva or password_confirmar:
+            if not check_password(password_actual, usuario.contrasena):
+                messages.error(request, 'La contraseña actual no es correcta.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+            if len(password_nueva) < 8:
+                messages.error(request, 'La nueva contraseña debe tener al menos 8 caracteres.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+            if password_nueva != password_confirmar:
+                messages.error(request, 'Las contraseñas nuevas no coinciden.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+            usuario.contrasena = make_password(password_nueva)
+
+        # Foto de perfil (opcional)
+        foto = request.FILES.get('fotoPerfil')
+        if foto:
+            if foto.size > 3 * 1024 * 1024:
+                messages.error(request, 'La imagen no puede superar 3MB.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+            if not foto.content_type in ('image/jpeg', 'image/png', 'image/webp'):
+                messages.error(request, 'Formato de imagen no válido (usa JPG, PNG o WEBP).')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+            usuario.fotoPerfil = foto
+
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.telefono = telefono or None
+        usuario.direccion = direccion or None
+        usuario.save()
+
+        if especialidad:
+            operario.especialidad = especialidad
+            operario.save()
+
+        messages.success(request, 'Perfil actualizado correctamente.')
+        return redirect('operarios:perfil')
+
+    return render(request, 'operarios/perfil.html', {'operario': operario})
 
 
 # ---------------------------------------------------------------------------

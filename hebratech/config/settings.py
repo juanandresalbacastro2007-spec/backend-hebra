@@ -84,7 +84,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DB_NAME', default='hebratech'),
         'USER': config('DB_USER', default='root'),
-        'PASSWORD': config('DB_PASSWORD', default='12345'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST': config('DB_HOST', default='127.0.0.1'),
         'PORT': config('DB_PORT', default='3306'),
     }
@@ -136,7 +136,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='hebratechoficial@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='gggg yday szyr fngm')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='iebi myfc qetj phvr')
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
 
 # --- CONFIGURACIÓN DE REST FRAMEWORK Y JWT ---

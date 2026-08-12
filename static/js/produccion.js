@@ -79,6 +79,8 @@ function renderProductos(lista) {
   const tb = document.getElementById('tbody-productos');
   if (!tb) return;
 
+  const iconos = { Camisa: '👔', 'Pantalón': '👖', Uniforme: '🎽', Chaqueta: '🧥', Accesorio: '👜' };
+
   if (!lista.length) {
     tb.innerHTML = `
       <tr>
@@ -265,16 +267,6 @@ function abrirModalOrden() {
   document.getElementById('o-fecha-fin').value = '';
   document.getElementById('o-costo-estimado').value = '';
   document.getElementById('o-estado').value = 'Pendiente';
-  
-  // Limpiar errores visuales previos si existen
-  const selectOperario = document.getElementById('o-operario'); // Asegúrate de tener este input o select en tu modal HTML
-  const errorDiv = document.getElementById('errorOperario');
-  if (selectOperario) selectOperario.classList.remove('ht-input-error');
-  if (errorDiv) {
-    errorDiv.style.display = 'none';
-    errorDiv.textContent = '';
-  }
-
   document.getElementById('modal-orden').style.display = 'flex';
 }
 
@@ -300,44 +292,6 @@ function editarOrden(id) {
 
 async function guardarOrden() {
   const id = document.getElementById('orden-id').value;
-  
-  // Asumiendo que agregaste un selector de operario con ID 'o-operario'
-  const selectOperario = document.getElementById('o-operario'); 
-  const operarioId = selectOperario ? selectOperario.value : null;
-  const errorDiv = document.getElementById('errorOperario');
-
-  // Limpiar errores visuales previos
-  if (selectOperario) selectOperario.classList.remove('ht-input-error');
-  if (errorDiv) {
-    errorDiv.style.display = 'none';
-    errorDiv.textContent = '';
-  }
-
-  // VALIDACIÓN: Evitar asignar más de una tarea activa (Pendiente o En Proceso) al mismo operario
-  if (operarioId) {
-    const estadoActual = document.getElementById('o-estado').value;
-    
-    // Si la orden que se guarda está activa (Pendiente o En Proceso)
-    if (estadoActual !== 'Completada') {
-      const operarioOcupado = allOrdenes.find(o => 
-        // Si no es la misma orden que estamos editando
-        (!id || o.idProduccion != id) && 
-        o.operarioId == operarioId && 
-        o.estado !== 'Completada'
-      );
-
-      if (operarioOcupado) {
-        if (selectOperario) selectOperario.classList.add('ht-input-error');
-        if (errorDiv) {
-          errorDiv.textContent = `Error: Este operario ya tiene la tarea activa #${operarioOcupado.idProduccion} asignada.`;
-          errorDiv.style.display = 'flex';
-        }
-        showToast('El operario ya cuenta con una tarea activa asignada.', 'error');
-        return; // Detiene el guardado
-      }
-    }
-  }
-
   const data = {
     idProducto: parseInt(document.getElementById('o-producto').value),
     cantidadRequerida: parseInt(document.getElementById('o-cantidad').value),

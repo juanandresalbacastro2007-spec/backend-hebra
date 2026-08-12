@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import json
+import unicodedata
 from .models import Producto, Produccion
 from datetime import date
 
@@ -11,6 +12,18 @@ from apps.core.decorators import login_required_rol, login_required_api
 # ── Decoradores de protección (solo administrador) ──────────────────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
+
+
+def _normalizar(texto):
+    """
+    Normaliza un texto para comparar nombres de forma robusta:
+    quita espacios extra, pasa a minúsculas y elimina tildes/acentos.
+    Así "Camiseta Básica" y "camiseta basica" se detectan como el mismo nombre.
+    """
+    texto = (texto or '').strip().lower()
+    texto = unicodedata.normalize('NFKD', texto)
+    texto = ''.join(c for c in texto if not unicodedata.combining(c))
+    return texto
 
 
 # ── PORTAL (Template HTML) ───────────────────────────
@@ -54,8 +67,26 @@ def productos(request):
         return JsonResponse([producto_to_dict(p) for p in lista], safe=False)
 
     data = json.loads(request.body)
+    nombre = (data.get('nombre') or '').strip()
+
+    if not nombre:
+        return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
+
+    # Validar que no exista ya un producto con el mismo nombre
+    # (ignora mayúsculas/minúsculas y tildes: "Camiseta Básica" == "camiseta basica")
+    nombre_normalizado = _normalizar(nombre)
+    duplicado = any(
+        _normalizar(p_nombre) == nombre_normalizado
+        for p_nombre in Producto.objects.values_list('nombre', flat=True)
+    )
+    if duplicado:
+        return JsonResponse(
+            {'error': f'Ya existe un producto llamado "{nombre}". Usa otro nombre.'},
+            status=400
+        )
+
     p = Producto.objects.create(
-        nombre      = data['nombre'],
+        nombre      = nombre,
         descripcion = data.get('descripcion', ''),
         precio      = data.get('precio', 0),
         categoria   = data['categoria'],
@@ -77,6 +108,23 @@ def producto_detalle(request, id):
 
     if request.method == 'PUT':
         data = json.loads(request.body)
+
+        if 'nombre' in data:
+            nuevo_nombre = (data['nombre'] or '').strip()
+            if not nuevo_nombre:
+                return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
+            nuevo_normalizado = _normalizar(nuevo_nombre)
+            duplicado = any(
+                _normalizar(otro_nombre) == nuevo_normalizado
+                for otro_nombre in Producto.objects.exclude(pk=p.pk).values_list('nombre', flat=True)
+            )
+            if duplicado:
+                return JsonResponse(
+                    {'error': f'Ya existe un producto llamado "{nuevo_nombre}". Usa otro nombre.'},
+                    status=400
+                )
+            data['nombre'] = nuevo_nombre
+
         for campo in ['nombre', 'descripcion', 'precio', 'categoria']:
             if campo in data:
                 setattr(p, campo, data[campo])
@@ -105,8 +153,12 @@ def ordenes(request):
         estado__in=['Pendiente', 'En Progreso']
     ).exists()
     if activo:
+        try:
+            nombre_prod = Producto.objects.get(pk=data['idProducto']).nombre
+        except Producto.DoesNotExist:
+            nombre_prod = 'Este producto'
         return JsonResponse(
-            {'error': 'Este producto ya tiene otro proceso activo.'},
+            {'error': f'"{nombre_prod}" ya tiene otra tarea/orden activa. No se puede asignar otra hasta completarla.'},
             status=400
         )
 

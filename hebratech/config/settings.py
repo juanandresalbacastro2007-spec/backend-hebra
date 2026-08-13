@@ -84,7 +84,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DB_NAME', default='hebratech'),
         'USER': config('DB_USER', default='root'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
+        'PASSWORD': config('DB_PASSWORD', default='12345'),
         'HOST': config('DB_HOST', default='127.0.0.1'),
         'PORT': config('DB_PORT', default='3306'),
     }
@@ -157,6 +157,8 @@ ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
 SOCIALACCOUNT_LOGIN_ON_GET = True  # Permite clic directo en enlaces <a> para iniciar sesión con Google
 SOCIALACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomSocialAccountAdapter'
 SOCIALACCOUNT_FORMS = {'signup': 'apps.usuarios.forms.SocialSignupForm'}
+ACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_AUTO_SIGNUP = False
 # --- CONFIGURACIÓN DE LOGIN SOCIAL CON GOOGLE ---
 SOCIALACCOUNT_PROVIDERS = {
     'google': {

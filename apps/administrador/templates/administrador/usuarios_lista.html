@@ -7,21 +7,53 @@
 {% block topbar_extra %}
 <div class="ms-auto d-flex gap-2">
   {% if estado_filtro == 'pendiente' %}
-    <a href="{% url 'admin_usuarios' %}" class="btn btn-outline-secondary">
+    <a href="{% url 'admin_usuarios' %}" class="btn btn-outline-secondary d-inline-flex align-items-center">
       <i class="bi bi-x-lg me-1"></i>Quitar filtro
     </a>
   {% else %}
-    <a href="{% url 'admin_usuarios' %}?estado=pendiente" class="btn btn-outline-warning">
+    <a href="{% url 'admin_usuarios' %}?estado=pendiente" class="btn btn-outline-warning d-inline-flex align-items-center">
       <i class="bi bi-hourglass-split me-1"></i>Ver pendientes
     </a>
   {% endif %}
-  <a href="{% url 'admin_usuario_crear' %}" class="btn btn-primary-ht">
+  <a href="{% url 'admin_usuario_crear' %}" class="btn btn-primary-ht d-inline-flex align-items-center">
     <i class="bi bi-person-plus me-1"></i>Nuevo usuario
   </a>
 </div>
 {% endblock %}
 
 {% block contenido %}
+
+<!-- 1. NOTIFICACIONES FLASH DEL SISTEMA (Django Messages) -->
+{% if messages %}
+  <div class="messages-wrapper mb-3">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+        {% if message.tags == 'success' %}
+          <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+        {% elif message.tags == 'error' or message.tags == 'danger' %}
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+        {% else %}
+          <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+        {% endif %}
+        <div>{{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- 2. AVISO CONTEXTUAL SI SE FILTRAN PENDIENTES -->
+{% if estado_filtro == 'pendiente' %}
+  <div class="alert alert-warning d-flex align-items-center gap-2 mb-3 shadow-sm" style="border-radius: 10px;">
+    <i class="bi bi-hourglass-split fs-4 flex-shrink-0"></i>
+    <div class="small">
+      Mostrando únicamente <strong>usuarios pendientes de aprobación</strong>. Asígnales un rol y cámbiales el estado a "Activo" mediante el botón de edición para permitirles el acceso.
+    </div>
+  </div>
+{% endif %}
+
 <div class="section-card">
   <div class="section-card-header">
     <h6>
@@ -46,62 +78,69 @@
       <tbody>
         {% for u in usuarios %}
         <tr>
-          <td><strong>{{ u.idUsuario }}</strong></td>
+          <td><strong>#{{ u.idUsuario }}</strong></td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="admin-avatar" style="width:30px;height:30px;font-size:0.78rem;">
                 {{ u.nombre|first|upper }}
               </div>
-              {{ u.nombre }} {{ u.apellido }}
+              <span class="fw-medium">{{ u.nombre }} {{ u.apellido }}</span>
             </div>
           </td>
           <td>{{ u.correoElectronico }}</td>
           <td>{{ u.telefono|default:"—" }}</td>
           <td>
             {% if u.rol == 'administrador' %}
-              <span class="badge-ht badge-danger">Admin</span>
+              <span class="badge-ht badge-danger"><i class="bi bi-shield-check me-1"></i>Admin</span>
             {% elif u.rol == 'operario' %}
-              <span class="badge-ht badge-info">Operario</span>
+              <span class="badge-ht badge-info"><i class="bi bi-tools me-1"></i>Operario</span>
             {% elif u.rol == 'cliente' %}
-              <span class="badge-ht badge-pending">Cliente</span>
+              <span class="badge-ht badge-pending"><i class="bi bi-person me-1"></i>Cliente</span>
             {% else %}
-              <span class="badge-ht" style="background:#f0e6ff;color:#7b3fe4;">Sin asignar</span>
+              <span class="badge-ht" style="background:#f0e6ff;color:#7b3fe4;"><i class="bi bi-question-circle me-1"></i>Sin asignar</span>
             {% endif %}
           </td>
           <td>
             {% if u.estado == 'activo' %}
-              <span class="badge-ht badge-success">Activo</span>
+              <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Activo</span>
             {% elif u.estado == 'pendiente' %}
               <span class="badge-ht badge-warning"><i class="bi bi-hourglass-split me-1"></i>Pendiente</span>
             {% elif u.estado == 'inactivo' %}
-              <span class="badge-ht" style="background:#eee;color:#666;">Inactivo</span>
+              <span class="badge-ht" style="background:#eee;color:#666;"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>
             {% else %}
-              <span class="badge-ht badge-warning">Reportado</span>
+              <span class="badge-ht badge-warning"><i class="bi bi-exclamation-circle me-1"></i>Reportado</span>
             {% endif %}
           </td>
           <td class="text-center">
             <a href="{% url 'admin_usuario_editar' u.idUsuario %}"
-              class="btn btn-sm btn-outline-primary me-1" title="Editar">
+              class="btn btn-sm btn-outline-primary me-1" title="Editar usuario">
               <i class="bi bi-pencil"></i>
             </a>
             <button type="button" class="btn btn-sm btn-outline-danger"
-              data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.idUsuario }}" title="Eliminar">
+              data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.idUsuario }}" title="Eliminar usuario">
               <i class="bi bi-trash"></i>
             </button>
 
-            <!-- Modal confirmar eliminación -->
+            <!-- 3. MODAL CONFIRMAR ELIMINACIÓN DETALLADO -->
             <div class="modal fade" id="deleteModal{{ u.idUsuario }}" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content" style="border-radius:14px;">
+                <div class="modal-content" style="border-radius:14px; overflow:hidden;">
                   <div class="modal-body text-center p-4">
-                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2.5rem;"></i>
-                    <h5 class="mt-3">¿Eliminar a {{ u.nombre }} {{ u.apellido }}?</h5>
-                    <p class="text-muted small">Esta acción no se puede deshacer.</p>
+                    <div class="mb-3">
+                      <span class="p-3 bg-danger-subtle text-danger rounded-circle d-inline-block">
+                        <i class="bi bi-exclamation-triangle-fill fs-2"></i>
+                      </span>
+                    </div>
+                    <h5 class="fw-bold">¿Eliminar a {{ u.nombre }} {{ u.apellido }}?</h5>
+                    <p class="text-muted small mb-1">Correo: <strong>{{ u.correoElectronico }}</strong></p>
+                    <div class="alert alert-danger py-2 px-3 small mt-3 mb-3 text-start">
+                      <i class="bi bi-info-circle me-1"></i> Esta acción eliminará permanentemente la cuenta del usuario y sus accesos asociados.
+                    </div>
                     <form method="POST" action="{% url 'admin_usuario_eliminar' u.idUsuario %}">
                       {% csrf_token %}
                       <div class="d-flex gap-2 justify-content-center mt-3">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                        <button type="button" class="btn btn-light px-4 border" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger px-4">Sí, eliminar</button>
                       </div>
                     </form>
                   </div>
@@ -110,8 +149,29 @@
             </div>
           </td>
         </tr>
+
+        <!-- 4. ESTADO VACÍO MEJORADO -->
         {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">No hay usuarios registrados</td></tr>
+        <tr>
+          <td colspan="7" class="text-center text-muted py-5">
+            <i class="bi bi-person-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+            {% if estado_filtro == 'pendiente' %}
+              <p class="mb-1 fw-medium">No hay usuarios pendientes de aprobación en este momento.</p>
+              <div class="mt-3">
+                <a href="{% url 'admin_usuarios' %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-arrow-left me-1"></i> Ver todos los usuarios
+                </a>
+              </div>
+            {% else %}
+              <p class="mb-1 fw-medium">No hay usuarios registrados en el sistema.</p>
+              <div class="mt-3">
+                <a href="{% url 'admin_usuario_crear' %}" class="btn btn-sm btn-primary-ht">
+                  <i class="bi bi-person-plus me-1"></i> Registrar primer usuario
+                </a>
+              </div>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

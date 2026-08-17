@@ -47,6 +47,28 @@
 {% endblock %}
 
 {% block contenido %}
+
+<!-- 1. NOTIFICACIONES FLASH SISTEMA (Django Messages) -->
+{% if messages %}
+  <div class="messages-wrapper mb-3">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+        {% if message.tags == 'success' %}
+          <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+        {% elif message.tags == 'error' or message.tags == 'danger' %}
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+        {% else %}
+          <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+        {% endif %}
+        <div>{{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
 <div class="section-card">
   <div class="section-card-header">
     <h6><i class="bi bi-bag me-2"></i> {% if estado_filtro %}Órdenes — {{ estado_filtro }}{% else %}Todas las órdenes{% endif %} ({{ ordenes|length }}) </h6>
@@ -82,20 +104,20 @@
           <td>{{ orden.fechaEntregaEstimada|default:"—" }}</td>
           <td>
             {% if orden.prioridad == 'Urgente' %}
-            <span class="badge-ht badge-danger">Urgente</span>
+            <span class="badge-ht badge-danger"><i class="bi bi-lightning-charge-fill me-1"></i>Urgente</span>
             {% else %}
             <span class="badge-ht" style="background:#eee;color:#555;">Normal</span>
             {% endif %}
           </td>
           <td>
             {% if orden.estado == 'Entregado' %}
-            <span class="badge-ht badge-success">{{ orden.estado }}</span>
+            <span class="badge-ht badge-success"><i class="bi bi-check-lg me-1"></i>{{ orden.estado }}</span>
             {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' %}
-            <span class="badge-ht badge-info">{{ orden.estado }}</span>
+            <span class="badge-ht badge-info"><i class="bi bi-gear-wide-connected me-1"></i>{{ orden.estado }}</span>
             {% elif orden.estado == 'Cancelado' %}
-            <span class="badge-ht badge-danger">{{ orden.estado }}</span>
+            <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>{{ orden.estado }}</span>
             {% else %}
-            <span class="badge-ht badge-pending">{{ orden.estado }}</span>
+            <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>{{ orden.estado }}</span>
             {% endif %}
           </td>
           <td>
@@ -103,44 +125,56 @@
               <i class="bi bi-pencil-fill"></i>
             </button>
 
-            <a href="{% url 'admin_eliminar_orden' orden.idOrden %}" class="btn btn-sm text-danger p-0 border-0" onclick="return confirm('¿Estás seguro de que deseas eliminar la orden #{{ orden.idOrden }}?');" title="Eliminar orden">
+            <!-- 2. AVISO DE CONFIRMACIÓN DE ELIMINACIÓN -->
+            <a href="{% url 'admin_eliminar_orden' orden.idOrden %}" 
+               class="btn btn-sm text-danger p-0 border-0" 
+               onclick="return confirm('⚠️ ¿Confirmas eliminar la orden #{{ orden.idOrden }}?\n\nEsta acción no se puede deshacer.');" 
+               title="Eliminar orden">
               <i class="bi bi-trash-fill"></i>
             </a>
           </td>
         </tr>
 
+        <!-- MODAL CON AVISOS Y VALIDACIONES -->
         <div class="modal fade" id="modalEditarOrden{{ orden.idOrden }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
-              <form action="{% url 'admin_editar_orden' orden.idOrden %}" method="POST">
+              <form action="{% url 'admin_editar_orden' orden.idOrden %}" method="POST" class="needs-validation" novalidate>
                 {% csrf_token %}
                 <div class="modal-header bg-light">
                   <h5 class="modal-title" style="font-family: 'Fredoka', sans-serif;"><i class="bi bi-pencil me-2 text-primary"></i>Editar Detalles de Orden #{{ orden.idOrden }}</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-start style-fields" style="color: #333;">
-                  <p class="text-muted small">Modifica los parámetros principales de la orden (excepto cliente y número identificador).</p>
+                  
+                  <!-- 3. AVISO INFORMATIVO DENTRO DEL FORMULARIO -->
+                  <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
+                    <i class="bi bi-info-circle-fill me-2 fs-6"></i>
+                    <span>Modifica los parámetros de la orden. Los cambios afectarán la planificación de entregas.</span>
+                  </div>
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Cantidad</label>
-                    <input type="number" name="cantidad" class="form-control" value="{{ orden.cantidad|default:'' }}" placeholder="Ej: 50">
+                    <input type="number" min="1" name="cantidad" class="form-control" value="{{ orden.cantidad|default:'' }}" placeholder="Ej: 50" required>
+                    <div class="invalid-feedback small">Ingresa una cantidad mayor a 0.</div>
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Precio Unitario ($)</label>
-                    <input type="number" step="any" name="precio_unitario" class="form-control" value="{{ orden.precioUnitario|default:'' }}" placeholder="Ej: 1500">
+                    <input type="number" min="0" step="any" name="precio_unitario" class="form-control" value="{{ orden.precioUnitario|default:'' }}" placeholder="Ej: 1500" required>
+                    <div class="invalid-feedback small">Ingresa un valor monetario válido.</div>
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Fecha de Entrega Estimada</label>
-                    <input type="date" name="fecha_entrega" class="form-control" value="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}">
+                    <input type="date" name="fecha_entrega" class="form-control" value="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}" required>
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Prioridad</label>
                     <select name="prioridad" class="form-select">
                       <option value="Normal" {% if orden.prioridad == 'Normal' %}selected{% endif %}>Normal</option>
-                      <option value="Urgente" {% if orden.prioridad == 'Urgente' %}selected{% endif %}>Urgente</option>
+                      <option value="Urgente" {% if orden.prioridad == 'Urgente' %}selected{% endif %}>Urgente ⚠️</option>
                     </select>
                   </div>
 
@@ -163,8 +197,25 @@
             </div>
           </div>
         </div>
+
+        <!-- 4. ESTADO VACÍO CON NOTIFICACIÓN DE BÚSQUEDA -->
         {% empty %}
-        <tr><td colspan="9" class="text-center text-muted py-4">No hay órdenes registradas</td></tr>
+        <tr>
+          <td colspan="9" class="text-center text-muted py-5">
+            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+            {% if buscar_filtro or estado_filtro %}
+              <p class="mb-1 fw-medium">No se encontraron órdenes con los filtros actuales.</p>
+              <small class="text-muted">Búsqueda: "<strong>{{ buscar_filtro }}</strong>" | Estado: "<strong>{{ estado_filtro|default:'Todos' }}</strong>"</small>
+              <div class="mt-3">
+                <a href="{% url 'admin_ordenes' %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-x-circle me-1"></i> Restablecer filtros
+                </a>
+              </div>
+            {% else %}
+              <p class="mb-0">No hay órdenes registradas en el sistema.</p>
+            {% endif %}
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

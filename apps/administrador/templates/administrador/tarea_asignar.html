@@ -6,76 +6,138 @@
 
 {% block contenido %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="section-card">
-      <div class="section-card-header">
-        <h6><i class="bi bi-clipboard2-plus me-2"></i>Nueva asignación</h6>
+  <div class="col-lg-9 col-xl-8">
+
+    <!-- Mensajes Flash de Django -->
+    {% if messages %}
+      <div class="messages-wrapper mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+            {% if message.tags == 'success' %}
+              <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+              <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+            {% elif message.tags == 'warning' %}
+              <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+            {% else %}
+              <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+            {% endif %}
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
       </div>
-      <div class="section-card-body">
-        <form method="POST" id="formAsignarTarea">
+    {% endif %}
+
+    <div class="section-card">
+      <div class="section-card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-clipboard2-plus me-2 text-primary"></i>Nueva Asignación de Tarea</h6>
+        <span class="badge bg-light text-secondary border">Formulario de registro</span>
+      </div>
+      
+      <div class="section-card-body p-4">
+        <form method="POST" id="formAsignarTarea" class="needs-validation" novalidate>
           {% csrf_token %}
+          
           <div class="row g-3">
 
-            <!-- Selector de Tarea (con opción "Otra") -->
+            <!-- Selector de Tarea -->
             <div class="col-md-6">
-              <label class="form-label">Tarea</label>
-              <select name="tarea" id="selectTarea" class="form-select" required>
-                <option value="">Seleccionar tarea...</option>
-                {% for tarea in tareas %}
-                <option value="{{ tarea.idTarea }}">
-                  {{ tarea.nombreTarea }} — {{ tarea.proceso }}
-                </option>
-                {% endfor %}
-                <option value="otra" style="color: #395B64; font-weight: 600;">+ Otra (crear nueva)</option>
-              </select>
+              <label for="selectTarea" class="form-label fw-medium small">
+                Tarea <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-list-task"></i></span>
+                <select name="tarea" id="selectTarea" class="form-select" required>
+                  <option value="" disabled selected>Seleccionar tarea...</option>
+                  {% for tarea in tareas %}
+                  <option value="{{ tarea.idTarea }}">
+                    {{ tarea.nombreTarea }} — {{ tarea.proceso }}
+                  </option>
+                  {% endfor %}
+                  <option value="otra" class="fw-bold text-primary">+ Otra (crear nueva tarea)</option>
+                </select>
+                <div class="invalid-feedback">Debes seleccionar o especificar una tarea.</div>
+              </div>
             </div>
 
-            <!-- Campo para tarea personalizada (oculto por defecto) -->
+            <!-- Operario asignado -->
+            <div class="col-md-6">
+              <label for="selectOperario" class="form-label fw-medium small">
+                Operario asignado <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-person-badge"></i></span>
+                <select name="operario" id="selectOperario" class="form-select" required>
+                  <option value="" disabled selected>Seleccionar operario...</option>
+                  {% for op in operarios %}
+                  <option value="{{ op.idOperario }}">
+                    {{ op.idUsuario.nombre }} {{ op.idUsuario.apellido }} — {{ op.especialidad }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Debes seleccionar un operario.</div>
+              </div>
+            </div>
+
+            <!-- Nombre para tarea personalizada -->
             <div class="col-md-6" id="tareasPersonalizadasContainer" style="display: none;">
-              <label class="form-label">Nombre de la tarea</label>
-              <input type="text" name="tarea_personalizada" id="tareaPersonalizada" class="form-control"
-                placeholder="Ej. Bordado personalizado, Teñido especial...">
-              <small class="text-muted">Se creará como una nueva tarea en el sistema.</small>
+              <label for="tareaPersonalizada" class="form-label fw-medium small">
+                Nombre de la nueva tarea <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-pencil-square"></i></span>
+                <input type="text" name="tarea_personalizada" id="tareaPersonalizada" class="form-control"
+                  placeholder="Ej. Bordado personalizado, Teñido especial...">
+              </div>
+              <small class="text-muted fs-7">Se registrará en el catálogo maestro de tareas.</small>
             </div>
 
             <!-- Proceso para tarea personalizada -->
             <div class="col-md-6" id="procesoPersonalizadoContainer" style="display: none;">
-              <label class="form-label">Proceso / Categoría</label>
-              <input type="text" name="proceso_personalizado" id="procesoPersonalizado" class="form-control"
-                placeholder="Ej. Bordado, Teñido, Confección...">
-              <small class="text-muted">Categoría o tipo de proceso.</small>
+              <label for="procesoPersonalizado" class="form-label fw-medium small">
+                Proceso / Categoría <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-diagram-3"></i></span>
+                <input type="text" name="proceso_personalizado" id="procesoPersonalizado" class="form-control"
+                  placeholder="Ej. Bordado, Teñido, Confección...">
+              </div>
+              <small class="text-muted fs-7">Categoría a la que pertenece el proceso.</small>
             </div>
 
+            <!-- Fecha de inicio -->
             <div class="col-md-6">
-              <label class="form-label">Operario</label>
-              <select name="operario" class="form-select" required>
-                <option value="">Seleccionar operario...</option>
-                {% for op in operarios %}
-                <option value="{{ op.idOperario }}">
-                  {{ op.idUsuario.nombre }} {{ op.idUsuario.apellido }} — {{ op.especialidad }}
-                </option>
-                {% endfor %}
-              </select>
+              <label for="fechaInicio" class="form-label fw-medium small">
+                Fecha de inicio <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-calendar-event"></i></span>
+                <input type="date" name="fechaInicio" id="fechaInicio" class="form-control" required>
+                <div class="invalid-feedback">Indica una fecha de inicio.</div>
+              </div>
             </div>
 
+            <!-- Prioridad -->
             <div class="col-md-6">
-              <label class="form-label">Fecha de inicio</label>
-              <input type="date" name="fechaInicio" class="form-control" required>
+              <label for="prioridad" class="form-label fw-medium small">
+                Prioridad <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-flag"></i></span>
+                <select name="prioridad" id="prioridad" class="form-select" required>
+                  <option value="Baja">Baja</option>
+                  <option value="Media" selected>Media</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Urgente">Urgente ⚠️</option>
+                </select>
+              </div>
             </div>
 
-            <div class="col-md-6">
-              <label class="form-label">Prioridad</label>
-              <select name="prioridad" class="form-select" required>
-                <option value="Baja">Baja</option>
-                <option value="Media" selected>Media</option>
-                <option value="Alta">Alta</option>
-                <option value="Urgente">Urgente</option>
-              </select>
-            </div>
-
+            <!-- Tipo de prenda -->
             <div class="col-md-4">
-              <label class="form-label">Tipo de prenda</label>
-              <select name="tipoPrenda" id="tipoPrenda" class="form-select">
+              <label for="tipoPrenda" class="form-label fw-medium small">Tipo de prenda</label>
+              <select name="tipoPrenda" id="tipoPrenda" class="form-select form-select-sm">
                 <option value="">Seleccionar tipo...</option>
                 <option value="Camisas">Camisas (5 min/u)</option>
                 <option value="Pantalones">Pantalones (10 min/u)</option>
@@ -85,31 +147,50 @@
               </select>
             </div>
 
+            <!-- Cantidad de prendas -->
             <div class="col-md-4">
-              <label class="form-label">Cantidad de prendas</label>
-              <input type="number" name="cantidadPrendas" id="cantidadPrendas" class="form-control"
+              <label for="cantidadPrendas" class="form-label fw-medium small">Cantidad de prendas</label>
+              <input type="number" name="cantidadPrendas" id="cantidadPrendas" class="form-control form-control-sm"
                 min="1" step="1" placeholder="Ej. 300">
             </div>
 
+            <!-- Horas estimadas -->
             <div class="col-md-4">
-              <label class="form-label">Horas estimadas</label>
-              <input type="number" name="horasEstimadas" id="horasEstimadas" class="form-control"
-                min="0.5" step="0.5" placeholder="Se calcula sola o edítala">
-              <small class="text-muted">Se calcula automáticamente; puedes ajustarla.</small>
+              <label for="horasEstimadas" class="form-label fw-medium small">Horas estimadas</label>
+              <div class="input-group input-group-sm">
+                <input type="number" name="horasEstimadas" id="horasEstimadas" class="form-control"
+                  min="0.1" step="0.1" placeholder="Auto o manual">
+                <span class="input-group-text bg-light text-muted">hrs</span>
+              </div>
             </div>
 
+            <!-- Banner informativo sobre el cálculo de horas -->
             <div class="col-12">
-              <label class="form-label">Descripción / instrucciones</label>
-              <textarea name="descripcion" class="form-control" rows="3"
-                placeholder="Detalla las instrucciones para el operario..." required></textarea>
+              <div class="alert alert-light border py-2 px-3 small d-flex align-items-center gap-2 mb-0 text-muted">
+                <i class="bi bi-calculator text-primary fs-5"></i>
+                <span>Al seleccionar el tipo y cantidad de prendas, las <strong>Horas estimadas</strong> se calcularán automáticamente. Puedes ajustarlas libremente si lo requieres.</span>
+              </div>
+            </div>
+
+            <!-- Descripción / Instrucciones -->
+            <div class="col-12">
+              <label for="descripcion" class="form-label fw-medium small">
+                Descripción / Instrucciones <span class="text-danger">*</span>
+              </label>
+              <textarea name="descripcion" id="descripcion" class="form-control" rows="3"
+                placeholder="Detalla las instrucciones operativas, recomendaciones o especificaciones técnicas..." required></textarea>
+              <div class="invalid-feedback">Por favor, agrega una descripción o instrucciones.</div>
             </div>
 
           </div>
 
-          <div class="d-flex gap-2 justify-content-end mt-4">
-            <a href="{% url 'admin_tareas' %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary-ht">
-              <i class="bi bi-send me-1"></i>Asignar tarea
+          <!-- Botones de Acción -->
+          <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
+            <a href="{% url 'admin_tareas' %}" class="btn btn-sm btn-outline-secondary px-3">
+              <i class="bi bi-x-circle me-1"></i>Cancelar
+            </a>
+            <button type="submit" class="btn btn-sm btn-primary-ht px-4">
+              <i class="bi bi-send me-1"></i>Asignar Tarea
             </button>
           </div>
         </form>
@@ -121,63 +202,71 @@
 
 {% block extra_js %}
 <script>
-  const TIEMPOS_ESTANDAR = { 'Camisas': 5, 'Pantalones': 10, 'Vestidos': 12, 'Chaquetas': 12, 'Bermudas': 15 };
+  document.addEventListener("DOMContentLoaded", function () {
+    const TIEMPOS_ESTANDAR = {
+      'Camisas': 5,
+      'Pantalones': 10,
+      'Vestidos': 12,
+      'Chaquetas': 12,
+      'Bermudas': 15
+    };
 
-  // ── Mostrar/ocultar campos de tarea personalizada ─────
-  const selectTarea = document.getElementById('selectTarea');
-  const tareasPersonalizadasContainer = document.getElementById('tareasPersonalizadasContainer');
-  const procesoPersonalizadoContainer = document.getElementById('procesoPersonalizadoContainer');
-  const tareaPersonalizada = document.getElementById('tareaPersonalizada');
-  const procesoPersonalizado = document.getElementById('procesoPersonalizado');
+    const selectTarea = document.getElementById('selectTarea');
+    const tareasPersonalizadasContainer = document.getElementById('tareasPersonalizadasContainer');
+    const procesoPersonalizadoContainer = document.getElementById('procesoPersonalizadoContainer');
+    const tareaPersonalizada = document.getElementById('tareaPersonalizada');
+    const procesoPersonalizado = document.getElementById('procesoPersonalizado');
+    const formAsignarTarea = document.getElementById('formAsignarTarea');
+    const fechaInicioInput = document.getElementById('fechaInicio');
 
-  selectTarea.addEventListener('change', function() {
-    if (this.value === 'otra') {
-      tareasPersonalizadasContainer.style.display = 'block';
-      procesoPersonalizadoContainer.style.display = 'block';
-      tareaPersonalizada.setAttribute('required', 'required');
-      procesoPersonalizado.setAttribute('required', 'required');
-    } else {
-      tareasPersonalizadasContainer.style.display = 'none';
-      procesoPersonalizadoContainer.style.display = 'none';
-      tareaPersonalizada.removeAttribute('required');
-      procesoPersonalizado.removeAttribute('required');
-      tareaPersonalizada.value = '';
-      procesoPersonalizado.value = '';
+    // Auto-establecer fecha mínima (hoy) en el input de fecha
+    if (fechaInicioInput && !fechaInicioInput.value) {
+      const today = new Date().toISOString().split('T')[0];
+      fechaInicioInput.value = today;
     }
-  });
 
-  // ── Validación del formulario ─────────────────────────
-  document.getElementById('formAsignarTarea').addEventListener('submit', function(e) {
-    if (selectTarea.value === 'otra') {
-      if (!tareaPersonalizada.value.trim()) {
-        e.preventDefault();
-        alert('Por favor, ingresa el nombre de la tarea personalizada.');
+    // Toggle de campos de tarea personalizada
+    selectTarea.addEventListener('change', function() {
+      if (this.value === 'otra') {
+        tareasPersonalizadasContainer.style.display = 'block';
+        procesoPersonalizadoContainer.style.display = 'block';
+        tareaPersonalizada.setAttribute('required', 'required');
+        procesoPersonalizado.setAttribute('required', 'required');
         tareaPersonalizada.focus();
-        return;
+      } else {
+        tareasPersonalizadasContainer.style.display = 'none';
+        procesoPersonalizadoContainer.style.display = 'none';
+        tareaPersonalizada.removeAttribute('required');
+        procesoPersonalizado.removeAttribute('required');
+        tareaPersonalizada.value = '';
+        procesoPersonalizado.value = '';
       }
-      if (!procesoPersonalizado.value.trim()) {
+    });
+
+    // Recálculo dinámico de horas estimadas
+    function recalcularHoras() {
+      const tipo = document.getElementById('tipoPrenda').value;
+      const cantidad = parseInt(document.getElementById('cantidadPrendas').value, 10);
+      const horasInput = document.getElementById('horasEstimadas');
+
+      if (tipo && cantidad > 0) {
+        const minutosUnidad = TIEMPOS_ESTANDAR[tipo] || 0;
+        const horasTotales = (cantidad * minutosUnidad) / 60;
+        horasInput.value = horasTotales.toFixed(2);
+      }
+    }
+
+    document.getElementById('tipoPrenda').addEventListener('change', recalcularHoras);
+    document.getElementById('cantidadPrendas').addEventListener('input', recalcularHoras);
+
+    // Validación del formulario Bootstrap
+    formAsignarTarea.addEventListener('submit', function(e) {
+      if (!formAsignarTarea.checkValidity()) {
         e.preventDefault();
-        alert('Por favor, ingresa el proceso/categoría de la tarea.');
-        procesoPersonalizado.focus();
-        return;
+        e.stopPropagation();
       }
-    }
+      formAsignarTarea.classList.add('was-validated');
+    });
   });
-
-  // ── Cálculo automático de horas ──────────────────────
-  function recalcularHoras() {
-    const tipo = document.getElementById('tipoPrenda').value;
-    const cantidad = parseInt(document.getElementById('cantidadPrendas').value, 10);
-    const horasInput = document.getElementById('horasEstimadas');
-
-    if (tipo && cantidad > 0) {
-      const minutos = TIEMPOS_ESTANDAR[tipo] || 0;
-      const horas = (cantidad * minutos) / 60;
-      horasInput.value = horas.toFixed(2);
-    }
-  }
-
-  document.getElementById('tipoPrenda').addEventListener('change', recalcularHoras);
-  document.getElementById('cantidadPrendas').addEventListener('input', recalcularHoras);
 </script>
 {% endblock %}

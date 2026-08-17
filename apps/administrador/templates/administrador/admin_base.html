@@ -5,107 +5,167 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HebraTech — {% block titulo %}Administración{% endblock %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <!-- CSS Custom -->
   <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="bg-light">
+
+  <!-- Overlay para cierre de menú responsive en móviles -->
+  <div class="sidebar-overlay d-md-none" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
   <!-- ══ SIDEBAR ══ -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">
-        <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
+  <aside class="sidebar d-flex flex-column flex-shrink-0 p-3" id="sidebar">
+    <!-- Brand Section -->
+    <a href="{% url 'admin_portal' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none sidebar-brand px-2">
+      <div class="brand-icon me-2" style="width: 36px; height: 36px;">
+        <img src="{% static 'img/logo.png' %}" alt="HebraTech" class="img-fluid rounded">
       </div>
-      <div>
-        <div class="brand-title">HebraTech</div>
-        <div class="brand-sub">Administración</div>
+      <div class="lh-1">
+        <div class="brand-title fw-bold text-dark fs-5">HebraTech</div>
+        <small class="brand-sub text-muted small">Administración</small>
       </div>
-    </div>
+    </a>
 
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Principal</div>
-      <a href="{% url 'admin_portal' %}" class="nav-item {% if seccion_activa == 'dashboard' %}active{% endif %}">
-        <i class="bi bi-grid-1x2-fill"></i> Dashboard
-      </a>
+    <hr class="my-3">
 
-      <div class="nav-section-label">Gestión</div>
-      <a href="{% url 'admin_usuarios' %}" class="nav-item {% if seccion_activa == 'usuarios' %}active{% endif %}">
-        <i class="bi bi-people-fill"></i> Usuarios
-      </a>
-      <a href="{% url 'admin_ordenes' %}" class="nav-item {% if seccion_activa == 'ordenes' %}active{% endif %}">
-        <i class="bi bi-bag-fill"></i> Órdenes
-      </a>
-      <a href="{% url 'admin_tareas' %}" class="nav-item {% if seccion_activa == 'tareas' %}active{% endif %}">
-        <i class="bi bi-clipboard2-check-fill"></i> Tareas
-      </a>
-      <a href="{% url 'admin_incidencias' %}" class="nav-item {% if seccion_activa == 'incidencias' %}active{% endif %}">
-        <i class="bi bi-exclamation-triangle-fill"></i> Incidencias
-      </a>
-      <a href="{% url 'admin_inventario' %}" class="nav-item {% if seccion_activa == 'inventario' %}active{% endif %}">
-        <i class="bi bi-box-seam-fill"></i> Inventario
+    <!-- Navigation Menu -->
+    <nav class="sidebar-nav flex-column mb-auto">
+      <div class="nav-section-label text-uppercase text-muted fw-bold mb-2 px-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">Principal</div>
+      
+      <a href="{% url 'admin_portal' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-1x2-fill"></i>
+        <span>Dashboard</span>
       </a>
 
-      <div class="nav-section-label">Módulos</div>
-      <a href="{% url 'admin_produccion' %}" class="nav-item {% if seccion_activa == 'produccion' %}active{% endif %}">
-        <i class="bi bi-gear-wide-connected"></i> Producción
+      <div class="nav-section-label text-uppercase text-muted fw-bold mt-3 mb-2 px-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">Gestión</div>
+      
+      <a href="{% url 'admin_usuarios' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'usuarios' %}active{% endif %}">
+        <i class="bi bi-people-fill"></i>
+        <span>Usuarios</span>
       </a>
-      <a href="{% url 'admin_proveedores' %}" class="nav-item {% if seccion_activa == 'proveedores' %}active{% endif %}">
-        <i class="bi bi-truck"></i> Proveedores
+      
+      <a href="{% url 'admin_ordenes' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'ordenes' %}active{% endif %}">
+        <i class="bi bi-bag-fill"></i>
+        <span>Órdenes</span>
+      </a>
+      
+      <a href="{% url 'admin_tareas' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'tareas' %}active{% endif %}">
+        <i class="bi bi-clipboard2-check-fill"></i>
+        <span>Tareas</span>
+      </a>
+      
+      <a href="{% url 'admin_incidencias' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'incidencias' %}active{% endif %}">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>Incidencias</span>
+      </a>
+      
+      <a href="{% url 'admin_inventario' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'inventario' %}active{% endif %}">
+        <i class="bi bi-box-seam-fill"></i>
+        <span>Inventario</span>
       </a>
 
-      <div class="sidebar-footer">
-        <div class="admin-info">
-          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
-          <div>
-            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
-            <div class="admin-role">Administrador</div>
-          </div>
-        </div>
-        <a href="{% url 'logout' %}" class="btn-logout">
-          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
-        </a>
-      </div>
+      <div class="nav-section-label text-uppercase text-muted fw-bold mt-3 mb-2 px-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">Módulos</div>
+      
+      <a href="{% url 'admin_produccion' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'produccion' %}active{% endif %}">
+        <i class="bi bi-gear-wide-connected"></i>
+        <span>Producción</span>
+      </a>
+      
+      <a href="{% url 'admin_proveedores' %}" class="nav-link nav-item d-flex align-items-center gap-2 mb-1 {% if seccion_activa == 'proveedores' %}active{% endif %}">
+        <i class="bi bi-truck"></i>
+        <span>Proveedores</span>
+      </a>
     </nav>
+
+    <hr class="my-3">
+
+    <!-- Admin User Info & Logout -->
+    <div class="sidebar-footer">
+      <div class="admin-info d-flex align-items-center gap-2 mb-2 p-2 rounded bg-light border">
+        <div class="admin-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" 
+             style="width: 32px; height: 32px; font-size: 0.85rem;">
+          {{ usuario.nombre|first|default:request.user.first_name|first|default:"A"|upper }}
+        </div>
+        <div class="lh-sm text-truncate">
+          <div class="admin-name fw-semibold text-dark small text-truncate">
+            {{ usuario.nombre|default:request.user.first_name|default:"Admin" }} {{ usuario.apellido|default:request.user.last_name }}
+          </div>
+          <div class="admin-role text-muted" style="font-size: 0.75rem;">Administrador</div>
+        </div>
+      </div>
+      
+      <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Cerrar sesión</span>
+      </a>
+    </div>
   </aside>
 
-  <!-- ══ MAIN ══ -->
-  <div class="main-content">
+  <!-- ══ MAIN WRAPPER ══ -->
+  <div class="main-content d-flex flex-column min-vh-100">
 
-    <!-- Topbar -->
-    <header class="topbar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <i class="bi bi-list fs-4"></i>
-      </button>
-      <div>
-        <h5 class="topbar-title">{% block topbar_titulo %}{% endblock %}</h5>
-        <small class="topbar-sub">{% block topbar_sub %}{% endblock %}</small>
+    <!-- Topbar Header -->
+    <header class="topbar bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between shadow-sm sticky-top">
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-light btn-sm border sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" aria-label="Abrir menú">
+          <i class="bi bi-list fs-5"></i>
+        </button>
+        <div>
+          <h5 class="topbar-title mb-0 fw-bold text-dark fs-6">{% block topbar_titulo %}{% endblock %}</h5>
+          <small class="topbar-sub text-muted">{% block topbar_sub %}{% endblock %}</small>
+        </div>
       </div>
       {% block topbar_extra %}{% endblock %}
     </header>
 
-    <!-- Mensajes -->
-    {% if messages %}
-    <div class="px-4 pt-3">
-      {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
+    <!-- Global Messages (Eliminado del base para evitar duplicación con las vistas hijas) -->
+    {% comment %}
+      Las alertas globales se renderizan directamente dentro del bloque "contenido" de las plantillas hijas para evitar duplicaciones.
+    {% endcomment %}
 
-    <!-- Contenido -->
-    <div class="content-wrap">
+    <!-- Main Content Body -->
+    <main class="content-wrap p-4 flex-grow-1">
       {% block contenido %}{% endblock %}
-    </div>
+    </main>
+
+    <!-- Footer opcional de pie de página -->
+    <footer class="footer mt-auto py-3 bg-white border-top text-center text-muted small">
+      <div class="container-fluid">
+        <span>&copy; {% now "Y" %} <strong>HebraTech</strong>. Todos los derechos reservados.</span>
+      </div>
+    </footer>
   </div>
 
+  <!-- JavaScript Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'js/admin.js' %}"></script>
+  
+  <script>
+    // Función global toggleSidebar con manejo de overlay en pantallas móviles
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar) {
+        sidebar.classList.toggle('show');
+      }
+      if (overlay) {
+        overlay.classList.toggle('show');
+      }
+    }
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 </html>

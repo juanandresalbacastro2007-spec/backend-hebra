@@ -7,92 +7,189 @@
         /* Configuración de la página en Horizontal (Landscape) */
         @page {
             size: letter landscape;
-            margin: 10mm 12mm 10mm 12mm;
+            margin: 10mm 12mm 12mm 12mm;
+
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: Helvetica, Arial, sans-serif;
+                font-size: 8px;
+                color: #777777;
+            }
         }
         
-        /* Estilos Base (Fuentes nativas seguras para xhtml2pdf) */
+        /* Estilos Base (compatibles con xhtml2pdf / ReportLab) */
         body {
             font-family: Helvetica, Arial, sans-serif;
             color: #333333;
-            font-size: 10px;
-            line-height: 1.4;
+            font-size: 9px;
+            line-height: 1.3;
         }
         
         /* Encabezado del Reporte */
         .header-table {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             border-bottom: 2px solid #1F497D;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
         }
         .title-system {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
             color: #1F497D;
+            letter-spacing: 0.5px;
         }
         .title-report {
-            font-size: 12px;
+            font-size: 11px;
             color: #555555;
             margin-top: 2px;
+            font-weight: bold;
         }
         .meta-info {
             text-align: right;
-            font-size: 9px;
-            color: #666666;
+            font-size: 8px;
+            color: #555555;
+            line-height: 1.4;
         }
         
+        /* Resumen Ejecutivo / KPIs */
+        .summary-table {
+            width: 100%;
+            margin-bottom: 12px;
+            background-color: #F4F6F9;
+            border: 1px solid #DCE1E7;
+            border-radius: 4px;
+        }
+        .summary-cell {
+            padding: 6px 10px;
+            text-align: center;
+        }
+        .summary-label {
+            font-size: 7.5px;
+            text-transform: uppercase;
+            color: #666666;
+            font-weight: bold;
+        }
+        .summary-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: #1F497D;
+            margin-top: 1px;
+        }
+
         /* Estilos de la Tabla de Datos */
         .data-table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 10px;
         }
         .data-table th {
             background-color: #1F497D;
             color: #ffffff;
             font-weight: bold;
-            padding: 7px 5px;
-            font-size: 9px;
+            padding: 6px 5px;
+            font-size: 8.5px;
             text-transform: uppercase;
             text-align: left;
+            border: 1px solid #1F497D;
         }
         .data-table td {
-            padding: 6px 5px;
+            padding: 5px 5px;
             border-bottom: 1px solid #E0E0E0;
-            font-size: 9px;
+            border-left: 1px solid #F0F0F0;
+            border-right: 1px solid #F0F0F0;
+            font-size: 8.5px;
+            vertical-align: middle;
         }
         
-        /* Clases de utilidad de alineación */
+        /* Filas alternadas (Zebra) */
+        .row-even {
+            background-color: #FFFFFF;
+        }
+        .row-odd {
+            background-color: #F9FAFC;
+        }
+
+        /* Estilos de Etiquetas (Badges) */
+        .badge {
+            display: inline-block;
+            padding: 2px 5px;
+            font-size: 7.5px;
+            font-weight: bold;
+            border-radius: 3px;
+            text-align: center;
+        }
+        .badge-urgente { background-color: #FADBD8; color: #78281F; }
+        .badge-alta { background-color: #FCF3CF; color: #7D6608; }
+        .badge-media { background-color: #D4EFDF; color: #145A32; }
+        .badge-baja { background-color: #EAECEE; color: #5D6D7E; }
+
+        .badge-completada { background-color: #D4EFDF; color: #145A32; }
+        .badge-progreso { background-color: #E8F8F5; color: #117864; }
+        .badge-pendiente { background-color: #FCF3CF; color: #7D6608; }
+        .badge-cancelada { background-color: #FADBD8; color: #78281F; }
+
+        /* Clases de utilidad */
         .text-center { text-align: center; }
         .text-right { text-align: right; }
+        .fw-bold { font-weight: bold; }
         
-        /* Evita saltos de página extraños a mitad de una fila */
+        /* Reglas para saltos de página */
         tr {
             page-break-inside: avoid;
+        }
+        .footer-note {
+            text-align: right;
+            font-size: 8px;
+            color: #777777;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 
+    <!-- Encabezado del Sistema -->
     <table class="header-table">
         <tr>
-            <td>
+            <td width="60%">
                 <div class="title-system">HebraTech</div>
                 <div class="title-report">Reporte Ejecutivo de Órdenes de Confección</div>
             </td>
-            <td class="meta-info">
-                <strong>Fecha Emisión:</strong> {% now "Y-m-d H:i" %}<br>
-                <strong>Generado por:</strong> Administrador del Sistema
+            <td width="40%" class="meta-info">
+                <strong>Fecha Emisión:</strong> {% now "d/m/Y H:i" %}<br>
+                <strong>Generado por:</strong> Administrador del Sistema<br>
+                <strong>Total Registros:</strong> {{ ordenes|length }}
             </td>
         </tr>
     </table>
 
+    <!-- Resumen Consolidado -->
+    {% if ordenes %}
+    <table class="summary-table">
+        <tr>
+            <td class="summary-cell" width="33%">
+                <div class="summary-label">Total Órdenes Registradas</div>
+                <div class="summary-value">{{ ordenes|length }}</div>
+            </td>
+            <td class="summary-cell" width="33%" style="border-left: 1px solid #DCE1E7;">
+                <div class="summary-label">Generado el</div>
+                <div class="summary-value">{% now "d/m/Y" %}</div>
+            </td>
+            <td class="summary-cell" width="34%" style="border-left: 1px solid #DCE1E7;">
+                <div class="summary-label">Estado del Informe</div>
+                <div class="summary-value" style="color: #27AE60;">Oficial / Consolidado</div>
+            </td>
+        </tr>
+    </table>
+    {% endif %}
+
+    <!-- Tabla Principal de Órdenes -->
     <table class="data-table">
         <thead>
             <tr>
-                <th width="8%" class="text-center">ID Orden</th>
-                <th>Cliente / Empresa</th>
-                <th width="12%" class="text-center">Fecha Creación</th>
-                <th width="12%" class="text-center">Entrega Estimada</th>
+                <th width="7%" class="text-center">ID</th>
+                <th width="25%">Cliente / Empresa</th>
+                <th width="11%" class="text-center">Creación</th>
+                <th width="11%" class="text-center">Entrega Est.</th>
                 <th width="10%" class="text-right">Cantidad</th>
                 <th width="12%" class="text-right">P. Unitario</th>
                 <th width="12%" class="text-center">Prioridad</th>
@@ -101,29 +198,54 @@
         </thead>
         <tbody>
             {% for orden in ordenes %}
-            <tr>
+            <tr class="{% if forloop.counter0|divisibleby:2 %}row-even{% else %}row-odd{% endif %}">
                 <td class="text-center"><strong>#{{ orden.idOrden }}</strong></td>
                 <td>{{ orden.idCliente.empresa|default:orden.idCliente.nombre|default:"—" }}</td>
-                <td class="text-center">{{ orden.fechaCreacion|date:"Y-m-d" }}</td>
-                <td class="text-center">{{ orden.fechaEntregaEstimada|date:"Y-m-d"|default:"—" }}</td>
-                <td class="text-right">{{ orden.cantidad|default:"0" }}</td>
-                <td class="text-right">{% if orden.precioUnitario %}${{ orden.precioUnitario }}{% else %}—{% endif %}</td>
-                <td class="text-center">{{ orden.prioridad }}</td>
+                <td class="text-center">{{ orden.fechaCreacion|date:"d/m/Y" }}</td>
+                <td class="text-center">{{ orden.fechaEntregaEstimada|date:"d/m/Y"|default:"—" }}</td>
+                <td class="text-right fw-bold">{{ orden.cantidad|default:"0" }}</td>
+                <td class="text-right">
+                    {% if orden.precioUnitario %}
+                        ${{ orden.precioUnitario|floatformat:2 }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
                 <td class="text-center">
-                    <strong>{{ orden.estado }}</strong>
+                    {% if orden.prioridad == 'Urgente' %}
+                        <span class="badge badge-urgente">Urgente</span>
+                    {% elif orden.prioridad == 'Alta' %}
+                        <span class="badge badge-alta">Alta</span>
+                    {% elif orden.prioridad == 'Media' %}
+                        <span class="badge badge-media">Media</span>
+                    {% else %}
+                        <span class="badge badge-baja">Baja</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if orden.estado == 'Completada' %}
+                        <span class="badge badge-completada">Completada</span>
+                    {% elif orden.estado == 'En Progreso' %}
+                        <span class="badge badge-progreso">En Progreso</span>
+                    {% elif orden.estado == 'Cancelada' %}
+                        <span class="badge badge-cancelada">Cancelada</span>
+                    {% else %}
+                        <span class="badge badge-pendiente">Pendiente</span>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8" class="text-center" style="padding: 20px; color: #777777;">
-                    No se encontraron registros de órdenes.
+                <td colspan="8" class="text-center" style="padding: 25px; color: #777777; background-color: #ffffff;">
+                    No se encontraron registros de órdenes en el sistema.
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <div style="text-align: right; font-size: 8px; color: #777777; margin-top: 15px;">
+    <!-- Paginación para xhtml2pdf -->
+    <div class="footer-note">
         Página <pdf:pagenumber /> de <pdf:pagecount />
     </div>
 

@@ -7,6 +7,32 @@
 {% endblock %}
 
 {% block contenido %}
+
+<!-- 1. NOTIFICACIONES FLASH DEL SISTEMA (Django Messages) -->
+{% if messages %}
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="messages-wrapper mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+            {% if message.tags == 'success' %}
+              <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+              <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+            {% elif message.tags == 'warning' %}
+              <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+            {% else %}
+              <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+            {% endif %}
+            <div>{{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
     <div class="section-card">
@@ -20,69 +46,93 @@
 
       <div class="section-card-body">
 
+        <!-- 2. AVISO DESTACADO DE APROBACIÓN PENDIENTE -->
         {% if usuario_editar.estado == 'pendiente' %}
-        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
-          <i class="bi bi-hourglass-split fs-5"></i>
-          <div>
-            Este usuario está <strong>pendiente de aprobación</strong>. Asignale un rol y cambiá el estado a "Activo" para que pueda iniciar sesión.
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-4 shadow-sm" style="border-radius: 10px;">
+          <i class="bi bi-hourglass-split fs-4 flex-shrink-0"></i>
+          <div class="small">
+            <strong>Usuario pendiente de aprobación.</strong> Asigna un rol válido y cambia el estado a <strong>"Activo"</strong> para habilitar su acceso a la plataforma.
           </div>
         </div>
         {% endif %}
 
-        <form method="POST">
+        <!-- 3. AVISO INFORMATIVO DE SEGURIDAD AL CREAR -->
+        {% if accion == 'Crear' %}
+        <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-4" style="border-radius: 8px;">
+          <i class="bi bi-shield-lock-fill me-2 fs-6"></i>
+          <span>Asegúrate de ingresar un correo electrónico válido para que el usuario reciba sus credenciales.</span>
+        </div>
+        {% endif %}
+
+        <form method="POST" class="needs-validation" novalidate>
           {% csrf_token %}
           <div class="row g-3">
 
             <div class="col-md-6">
-              <label for="id_nombre" class="form-label">Nombre</label>
-              <input type="text" id="id_nombre" name="nombre" class="form-control" value="{{ usuario_editar.nombre|default:'' }}" required>
+              <label for="id_nombre" class="form-label fw-medium small">Nombre</label>
+              <input type="text" id="id_nombre" name="nombre" class="form-control" value="{{ usuario_editar.nombre|default:'' }}" placeholder="Ej: Carlos" required>
+              <div class="invalid-feedback small">Por favor ingresa el nombre.</div>
             </div>
 
             <div class="col-md-6">
-              <label for="id_apellido" class="form-label">Apellido</label>
-              <input type="text" id="id_apellido" name="apellido" class="form-control" value="{{ usuario_editar.apellido|default:'' }}" required>
+              <label for="id_apellido" class="form-label fw-medium small">Apellido</label>
+              <input type="text" id="id_apellido" name="apellido" class="form-control" value="{{ usuario_editar.apellido|default:'' }}" placeholder="Ej: Gómez" required>
+              <div class="invalid-feedback small">Por favor ingresa el apellido.</div>
             </div>
 
             <div class="col-12">
-              <label for="id_correo" class="form-label">Correo electrónico</label>
-              <input type="email" id="id_correo" name="correoElectronico" class="form-control" value="{{ usuario_editar.correoElectronico|default:'' }}" required>
+              <label for="id_correo" class="form-label fw-medium small">Correo electrónico</label>
+              <div class="input-group has-validation">
+                <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
+                <input type="email" id="id_correo" name="correoElectronico" class="form-control" value="{{ usuario_editar.correoElectronico|default:'' }}" placeholder="correo@ejemplo.com" required>
+                <div class="invalid-feedback small">Ingresa un correo electrónico válido.</div>
+              </div>
             </div>
 
             <div class="col-md-6">
-              <label for="id_telefono" class="form-label">Teléfono</label>
-              <input type="tel" id="id_telefono" name="telefono" class="form-control" value="{{ usuario_editar.telefono|default:'' }}" placeholder="+57 300 000 0000">
+              <label for="id_telefono" class="form-label fw-medium small">Teléfono</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white text-muted"><i class="bi bi-telephone"></i></span>
+                <input type="tel" id="id_telefono" name="telefono" class="form-control" value="{{ usuario_editar.telefono|default:'' }}" placeholder="+57 300 000 0000">
+              </div>
             </div>
 
             <div class="col-md-6">
-              <label for="rolSelect" class="form-label">Rol</label>
-              <select name="rol" class="form-select" id="rolSelect" onchange="toggleEspecialidad()">
+              <label for="rolSelect" class="form-label fw-medium small">Rol</label>
+              <select name="rol" class="form-select" id="rolSelect" onchange="toggleEspecialidad()" required>
                 {% if usuario_editar.rol == 'sin_asignar' or not usuario_editar.rol %}
-                  <option value="sin_asignar" selected disabled>Sin asignar (pendiente)</option>
+                  <option value="" selected disabled>Seleccionar rol...</option>
                 {% endif %}
                 <option value="cliente" {% if usuario_editar.rol == 'cliente' %}selected{% endif %}>Cliente</option>
                 <option value="operario" {% if usuario_editar.rol == 'operario' %}selected{% endif %}>Operario</option>
                 <option value="administrador" {% if usuario_editar.rol == 'administrador' %}selected{% endif %}>Administrador</option>
               </select>
+              <div class="invalid-feedback small">Debes seleccionar un rol para el usuario.</div>
             </div>
 
-            <!-- Campo visible solo si rol = operario -->
+            <!-- Campo dinámico para operario con aviso guiado -->
             <div class="col-12" id="especialidadField" style="display: none;">
-              <label for="id_especialidad" class="form-label">Especialidad</label>
-              <select name="especialidad" id="id_especialidad" class="form-select">
-                <option value="Corte" {% if usuario_editar.especialidad == 'Corte' %}selected{% endif %}>Corte</option>
-                <option value="Confección" {% if usuario_editar.especialidad == 'Confección' %}selected{% endif %}>Confección</option>
-                <option value="Bordado" {% if usuario_editar.especialidad == 'Bordado' %}selected{% endif %}>Bordado</option>
-                <option value="Estampado" {% if usuario_editar.especialidad == 'Estampado' %}selected{% endif %}>Estampado</option>
-                <option value="Planchado" {% if usuario_editar.especialidad == 'Planchado' %}selected{% endif %}>Planchado</option>
-                <option value="Control de Calidad" {% if usuario_editar.especialidad == 'Control de Calidad' %}selected{% endif %}>Control de Calidad</option>
-                <option value="Empaque" {% if usuario_editar.especialidad == 'Empaque' %}selected{% endif %}>Empaque</option>
-                <option value="General" {% if usuario_editar.especialidad == 'General' %}selected{% endif %}>General</option>
-              </select>
+              <div class="p-3 bg-light rounded-3 border">
+                <label for="id_especialidad" class="form-label fw-medium small text-primary">
+                  <i class="bi bi-tools me-1"></i>Especialidad del Operario
+                </label>
+                <select name="especialidad" id="id_especialidad" class="form-select">
+                  <option value="Corte" {% if usuario_editar.especialidad == 'Corte' %}selected{% endif %}>Corte</option>
+                  <option value="Confección" {% if usuario_editar.especialidad == 'Confección' %}selected{% endif %}>Confección</option>
+                  <option value="Bordado" {% if usuario_editar.especialidad == 'Bordado' %}selected{% endif %}>Bordado</option>
+                  <option value="Estampado" {% if usuario_editar.especialidad == 'Estampado' %}selected{% endif %}>Estampado</option>
+                  <option value="Planchado" {% if usuario_editar.especialidad == 'Planchado' %}selected{% endif %}>Planchado</option>
+                  <option value="Control de Calidad" {% if usuario_editar.especialidad == 'Control de Calidad' %}selected{% endif %}>Control de Calidad</option>
+                  <option value="Empaque" {% if usuario_editar.especialidad == 'Empaque' %}selected{% endif %}>Empaque</option>
+                  <option value="General" {% if usuario_editar.especialidad == 'General' %}selected{% endif %}>General</option>
+                </select>
+                <span class="form-text text-muted small d-block mt-1">Define el área de producción asignada a este trabajador.</span>
+              </div>
             </div>
 
             {% if accion == 'Editar' %}
             <div class="col-md-6">
-              <label for="id_estado" class="form-label">Estado</label>
+              <label for="id_estado" class="form-label fw-medium small">Estado de la cuenta</label>
               <select name="estado" id="id_estado" class="form-select">
                 <option value="pendiente" {% if usuario_editar.estado == 'pendiente' %}selected{% endif %}>Pendiente de aprobación</option>
                 <option value="activo" {% if usuario_editar.estado == 'activo' %}selected{% endif %}>Activo</option>
@@ -94,14 +144,15 @@
 
             {% if accion == 'Crear' %}
             <div class="col-md-6">
-              <label for="id_contrasena" class="form-label">Contraseña</label>
-              <input type="password" id="id_contrasena" name="contrasena" class="form-control" placeholder="Mínimo 8 caracteres" required>
+              <label for="id_contrasena" class="form-label fw-medium small">Contraseña</label>
+              <input type="password" id="id_contrasena" name="contrasena" class="form-control" placeholder="Mínimo 8 caracteres" minlength="8" required>
+              <div class="invalid-feedback small">La contraseña debe contener al menos 8 caracteres.</div>
             </div>
             {% endif %}
 
           </div>
 
-          <div class="d-flex gap-2 justify-content-end mt-4">
+          <div class="d-flex gap-2 justify-content-end mt-4 pt-2 border-top">
             <a href="{% url 'admin_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
             <button type="submit" class="btn btn-primary-ht">
               <i class="bi bi-check-lg me-1"></i>{{ accion }} usuario
@@ -125,6 +176,21 @@
       campoEspecialidad.style.display = (rolSelect.value === 'operario') ? 'block' : 'none';
     }
   }
+
+  // Validaciones visuales Bootstrap 5 al enviar el formulario
+  (function () {
+    'use strict'
+    const forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        form.classList.add('was-validated')
+      }, false)
+    })
+  })()
 
   document.addEventListener('DOMContentLoaded', toggleEspecialidad);
 </script>

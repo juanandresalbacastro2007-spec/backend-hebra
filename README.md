@@ -127,6 +127,6 @@ EMAIL_HOST_PASSWORD=
 
 **Yeferson Idarraga** — Backend  
 [GitHub](https://github.com/yeferson11-11)
----
+
 
 <p align="center">Proyecto académico — Especialización en Gerencia de la Calidad</p>

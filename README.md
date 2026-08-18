@@ -111,10 +111,18 @@ EMAIL_HOST_PASSWORD=
 | 📌 Tablero Scrum (Trello) | [Ver tablero](https://trello.com/invite/b/689f62d2858160184aa70561/ATTIbf128c1aaca7ccb2036e0abc8d037bf7762A8D73/hebratech) |
 | 📄 Documentación funcional | [Ver documento](https://1drv.ms/w/c/79ed40f1be334284/IQD3UudmTnMKQ7at6iZM_n9jAdiUx77Mm4oDD52Lsl0VrW8?e=wiPUn2) |
 
-## 👤 Autor
+## 👤 Autores
 
-**Jorge** — Backend & Cloud Engineer
+**Jorge Almanza** — Backend
 [GitHub](https://github.com/jorgeformulauno)
+**Juan Alba** — Backend 
+[GitHub](https://github.com/juanandresalbacastro2007-spec)
+**David Sierra** — Backend 
+[GitHub](https://github.com/David-sierra4444)
+**Santiago Cano** — Backend 
+[GitHub](https://github.com/ssantiagocubides-bit)
+**Yeferson Idarraga** — Backend
+[GitHub](https://github.com/yeferson11-11)
 
 ---
 

@@ -550,13 +550,32 @@ def exportar_ordenes_pdf(request):
         return HttpResponse('Hubo un error al generar el PDF', status=500)
     return response
 
+
+
 @admin_required
 def inventario_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
 
-    # Consulta optimizada trayendo la relación de Producto en una sola consulta SQL
+    # Capturar término de búsqueda desde la URL (?buscar=texto)
+    buscar = request.GET.get('buscar', '').strip()
+
+    # Consultas base
     inventario_list = Inventario.objects.all().select_related('producto')
     materiales_list = Material.objects.all()
+
+    # Aplicar filtro si se ingresó un valor en la caja de búsqueda
+    if buscar:
+        inventario_list = inventario_list.filter(
+            Q(producto__nombre__icontains=buscar) | 
+            Q(idInventario__icontains=buscar) |
+            Q(ubicacion__icontains=buscar)
+        )
+        
+        materiales_list = materiales_list.filter(
+            Q(nombreMaterial__icontains=buscar) | 
+            Q(descripcion__icontains=buscar) |
+            Q(idMaterial__icontains=buscar)
+        )
 
     context = {
         'usuario': usuario,
@@ -564,8 +583,11 @@ def inventario_lista(request):
         'total_items': inventario_list.count(),
         'materiales_list': materiales_list,
         'total_materiales': materiales_list.count(),
+        'buscar_filtro': buscar,  # Necesario para mantener el texto en el input
     }
     return render(request, 'administrador/inventario_lista.html', context)
+
+
 
 @admin_required
 @require_POST

@@ -6,24 +6,27 @@
 
 {% block topbar_extra %}
 <div class="ms-auto d-flex gap-2 align-items-center">
-  <form method="GET" class="d-flex gap-2 align-items-center" id="searchForm">
-    <div class="input-group input-group-sm" style="max-width: 280px;">
-      <span class="input-group-text bg-white border-end-0 text-muted">
-        <i class="bi bi-search"></i>
-      </span>
-      <input type="search" name="buscar" id="buscarInput"
-        class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
-        placeholder="Buscar producto o material..." value="{{ buscar_filtro|default:'' }}">
+  <form method="GET" action="{% url 'admin_inventario' %}" class="d-flex align-items-center">
+  <div class="input-group input-group-sm" style="max-width: 280px;">
+    <span class="input-group-text bg-white border-end-0 text-muted">
+      <i class="bi bi-search"></i>
+    </span>
+    
+    <input type="search" name="buscar" id="buscarInput"
+           class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
+           placeholder="Buscar producto o material..." value="{{ buscar_filtro|default:'' }}">
 
-      {% if buscar_filtro %}
-      <a href="{% url 'admin_inventario' %}" class="input-group-text bg-white border-start-0 text-muted"
-        title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
-        <i class="bi bi-x-circle-fill"></i>
-      </a>
-      {% endif %}
-    </div>
-    <button type="submit" class="d-none"></button>
-  </form>
+    {% if buscar_filtro %}
+    <a href="{% url 'admin_inventario' %}" class="input-group-text bg-white border-start-0 text-muted"
+       title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
+      <i class="bi bi-x-circle-fill"></i>
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Botón invisible para permitir el envío al presionar ENTER -->
+  <button type="submit" class="d-none"></button>
+</form>
 </div>
 {% endblock %}
 

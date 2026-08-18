@@ -86,17 +86,6 @@
       {% block topbar_extra %}{% endblock %}
     </header>
 
-    <!-- Mensajes -->
-    {% if messages %}
-    <div class="px-4 pt-3">
-      {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
 
     <!-- Contenido -->
     <div class="content-wrap">

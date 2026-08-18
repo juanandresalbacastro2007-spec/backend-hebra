@@ -5,10 +5,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HebraTech — {% block titulo %}Administración{% endblock %}</title>
+  
+  <!-- CSS Base -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Estilos propios -->
   <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
+  <link rel="stylesheet" href="{% static 'css/administrador/perfil-modal.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -57,11 +62,17 @@
       </a>
 
       <div class="sidebar-footer">
-        <div class="admin-info">
-          <div class="admin-avatar">{{ usuario.nombre|first|upper }}</div>
+        <div class="admin-info admin-info-clickable" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" title="Editar perfil">
+          <div class="admin-avatar">
+            {% if usuario.foto %}
+              <img src="{{ usuario.foto.url }}" alt="Avatar" class="admin-avatar-img">
+            {% else %}
+              {{ usuario.nombre|first|upper }}
+            {% endif %}
+          </div>
           <div>
             <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
-            <div class="admin-role">Administrador</div>
+            <div class="admin-role">Administrador <i class="bi bi-pencil-fill perfil-edit-hint"></i></div>
           </div>
         </div>
         <a href="{% url 'logout' %}" class="btn-logout">
@@ -86,15 +97,119 @@
       {% block topbar_extra %}{% endblock %}
     </header>
 
+    <!-- Mensajes de Sistema -->
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
-    <!-- Contenido -->
+    <!-- Contenido Principal -->
     <div class="content-wrap">
       {% block contenido %}{% endblock %}
     </div>
   </div>
 
+  <!-- ══ MODAL EDITAR PERFIL ══ -->
+  <div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content perfil-modal-content">
+
+        <!-- Cabecera del Modal -->
+        <div class="perfil-modal-header">
+          <button type="button" class="btn-close btn-close-white perfil-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          
+          <!-- Contenedor del Avatar + Botón Flotante para Subir Imagen -->
+          <div class="perfil-avatar-wrapper">
+            <div class="perfil-avatar-grande" id="perfilAvatarPreview">
+              {% if usuario.foto %}
+                <img src="{{ usuario.foto.url }}" alt="Foto de perfil">
+              {% else %}
+                {{ usuario.nombre|first|upper }}
+              {% endif %}
+            </div>
+            <label for="perfilFoto" class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
+              <i class="bi bi-camera-fill"></i>
+            </label>
+          </div>
+
+          <h5 class="perfil-modal-title">Editar perfil</h5>
+          <p class="perfil-modal-sub">Actualizá tu información personal</p>
+        </div>
+
+        <!-- Formulario (con multipart/form-data para enviar archivos) -->
+        <form id="formEditarPerfil" class="perfil-modal-body" novalidate enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <!-- Input File Oculto -->
+          <input type="file" id="perfilFoto" name="foto" accept="image/png, image/jpeg, image/webp" class="d-none">
+
+          <!-- Caja de Alertas JS -->
+          <div class="perfil-alert" id="perfilAlert"></div>
+
+          <!-- Campos de Texto -->
+          <div class="perfil-field">
+            <label for="perfilNombre"><i class="bi bi-person-fill"></i> Nombre</label>
+            <input type="text" class="form-control" id="perfilNombre" name="nombre" value="{{ usuario.nombre }}" required>
+          </div>
+
+          <div class="perfil-field">
+            <label for="perfilApellido"><i class="bi bi-person-fill"></i> Apellido</label>
+            <input type="text" class="form-control" id="perfilApellido" name="apellido" value="{{ usuario.apellido }}" required>
+          </div>
+
+          <div class="perfil-field">
+            <label for="perfilEmail"><i class="bi bi-envelope-fill"></i> Correo electrónico</label>
+            <input type="email" class="form-control" id="perfilEmail" name="email" value="{{ usuario.email }}" required>
+          </div>
+
+          <div class="perfil-field">
+            <label for="perfilTelefono"><i class="bi bi-telephone-fill"></i> Teléfono</label>
+            <input type="text" class="form-control" id="perfilTelefono" name="telefono" value="{{ usuario.telefono|default:'' }}">
+          </div>
+
+          <!-- Cambio de Contraseña -->
+          <hr class="perfil-divider">
+          <p class="perfil-section-label"><i class="bi bi-shield-lock-fill"></i> Cambiar contraseña <span>(opcional)</span></p>
+
+          <div class="perfil-field">
+            <label for="perfilPassword1">Nueva contraseña</label>
+            <div class="perfil-input-icon">
+              <input type="password" class="form-control" id="perfilPassword1" name="password1" placeholder="Dejar en blanco para no cambiar">
+              <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword1"></i>
+            </div>
+          </div>
+
+          <div class="perfil-field">
+            <label for="perfilPassword2">Confirmar nueva contraseña</label>
+            <div class="perfil-input-icon">
+              <input type="password" class="form-control" id="perfilPassword2" name="password2" placeholder="Repetir contraseña">
+              <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword2"></i>
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="perfil-modal-footer">
+            <button type="button" class="btn btn-perfil-cancelar" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-perfil-guardar" id="btnGuardarPerfil">
+              <span class="btn-text">Guardar cambios</span>
+              <span class="spinner-border spinner-border-sm d-none" id="spinnerGuardar"></span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{% static 'js/admin.js' %}"></script>
+  <script src="{% static 'js/administrador/perfil.js' %}"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -11,7 +11,8 @@ from .models import (
     TIEMPOS_ESTANDAR_MINUTOS,
 )
 import openpyxl
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -565,3 +566,45 @@ def inventario_lista(request):
         'total_materiales': materiales_list.count(),
     }
     return render(request, 'administrador/inventario_lista.html', context)
+
+@admin_required
+@require_POST
+def editar_perfil(request):
+    try:
+        usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+
+        nombre = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        correo = request.POST.get('email', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        pass1 = request.POST.get('password1', '').strip()
+        pass2 = request.POST.get('password2', '').strip()
+
+        # ── Validaciones básicas ──
+        if not nombre or not apellido or not correo:
+            return JsonResponse({'success': False, 'mensaje': 'Nombre, apellido y correo son obligatorios.'}, status=400)
+
+        # ── Validar correo duplicado (excluyendo al propio usuario) ──
+        if Usuario.objects.filter(correoElectronico=correo).exclude(idUsuario=usuario.idUsuario).exists():
+            return JsonResponse({'success': False, 'mensaje': 'Ese correo ya está en uso por otro usuario.'}, status=400)
+
+        # ── Validar contraseña si la mandaron ──
+        if pass1 or pass2:
+            if pass1 != pass2:
+                return JsonResponse({'success': False, 'mensaje': 'Las contraseñas no coinciden.'}, status=400)
+            if len(pass1) < 8:
+                return JsonResponse({'success': False, 'mensaje': 'La contraseña debe tener al menos 8 caracteres.'}, status=400)
+            usuario.contrasena = make_password(pass1)
+
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.correoElectronico = correo
+        usuario.telefono = telefono or None
+        usuario.save()
+
+        return JsonResponse({'success': True, 'mensaje': 'Perfil actualizado correctamente.'})
+
+    except Usuario.DoesNotExist:
+        return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'mensaje': f'Error al actualizar el perfil: {str(e)}'}, status=500)

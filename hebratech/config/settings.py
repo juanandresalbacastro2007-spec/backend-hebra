@@ -136,7 +136,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='hebratechoficial@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='iebi myfc qetj phvr')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='qott jfmn uern pliy')
 DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
 
 # --- CONFIGURACIÓN DE REST FRAMEWORK Y JWT ---

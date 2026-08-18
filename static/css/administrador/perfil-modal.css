@@ -1,0 +1,295 @@
+/* ══════════════════════════════════════════
+   PALETA DE COLORES - HEBRATECH
+   #2C3333 | #395B64 | #A5C9CA | #E7F6F2
+   ══════════════════════════════════════════ */
+
+:root {
+  --color-actitud: #2C3333;   /* Oscuro / Cabecera y textos */
+  --color-fortaleza: #395B64; /* Azul verdoso oscuro / Botón guardar e íconos */
+  --color-mentalidad: #A5C9CA;/* Azul menta claro / Bordes y focus */
+  --color-atencion: #E7F6F2;  /* Fondo hielo menta / Fondos suaves y cancel */
+}
+
+/* ══ ADMIN INFO CLICKABLE (Sidebar) ══ */
+.admin-info-clickable {
+  cursor: pointer;
+  transition: background .2s ease, transform .15s ease;
+  border-radius: 10px;
+  padding: 6px 8px;
+  margin: -6px -8px;
+}
+
+.admin-info-clickable:hover {
+  background: rgba(255, 255, 255, .1);
+  transform: translateX(2px);
+}
+
+.perfil-edit-hint {
+  font-size: .65rem;
+  opacity: .75;
+  margin-left: 4px;
+}
+
+/* Avatar del Sidebar */
+.admin-avatar {
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-fortaleza);
+  color: #ffffff;
+}
+
+.admin-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ══ MODAL EDITAR PERFIL ══ */
+.perfil-modal-content {
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(44, 51, 51, .3);
+  background-color: #ffffff;
+}
+
+.perfil-modal-header {
+  background: linear-gradient(135deg, var(--color-actitud) 0%, var(--color-fortaleza) 100%);
+  padding: 32px 24px 24px;
+  text-align: center;
+  position: relative;
+  color: #ffffff;
+}
+
+.perfil-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* Contenedor del Avatar y Botón de Subida */
+.perfil-avatar-wrapper {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 12px;
+}
+
+.perfil-avatar-grande {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(231, 246, 242, 0.2);
+  border: 3px solid var(--color-mentalidad);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.perfil-avatar-grande img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.perfil-avatar-edit-btn {
+  position: absolute;
+  bottom: 0;
+  right: -2px;
+  width: 28px;
+  height: 28px;
+  background: var(--color-fortaleza);
+  color: #ffffff;
+  border: 2px solid var(--color-atencion);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform .15s ease, background .2s ease, color .2s ease;
+}
+
+.perfil-avatar-edit-btn:hover {
+  background: var(--color-actitud);
+  color: var(--color-mentalidad);
+  transform: scale(1.1);
+}
+
+.perfil-modal-title {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: #ffffff;
+}
+
+.perfil-modal-sub {
+  font-size: .85rem;
+  color: var(--color-atencion);
+  opacity: .9;
+  margin-bottom: 0;
+}
+
+/* Cuerpo del Modal */
+.perfil-modal-body {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.perfil-field {
+  margin-bottom: 16px;
+}
+
+.perfil-field label {
+  display: block;
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--color-actitud);
+  margin-bottom: 6px;
+}
+
+.perfil-field label i {
+  color: var(--color-fortaleza);
+  margin-right: 4px;
+}
+
+.perfil-field .form-control {
+  border-radius: 10px;
+  border: 1.5px solid var(--color-mentalidad);
+  background-color: #ffffff;
+  padding: 10px 14px;
+  color: var(--color-actitud);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.perfil-field .form-control:focus {
+  border-color: var(--color-fortaleza);
+  box-shadow: 0 0 0 3px rgba(165, 201, 202, 0.35);
+}
+
+.perfil-input-icon {
+  position: relative;
+}
+
+.perfil-input-icon .toggle-password {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-fortaleza);
+  cursor: pointer;
+  opacity: .7;
+  transition: opacity .2s ease, color .2s ease;
+}
+
+.perfil-input-icon .toggle-password:hover {
+  opacity: 1;
+  color: var(--color-actitud);
+}
+
+.perfil-divider {
+  margin: 20px 0 16px;
+  border-color: var(--color-atencion);
+}
+
+.perfil-section-label {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--color-fortaleza);
+  margin-bottom: 14px;
+}
+
+.perfil-section-label span {
+  font-weight: 400;
+  color: #7d8b8e;
+}
+
+/* Alertas */
+.perfil-alert {
+  display: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: .85rem;
+  margin-bottom: 16px;
+}
+
+.perfil-alert.show-error {
+  display: block;
+  background: #ffe3e3;
+  color: #c0392b;
+  border: 1px solid #f5c6cb;
+}
+
+.perfil-alert.show-success {
+  display: block;
+  background: var(--color-atencion);
+  color: var(--color-actitud);
+  border: 1.5px solid var(--color-mentalidad);
+  font-weight: 500;
+}
+
+/* Footer y Botones */
+.perfil-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.btn-perfil-cancelar {
+  background: var(--color-atencion);
+  color: var(--color-actitud);
+  border: 1px solid var(--color-mentalidad);
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-weight: 500;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.btn-perfil-cancelar:hover {
+  background: var(--color-mentalidad);
+  color: var(--color-actitud);
+}
+
+.btn-perfil-guardar {
+  background: linear-gradient(135deg, var(--color-fortaleza), var(--color-actitud));
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 22px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(57, 91, 100, 0.25);
+  transition: opacity .2s ease, transform .15s ease, box-shadow .2s ease;
+}
+
+.btn-perfil-guardar:hover {
+  opacity: .95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(44, 51, 51, 0.35);
+  color: #ffffff;
+}
+
+.btn-perfil-guardar:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

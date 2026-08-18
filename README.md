@@ -113,17 +113,20 @@ EMAIL_HOST_PASSWORD=
 
 ## 👤 Autores
 
-**Jorge Almanza** — Backend
+**Jorge Almanza** — Backend  
 [GitHub](https://github.com/jorgeformulauno)
-**Juan Alba** — Backend 
-[GitHub](https://github.com/juanandresalbacastro2007-spec)
-**David Sierra** — Backend 
-[GitHub](https://github.com/David-sierra4444)
-**Santiago Cano** — Backend 
-[GitHub](https://github.com/ssantiagocubides-bit)
-**Yeferson Idarraga** — Backend
-[GitHub](https://github.com/yeferson11-11)
 
+**Juan Alba** — Backend  
+[GitHub](https://github.com/juanandresalbacastro2007-spec)
+
+**David Sierra** — Backend  
+[GitHub](https://github.com/David-sierra4444)
+
+**Santiago Cano** — Backend  
+[GitHub](https://github.com/ssantiagocubides-bit)
+
+**Yeferson Idarraga** — Backend  
+[GitHub](https://github.com/yeferson11-11)
 ---
 
 <p align="center">Proyecto académico — Especialización en Gerencia de la Calidad</p>

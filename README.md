@@ -65,7 +65,7 @@ hebratech/
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/jorgeformulauno/hebratech.git
+git clone https://github.com/juanandresalbacastro2007-spec/backend-hebra.git
 cd hebratech
 
 # 2. Crear entorno virtual

@@ -284,6 +284,7 @@
 
 
   <!-- ══════════ MODAL AGREGAR ═══════════════════════════════ -->
+    <!-- ══════════ MODAL AGREGAR ═══════════════════════════════ -->
   <div class="modal fade" id="modalAgregarProveedor" tabindex="-1"
        aria-labelledby="modalAgregarLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -296,17 +297,16 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
 
-        <form method="POST" action="{% url 'crear_proveedor' %}" novalidate>
+        <form method="POST" action="{% url 'crear_proveedor' %}" id="formAgregarProveedor" class="needs-validation" novalidate>
           {% csrf_token %}
           <div class="modal-body p-4">
-
-            <div id="alertaErrorModal" class="alert alert-danger d-none py-2 px-3 mb-3 small rounded-3" role="alert"></div>
 
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Nombre de la empresa</label>
                 <input type="text" name="nombreEmpresa" class="form-control"
                        placeholder="Ej. Textiles Del Valle S.A.S." required>
+                <div class="invalid-feedback">Ingresa el nombre de la empresa.</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">
@@ -316,31 +316,36 @@
                 <input type="tel" name="nit" class="form-control"
                        placeholder="900123456" pattern="[0-9]{9,10}" maxlength="10"
                        title="9 a 10 dígitos numéricos" required>
+                <div class="invalid-feedback">Ingresa entre 9 y 10 dígitos numéricos.</div>
                 <div class="form-text">9 dígitos principales del NIT en Colombia</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Persona de contacto</label>
                 <input type="text" name="nombreContacto" class="form-control"
                        placeholder="Ej. Carlos Mendoza" required>
+                <div class="invalid-feedback">Ingresa el nombre de la persona de contacto.</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Teléfono de contacto</label>
-                <div class="input-group">
+                <div class="input-group has-validation">
                   <span class="input-group-text fw-bold text-muted">+57</span>
                   <input type="tel" name="telefono" class="form-control"
                          placeholder="300 123 4567" pattern="[0-9]{7,10}" maxlength="10"
                          title="10 dígitos celular o 7 dígitos fijo" required>
+                  <div class="invalid-feedback">Ingresa un número celular (10 dígitos) o fijo (7 dígitos).</div>
                 </div>
               </div>
               <div class="col-12">
                 <label class="form-label fw-semibold">Correo electrónico</label>
                 <input type="email" name="correo" class="form-control"
                        placeholder="contacto@empresa.com" required>
+                <div class="invalid-feedback">Ingresa un correo electrónico válido.</div>
               </div>
               <div class="col-12">
                 <label class="form-label fw-semibold">Dirección comercial</label>
                 <textarea name="direccion" class="form-control" rows="2"
                           placeholder="Ej. Calle 45 # 12-34, Bodega 3, Medellín" required></textarea>
+                <div class="invalid-feedback">Ingresa la dirección comercial.</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Estado inicial</label>
@@ -349,6 +354,7 @@
                   <option value="activo">🟢 Activo</option>
                   <option value="inactivo">🔴 Inactivo</option>
                 </select>
+                <div class="invalid-feedback">Selecciona un estado inicial.</div>
               </div>
             </div>
 

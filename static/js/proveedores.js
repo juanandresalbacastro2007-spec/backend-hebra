@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function () {
       sinResultados.classList.toggle('d-none', visibles > 0);
     }
 
-    /* Botón limpiar */
     if (btnLimpiar) {
       btnLimpiar.classList.toggle('d-none', !filtro);
     }
@@ -92,46 +91,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   };
 
-  /* ── Validación del formulario Agregar ────────────────── */
-  const formAgregar    = document.querySelector('#modalAgregarProveedor form');
-  const alertContainer = document.getElementById('alertaErrorModal');
+  /* ── Validación Bootstrap del formulario Agregar ──────── */
+  const formAgregarProveedor = document.getElementById('formAgregarProveedor');
 
-  if (formAgregar) {
-    formAgregar.addEventListener('submit', function (event) {
-      let esValido = true;
-      let mensajeError = '';
-
-      const camposRequeridos = formAgregar.querySelectorAll('[required]');
-      camposRequeridos.forEach(campo => {
-        if (!campo.value.trim()) {
-          esValido = false;
-          mensajeError = 'Por favor completa todos los campos requeridos.';
-        }
-      });
-
-      if (esValido) {
-        const nit      = formAgregar.querySelector('[name="nit"]').value.trim();
-        const telefono = formAgregar.querySelector('[name="telefono"]').value.trim();
-
-        if (nit.length < 9) {
-          esValido = false;
-          mensajeError = 'El NIT debe tener al menos 9 dígitos.';
-        } else if (telefono.length < 7) {
-          esValido = false;
-          mensajeError = 'El teléfono debe tener al menos 7 dígitos.';
-        }
+  if (formAgregarProveedor) {
+    formAgregarProveedor.addEventListener('submit', function (e) {
+      if (!formAgregarProveedor.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
       }
-
-      if (!esValido) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (alertContainer) {
-          alertContainer.innerText = mensajeError;
-          alertContainer.classList.remove('d-none');
-        }
-      } else {
-        if (alertContainer) alertContainer.classList.add('d-none');
-      }
+      formAgregarProveedor.classList.add('was-validated');
     });
   }
 

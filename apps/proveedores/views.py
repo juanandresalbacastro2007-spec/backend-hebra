@@ -27,12 +27,20 @@ def listar_proveedores(request):
         'form': form
     })
 
-
 @admin_required
 def crear_proveedor(request):
     if request.method == 'POST':
         form = ProveedorForm(request.POST)
-        if form.is_valid():
+
+        try:
+            if not form.is_valid():
+                # Igual que en tareas: se arma un solo mensaje con todos los errores
+                errores = '; '.join(
+                    f'{error}' for errors in form.errors.values() for error in errors
+                )
+                messages.error(request, f'⚠️ Error al crear proveedor: {errores}')
+                return redirect('admin_proveedores')
+
             proveedor = form.save(commit=False)
 
             # ID del usuario logueado (sesión manual, no auth de Django)
@@ -40,12 +48,11 @@ def crear_proveedor(request):
             proveedor.idUsuario_id = usuario_id
 
             proveedor.save()
-            messages.success(request, '✅ Proveedor creado con éxito.')
+            messages.success(request, f'✅ Proveedor "{proveedor.nombreEmpresa}" creado con éxito.')
             return redirect('admin_proveedores')
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'⚠️ {error}')
+
+        except Exception as e:
+            messages.error(request, f'Error al crear proveedor: {str(e)}')
             return redirect('admin_proveedores')
 
     return redirect('admin_proveedores')
@@ -57,14 +64,22 @@ def editar_proveedor(request, id):
 
     if request.method == 'POST':
         form = ProveedorForm(request.POST, instance=proveedor)
-        if form.is_valid():
+
+        try:
+            if not form.is_valid():
+                errores = '; '.join(
+                    f'{error}' for errors in form.errors.values() for error in errors
+                )
+                messages.error(request, f'⚠️ Error al actualizar proveedor: {errores}')
+                return redirect('admin_proveedores')
+
             form.save()
             messages.success(request, f'✏️ {proveedor.nombreEmpresa} actualizado correctamente')
             return redirect('admin_proveedores')
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'⚠️ {error}')
+
+        except Exception as e:
+            messages.error(request, f'Error al actualizar proveedor: {str(e)}')
+            return redirect('admin_proveedores')
 
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     proveedores = Proveedor.objects.all().order_by('-fechaRegistro')
@@ -78,12 +93,13 @@ def editar_proveedor(request, id):
 
 @admin_required
 def eliminar_proveedor(request, id):
-    proveedor = get_object_or_404(Proveedor, idProveedor=id)
-
-    proveedor.estado = 'inactivo'
-    proveedor.save()
-
-    messages.warning(request, f'🗑️ {proveedor.nombreEmpresa} desactivado correctamente')
+    try:
+        proveedor = get_object_or_404(Proveedor, idProveedor=id)
+        proveedor.estado = 'inactivo'
+        proveedor.save()
+        messages.warning(request, f'🗑️ {proveedor.nombreEmpresa} desactivado correctamente')
+    except Exception as e:
+        messages.error(request, f'Error al desactivar proveedor: {str(e)}')
     return redirect('admin_proveedores')
 
 

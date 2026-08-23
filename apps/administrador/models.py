@@ -93,6 +93,7 @@ class AsignacionTarea(models.Model):
         ('En Progreso', 'En Progreso'),
         ('Completada', 'Completada'),
         ('Cancelada', 'Cancelada'),
+        ('Retrasada', 'Retrasada'),
     ]
     PRIORIDAD_CHOICES = [
         ('Baja', 'Baja'),
@@ -115,6 +116,7 @@ class AsignacionTarea(models.Model):
     descripcion = models.TextField()
     fechaAsignacion = models.DateField(auto_now_add=True)
     fechaInicio = models.DateField()
+    fechaLimite = models.DateField(null=True, blank=True)
     fechaFinalizacion = models.DateField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='Media')

@@ -1,48 +1,99 @@
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("✅ Script cargado");
-    
-    const inputBusqueda = document.getElementById('campoBusqueda');
-    const contenedorBotones = document.querySelector('.nav-pills');
-    
-    if (!inputBusqueda) {
-        console.error("❌ No encontré #campoBusqueda");
-        return;
-    }
-    
-    if (!contenedorBotones) {
-        console.error("❌ No encontré .nav-pills");
-        return;
-    }
-    
-    // Escuchar el evento input
-    inputBusqueda.addEventListener('input', function() {
-        const filtro = this.value.toLowerCase().trim();
-        console.log(`Filtro: "${filtro}"`);
-        
-        // Obtener todos los botones dentro del contenedor
-        const botones = contenedorBotones.querySelectorAll('button.nav-link');
-        console.log(`Total de botones: ${botones.length}`);
-        
-        botones.forEach((boton, index) => {
-            const textoCompleto = boton.textContent.toLowerCase();
-            console.log(`Botón ${index}: ${textoCompleto}`);
-            
-            if (textoCompleto.includes(filtro) || filtro === '') {
-                boton.style.display = 'flex';
-                console.log(`  → Mostrado`);
-            } else {
-                boton.style.display = 'none';
-                console.log(`  → Oculto`);
-            }
-        });
-    });
-});
+/* proveedores.js — HebraTech · Módulo de Proveedores v2 */
 
-
-
-/* validacion de datos llenos en el formulario de agregar*/
 document.addEventListener('DOMContentLoaded', function () {
-  const formAgregar = document.querySelector('#modalAgregarProveedor form');
+
+  /* ── Contadores KPI ───────────────────────────────────── */
+  (function actualizarKPIs() {
+    const items = document.querySelectorAll('.prov-item[data-estado]');
+    let activos = 0, inactivos = 0;
+    items.forEach(btn => {
+      if (btn.dataset.estado === 'activo') activos++;
+      else inactivos++;
+    });
+    const elA = document.getElementById('cntActivos');
+    const elI = document.getElementById('cntInactivos');
+    if (elA) elA.textContent = activos;
+    if (elI) elI.textContent = inactivos;
+  })();
+
+  /* ── Búsqueda en tiempo real ──────────────────────────── */
+  const inputBusqueda = document.getElementById('campoBusqueda');
+  const btnLimpiar    = document.getElementById('btnLimpiarBusqueda');
+  const sinResultados = document.getElementById('sinResultados');
+
+  function filtrarLista() {
+    const filtro  = inputBusqueda.value.toLowerCase().trim();
+    const estadoActivo = document.querySelector('.ftab.active')?.dataset.filtro || 'todos';
+    const botones = document.querySelectorAll('.prov-item');
+    let visibles  = 0;
+
+    botones.forEach(btn => {
+      const texto  = btn.textContent.toLowerCase();
+      const estado = btn.dataset.estado;
+
+      const pasaTexto  = !filtro || texto.includes(filtro);
+      const pasaEstado = estadoActivo === 'todos' || estado === estadoActivo;
+
+      if (pasaTexto && pasaEstado) {
+        btn.style.display = 'flex';
+        visibles++;
+      } else {
+        btn.style.display = 'none';
+      }
+    });
+
+    if (sinResultados) {
+      sinResultados.classList.toggle('d-none', visibles > 0);
+    }
+
+    /* Botón limpiar */
+    if (btnLimpiar) {
+      btnLimpiar.classList.toggle('d-none', !filtro);
+    }
+  }
+
+  if (inputBusqueda) {
+    inputBusqueda.addEventListener('input', filtrarLista);
+  }
+
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener('click', function () {
+      inputBusqueda.value = '';
+      filtrarLista();
+      inputBusqueda.focus();
+    });
+  }
+
+  /* ── Filtro por estado ────────────────────────────────── */
+  document.querySelectorAll('.ftab').forEach(tab => {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      filtrarLista();
+    });
+  });
+
+  /* ── Copiar NIT al portapapeles ────────────────────────── */
+  window.copiarNIT = function (nit, btn) {
+    navigator.clipboard.writeText(nit).then(() => {
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>¡Copiado!';
+      btn.style.background    = 'rgba(40,167,69,0.08)';
+      btn.style.borderColor   = 'rgba(40,167,69,0.4)';
+      btn.style.color         = '#1a7a38';
+      setTimeout(() => {
+        btn.innerHTML = original;
+        btn.style.background  = '';
+        btn.style.borderColor = '';
+        btn.style.color       = '';
+      }, 1800);
+    }).catch(() => {
+      alert('No se pudo copiar. NIT: ' + nit);
+    });
+  };
+
+  /* ── Validación del formulario Agregar ────────────────── */
+  const formAgregar    = document.querySelector('#modalAgregarProveedor form');
   const alertContainer = document.getElementById('alertaErrorModal');
 
   if (formAgregar) {
@@ -50,7 +101,6 @@ document.addEventListener('DOMContentLoaded', function () {
       let esValido = true;
       let mensajeError = '';
 
-      // 1. Verificar si hay campos vacíos
       const camposRequeridos = formAgregar.querySelectorAll('[required]');
       camposRequeridos.forEach(campo => {
         if (!campo.value.trim()) {
@@ -59,9 +109,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
 
-      // 2. Validaciones específicas (solo si pasó la de vacíos)
       if (esValido) {
-        const nit = formAgregar.querySelector('[name="nit"]').value.trim();
+        const nit      = formAgregar.querySelector('[name="nit"]').value.trim();
         const telefono = formAgregar.querySelector('[name="telefono"]').value.trim();
 
         if (nit.length < 9) {
@@ -73,16 +122,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
 
-      // 3. Si hay un error, frena el envio y muestra la alerta en pantalla
       if (!esValido) {
         event.preventDefault();
         event.stopPropagation();
-
-        alertContainer.innerText = mensajeError;
-        alertContainer.classList.remove('d-none'); // Muestra la alerta roja
+        if (alertContainer) {
+          alertContainer.innerText = mensajeError;
+          alertContainer.classList.remove('d-none');
+        }
       } else {
-        alertContainer.classList.add('d-none'); // Oculta si todo está bien
+        if (alertContainer) alertContainer.classList.add('d-none');
       }
     });
   }
+
 });

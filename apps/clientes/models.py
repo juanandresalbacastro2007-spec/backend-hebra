@@ -129,6 +129,7 @@ class Orden(models.Model):
     def __str__(self):
         return f'Orden #{self.idOrden} - {self.estado}'
 
+
 class Factura(models.Model):
     idFactura = models.AutoField(primary_key=True)
     idOrden = models.ForeignKey(
@@ -152,4 +153,42 @@ class Factura(models.Model):
         managed = False
 
     def __str__(self):
-        return f'Factura {self.numeroFactura}'    
+        return f'Factura {self.numeroFactura}'
+
+
+# ── NUEVO: Notificaciones del cliente ────────────────────────
+class Notificacion(models.Model):
+    """
+    Registro de notificaciones que el cliente ve en su portal.
+    Se crea automáticamente via señal Django cada vez que
+    el administrador cambia el estado de una orden.
+
+    La tabla se crea manualmente con el SQL adjunto
+    (managed = False porque el resto del proyecto no usa migraciones).
+    """
+    TIPO_CHOICES = [
+        ('orden',    'Cambio de estado de orden'),
+        ('factura',  'Factura emitida'),
+        ('sistema',  'Mensaje del sistema'),
+    ]
+
+    idNotificacion = models.AutoField(primary_key=True)
+    idCliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='idCliente',
+        related_name='notificaciones'
+    )
+    tipo = models.CharField(max_length=50, choices=TIPO_CHOICES, default='orden')
+    titulo = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    leida = models.BooleanField(default=False)
+    fechaCreacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'notificaciones'
+        managed = False
+        ordering = ['-fechaCreacion']
+
+    def __str__(self):
+        return f'[{self.tipo}] {self.titulo} → Cliente #{self.idCliente_id}'

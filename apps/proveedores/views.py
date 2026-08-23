@@ -8,6 +8,7 @@ from .forms import ProveedorForm
 from django.contrib import messages
 import json
 from apps.core.decorators import login_required_rol, login_required_api
+from apps.administrador.models import Usuario
 
 # ── Decoradores de protección (gestionado por el administrador) ────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
@@ -16,9 +17,12 @@ admin_required_api = login_required_api(rol_esperado='administrador', session_ke
 
 @admin_required
 def listar_proveedores(request):
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     proveedores = Proveedor.objects.all().order_by('-fechaRegistro')
     form = ProveedorForm()
     return render(request, 'proveedores/proveedores.html', {
+        'usuario': usuario,
+        'seccion_activa': 'proveedores',
         'proveedores': proveedores,
         'form': form
     })
@@ -62,8 +66,11 @@ def editar_proveedor(request, id):
                 for error in errors:
                     messages.error(request, f'⚠️ {error}')
 
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     proveedores = Proveedor.objects.all().order_by('-fechaRegistro')
     return render(request, 'proveedores/proveedores.html', {
+        'usuario': usuario,
+        'seccion_activa': 'proveedores',
         'form': ProveedorForm(instance=proveedor),
         'proveedores': proveedores
     })

@@ -67,6 +67,7 @@
           <th>Operario</th>
           <th>Descripción</th>
           <th>Fecha inicio</th>
+          <th>Fecha límite</th>
           <th>Horas est.</th>
           <th>Tipo prenda</th>
           <th>Cantidad</th>
@@ -93,6 +94,13 @@
             {{ asig.descripcion }}
           </td>
           <td>{{ asig.fechaInicio }}</td>
+          <td>
+            {% if asig.fechaLimite %}
+              {{ asig.fechaLimite }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           <td>{{ asig.horasEstimadas }} h</td>
           <td>{{ asig.tipoPrenda|default:"—" }}</td>
           <td>{{ asig.cantidadPrendas|default:"—" }}</td>
@@ -114,6 +122,8 @@
             <span class="badge-ht badge-info"><i class="bi bi-gear-wide-connected me-1"></i>En Progreso</span>
             {% elif asig.estado == 'Cancelada' %}
             <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>Cancelada</span>
+            {% elif asig.estado == 'Retrasada' %}
+            <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retrasada</span>
             {% else %}
             <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente</span>
             {% endif %}
@@ -186,9 +196,17 @@
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Fecha de Inicio</label>
-                    <input type="date" name="fecha_inicio" class="form-control"
+                    <input type="date" name="fecha_inicio" class="form-control fecha-inicio-input"
                       value="{{ asig.fechaInicio|date:'Y-m-d' }}" required>
                     <div class="invalid-feedback small">Selecciona una fecha válida.</div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-medium small">Fecha Límite</label>
+                    <input type="date" name="fecha_limite" class="form-control fecha-limite-input"
+                      value="{{ asig.fechaLimite|date:'Y-m-d' }}">
+                    <div class="invalid-feedback small">La fecha límite no puede ser anterior a la fecha de inicio.</div>
+                    <small class="text-muted fs-7">Si se supera, la asignación se marca automáticamente como retrasada.</small>
                   </div>
 
                   <div class="mb-3">
@@ -234,6 +252,7 @@
                       <option value="En Progreso" {% if asig.estado == 'En Progreso' %}selected{% endif %}>En Progreso</option>
                       <option value="Completada" {% if asig.estado == 'Completada' %}selected{% endif %}>Completada</option>
                       <option value="Cancelada" {% if asig.estado == 'Cancelada' %}selected{% endif %}>Cancelada</option>
+                      <option value="Retrasada" {% if asig.estado == 'Retrasada' %}selected{% endif %}>Retrasada</option>
                     </select>
                   </div>
                 </div>
@@ -249,7 +268,7 @@
         <!-- 4. ESTADO VACÍO MEJORADO CON CONTEXTO DE BÚSQUEDA -->
         {% empty %}
         <tr>
-          <td colspan="11" class="text-center text-muted py-5">
+          <td colspan="12" class="text-center text-muted py-5">
             <i class="bi bi-clipboard2-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
             {% if buscar_filtro %}
               <p class="mb-1 fw-medium">No se encontraron asignaciones que coincidan con "<strong>{{ buscar_filtro }}</strong>".</p>
@@ -291,10 +310,42 @@
     }
 
     // Validaciones Bootstrap 5 para los formularios en modales
+    const todayStr = new Date().toISOString().split('T')[0];
     const forms = document.querySelectorAll('.needs-validation');
     Array.prototype.slice.call(forms).forEach(function (form) {
+      const fechaInicioInput = form.querySelector('.fecha-inicio-input');
+      const fechaLimiteInput = form.querySelector('.fecha-limite-input');
+
+      // Fecha mínima seleccionable: hoy. No tocamos el value existente
+      // (puede ser legítimamente pasado si la tarea ya empezó), solo
+      // evitamos que elijan una fecha nueva anterior a hoy.
+      if (fechaInicioInput) fechaInicioInput.min = todayStr;
+      if (fechaLimiteInput) fechaLimiteInput.min = todayStr;
+
+      // Sincronizar el mínimo permitido de fecha límite con la fecha de inicio
+      if (fechaInicioInput && fechaLimiteInput) {
+        function sincronizarMin() {
+          if (fechaInicioInput.value) {
+            fechaLimiteInput.min = fechaInicioInput.value;
+          }
+        }
+        sincronizarMin();
+        fechaInicioInput.addEventListener('change', sincronizarMin);
+      }
+
       form.addEventListener('submit', function (event) {
-        if (!form.checkValidity()) {
+        let valido = form.checkValidity();
+
+        if (fechaInicioInput && fechaLimiteInput &&
+            fechaLimiteInput.value && fechaInicioInput.value &&
+            fechaLimiteInput.value < fechaInicioInput.value) {
+          fechaLimiteInput.setCustomValidity('La fecha límite no puede ser anterior a la fecha de inicio.');
+          valido = false;
+        } else if (fechaLimiteInput) {
+          fechaLimiteInput.setCustomValidity('');
+        }
+
+        if (!valido) {
           event.preventDefault();
           event.stopPropagation();
         }

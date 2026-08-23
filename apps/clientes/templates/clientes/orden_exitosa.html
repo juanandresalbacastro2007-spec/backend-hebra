@@ -4,15 +4,145 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Orden Registrada - HebraTech</title>
+  <title>Orden Registrada — HebraTech</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
+  <style>
+    :root {
+      --primary: #395B64; --primary-dark: #2C3333;
+      --accent: #A5C9CA;  --bg-light: #E7F6F2;
+      --ff-display: 'Fredoka', sans-serif;
+      --ff-body: 'Roboto', sans-serif;
+    }
+    body { background: #f0f4f5; font-family: var(--ff-body); }
+
+    .topbar {
+      background: linear-gradient(90deg, #1e3540 0%, #2C3333 100%);
+      padding: 0.6rem 0; position: sticky; top: 0; z-index: 100;
+    }
+    .ht-brand { display:flex; align-items:center; gap:0.65rem; text-decoration:none; }
+    .brand-icon { width:34px;height:34px;border-radius:8px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .brand-title { font-family:var(--ff-display);font-size:1rem;font-weight:700;color:#fff;line-height:1.1; }
+    .brand-sub { font-size:0.65rem;color:var(--accent);opacity:0.85; }
+
+    .exito-wrap {
+      max-width: 560px;
+      margin: 3rem auto;
+      padding: 0 1rem;
+    }
+
+    /* Ícono de check animado */
+    .exito-icon-wrap {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(40,167,69,0.1);
+      border: 2px solid rgba(40,167,69,0.25);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.2rem;
+    }
+    .exito-icon-wrap i {
+      font-size: 2.2rem;
+      color: #28a745;
+    }
+
+    /* Card principal */
+    .exito-card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid rgba(165,201,202,0.35);
+      box-shadow: 0 4px 20px rgba(57,91,100,0.08);
+      overflow: hidden;
+    }
+
+    .exito-card-header {
+      background: linear-gradient(135deg, #1A2F3B 0%, #395B64 100%);
+      padding: 1.4rem 1.6rem;
+      text-align: center;
+    }
+
+    .exito-titulo {
+      font-family: var(--ff-display);
+      font-size: 1.3rem; font-weight: 700; color: #fff; margin: 0.5rem 0 0.2rem;
+    }
+    .exito-sub { font-size: 0.82rem; color: rgba(165,201,202,0.85); margin: 0; }
+
+    .exito-card-body { padding: 1.6rem; }
+
+    /* Filas de detalle */
+    .detalle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid rgba(165,201,202,0.18);
+      font-size: 0.88rem;
+    }
+    .detalle-row:last-child { border-bottom: none; }
+    .detalle-label { color: #8aa; }
+    .detalle-valor { font-weight: 600; color: #1A2F3B; }
+
+    /* Subtotal destacado */
+    .detalle-row.total-row {
+      background: rgba(57,91,100,0.04);
+      border-radius: 9px;
+      padding: 0.8rem 0.9rem;
+      border: 1px dashed rgba(57,91,100,0.2);
+      margin-top: 0.5rem;
+    }
+    .detalle-row.total-row .detalle-label {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+    }
+    .detalle-row.total-row .detalle-valor {
+      font-family: var(--ff-display);
+      font-size: 1.15rem;
+      color: var(--primary-dark);
+    }
+
+    /* Aviso factura */
+    .aviso-factura {
+      background: rgba(165,201,202,0.12);
+      border: 1px solid rgba(165,201,202,0.35);
+      border-radius: 9px;
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      color: var(--primary);
+      margin-top: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* Botones */
+    .btn-portal {
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 10px;
+      padding: 0.65rem 1.8rem;
+      font-family: var(--ff-display); font-size: 0.95rem; font-weight: 600;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;
+      transition: background 0.15s;
+    }
+    .btn-portal:hover { background: var(--primary-dark); color: #fff; }
+
+    .btn-factura {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid rgba(57,91,100,0.35);
+      border-radius: 10px;
+      padding: 0.65rem 1.8rem;
+      font-family: var(--ff-body); font-size: 0.88rem;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;
+      transition: background 0.15s;
+    }
+    .btn-factura:hover { background: rgba(57,91,100,0.06); color: var(--primary-dark); }
+  </style>
 </head>
 <body>
 
-  <!-- Topbar mínima -->
+  <!-- Topbar -->
   <nav class="navbar topbar">
     <div class="container-fluid px-4 d-flex align-items-center gap-3">
       <a class="ht-brand" href="{% url 'cliente_portal' %}">
@@ -27,90 +157,114 @@
     </div>
   </nav>
 
-  <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-md-6">
-        <div class="card shadow text-center p-5" style="border-radius:16px;border:1px solid rgba(165,201,202,0.4);">
+  <div class="exito-wrap">
+    <div class="exito-card">
 
-          <div style="font-size:3.5rem;" class="mb-2">✅</div>
-          <h3 style="font-family:var(--ff-display);color:var(--primary-dark);">¡Orden registrada!</h3>
-          <p class="text-muted mb-4">Tu orden fue guardada exitosamente en el sistema de producción de HebraTech.</p>
-
-          {% if factura %}
-          <p class="text-muted small mb-0" id="avisoDescarga">
-            <i class="bi bi-file-earmark-pdf-fill me-1" style="color:#395B64;"></i>
-            Descargando tu factura {{ factura.numeroFactura }}...
-          </p>
-          {% endif %}
-
-          <hr style="border-color:rgba(165,201,202,0.4);">
-
-          <div class="text-start mt-3">
-            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:rgba(165,201,202,0.3) !important;">
-              <span class="text-muted">Número de orden</span>
-              <strong>#{{ orden.idOrden }}</strong>
-            </div>
-            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:rgba(165,201,202,0.3) !important;">
-              <span class="text-muted">Cantidad</span>
-              <strong>{{ orden.cantidad }} unidades</strong>
-            </div>
-            {% if orden.precioUnitario %}
-            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:rgba(165,201,202,0.3) !important;">
-              <span class="text-muted">Precio unitario</span>
-              <strong>${{ orden.precioUnitario|floatformat:0 }}</strong>
-            </div>
-            {% endif %}
-            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:rgba(165,201,202,0.3) !important;">
-              <span class="text-muted">Fecha de entrega est.</span>
-              <strong>{{ orden.fechaEntregaEstimada|default:"Por definir" }}</strong>
-            </div>
-            <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:rgba(165,201,202,0.3) !important;">
-              <span class="text-muted">Prioridad</span>
-              {% if orden.prioridad == 'Urgente' %}
-                <span class="badge bg-danger">Urgente</span>
-              {% else %}
-                <span class="badge bg-secondary">Normal</span>
-              {% endif %}
-            </div>
-            <div class="d-flex justify-content-between py-2">
-              <span class="text-muted">Estado</span>
-              <span class="badge px-3 py-1 rounded-pill" style="background-color:#A5C9CA;color:#2C3333;">
-                {{ orden.estado }}
-              </span>
-            </div>
-          </div>
-
-          <div class="d-flex gap-2 justify-content-center mt-4">
-            {% if factura %}
-            <a href="{% url 'descargar_factura' factura.idFactura %}" id="btnDescargarFactura" class="btn btn-outline-primary px-4"
-               style="border-radius:10px;">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Descargar factura
-            </a>
-            {% endif %}
-            <a href="{% url 'cliente_portal' %}" class="btn btn-primary px-4"
-               style="background-color:#395B64;border-color:#395B64;border-radius:10px;">
-              <i class="bi bi-house me-1"></i>Volver al portal
-            </a>
-          </div>
-
+      <!-- Header -->
+      <div class="exito-card-header">
+        <div class="exito-icon-wrap">
+          <i class="bi bi-check-lg"></i>
         </div>
+        <div class="exito-titulo">¡Orden registrada!</div>
+        <p class="exito-sub">Tu solicitud fue enviada al equipo de producción de HebraTech.</p>
+      </div>
+
+      <!-- Detalle -->
+      <div class="exito-card-body">
+
+        <div class="detalle-row">
+          <span class="detalle-label">Número de orden</span>
+          <span class="detalle-valor">#{{ orden.idOrden }}</span>
+        </div>
+
+        {% if orden.idProducto %}
+        <div class="detalle-row">
+          <span class="detalle-label">Producto</span>
+          <span class="detalle-valor">{{ orden.idProducto.nombre }}</span>
+        </div>
+        {% endif %}
+
+        <div class="detalle-row">
+          <span class="detalle-label">Cantidad</span>
+          <span class="detalle-valor">{{ orden.cantidad }} unidades</span>
+        </div>
+
+        {% if orden.precioUnitario %}
+        <div class="detalle-row">
+          <span class="detalle-label">Precio unitario</span>
+          <span class="detalle-valor">${{ orden.precioUnitario|floatformat:0 }}</span>
+        </div>
+        {% endif %}
+
+        <div class="detalle-row">
+          <span class="detalle-label">Prioridad</span>
+          <span class="detalle-valor">
+            {% if orden.prioridad == 'Urgente' %}
+            <span style="background:rgba(220,53,69,0.1);color:#b02a37;font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:999px;">
+              <i class="bi bi-lightning-fill me-1"></i>Urgente
+            </span>
+            {% else %}
+            <span style="background:rgba(108,117,125,0.1);color:#555;font-size:0.75rem;font-weight:700;padding:0.2rem 0.65rem;border-radius:999px;">
+              Normal
+            </span>
+            {% endif %}
+          </span>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-label">Estado</span>
+          <span class="detalle-valor">
+            <span style="background:rgba(165,201,202,0.25);color:#2C3333;font-size:0.75rem;font-weight:700;padding:0.2rem 0.7rem;border-radius:999px;">
+              {{ orden.estado }}
+            </span>
+          </span>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-label">Fecha de entrega</span>
+          <span class="detalle-valor">{{ orden.fechaEntregaEstimada|date:"d/m/Y"|default:"Por definir" }}</span>
+        </div>
+
+        {% if orden.cantidad and orden.precioUnitario %}
+        <div class="detalle-row total-row">
+          <span class="detalle-label">Subtotal estimado</span>
+          <span class="detalle-valor">
+            ${% widthratio orden.cantidad 1 orden.precioUnitario %}
+          </span>
+        </div>
+        {% endif %}
+
+        <!-- Aviso factura — sin descarga automática -->
+        {% if factura %}
+        <div class="aviso-factura">
+          <i class="bi bi-file-earmark-pdf-fill" style="font-size:1.1rem;flex-shrink:0;"></i>
+          <div>
+            Tu factura <strong>{{ factura.numeroFactura }}</strong> fue generada y está disponible
+            en el panel de <strong>Historial de facturas</strong>.
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Acciones -->
+        <div class="d-flex gap-2 justify-content-center flex-wrap mt-4">
+          {% if factura %}
+          <a href="{% url 'descargar_factura' factura.idFactura %}" class="btn-factura">
+            <i class="bi bi-file-earmark-pdf"></i>Descargar factura
+          </a>
+          {% endif %}
+          <a href="{% url 'cliente_portal' %}" class="btn-portal">
+            <i class="bi bi-house"></i>Volver al portal
+          </a>
+        </div>
+
       </div>
     </div>
-  </div>
 
-  {% if factura %}
-  <script>
-    window.addEventListener('load', function() {
-      const link = document.getElementById('btnDescargarFactura');
-      if (!link) return;
-      // Descarga silenciosa vía iframe oculto, sin navegar fuera de esta página
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = link.href;
-      document.body.appendChild(iframe);
-    });
-  </script>
-  {% endif %}
+    <p class="text-center text-muted small mt-3">
+      <i class="bi bi-clock me-1"></i>
+      El equipo de producción revisará tu orden pronto.
+    </p>
+  </div>
 
 </body>
 </html>

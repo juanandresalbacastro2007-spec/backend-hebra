@@ -11,6 +11,7 @@ from .models import (
     TIEMPOS_ESTANDAR_MINUTOS,
 )
 import openpyxl
+from datetime import datetime, date
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
@@ -241,6 +242,14 @@ def orden_eliminar(request, idOrden):
     return redirect('admin_ordenes')
 
 
+# ── Helpers de fechas ────────────────────────────────────────
+def _parsear_fecha(valor):
+    """Convierte 'YYYY-MM-DD' (input type=date) a date, o None si viene vacío."""
+    if not valor or not valor.strip():
+        return None
+    return datetime.strptime(valor.strip(), '%Y-%m-%d').date()
+
+
 # ── Tareas ───────────────────────────────────────────────────
 @admin_required
 def tareas_lista(request):
@@ -275,6 +284,7 @@ def tarea_asignar(request):
         id_operario = request.POST.get('operario')
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
+        fecha_limite = request.POST.get('fechaLimite')
         prioridad = request.POST.get('prioridad', 'Media')
         tipo_prenda = request.POST.get('tipoPrenda')
         cantidad = request.POST.get('cantidadPrendas')
@@ -317,6 +327,25 @@ def tarea_asignar(request):
             # ── Convertir cantidad a entero si existe ─────────────
             cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
 
+            # ── Validar fechas ────────────────────────────────────
+            fecha_inicio_dt = _parsear_fecha(fecha_inicio)
+            fecha_limite_dt = _parsear_fecha(fecha_limite)
+
+            if fecha_inicio_dt and fecha_inicio_dt < date.today():
+                messages.error(request, 'La fecha de inicio no puede ser anterior a hoy.')
+                return redirect('admin_tarea_asignar')
+
+            if fecha_limite_dt and fecha_limite_dt < date.today():
+                messages.error(request, 'La fecha límite no puede ser anterior a hoy.')
+                return redirect('admin_tarea_asignar')
+
+            if fecha_inicio_dt and fecha_limite_dt and fecha_limite_dt < fecha_inicio_dt:
+                messages.error(
+                    request,
+                    'La fecha límite no puede ser anterior a la fecha de inicio.'
+                )
+                return redirect('admin_tarea_asignar')
+
             # ── Calcular horas estimadas ─────────────────────────
             # Si no escribieron horas manualmente, se calculan solas:
             # cantidad de prendas x minutos estándar del tipo / 60
@@ -331,7 +360,8 @@ def tarea_asignar(request):
                 idTarea=tarea,
                 idOperario=operario,
                 descripcion=descripcion,
-                fechaInicio=fecha_inicio if fecha_inicio and fecha_inicio.strip() else None,
+                fechaInicio=fecha_inicio_dt,
+                fechaLimite=fecha_limite_dt,
                 prioridad=prioridad,
                 tipoPrenda=tipo_prenda or None,
                 cantidadPrendas=cantidad_int,
@@ -364,11 +394,30 @@ def tarea_editar(request, idAsignacion):
         asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
         asignacion.descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_limite = request.POST.get('fecha_limite')
         horas_estimadas = request.POST.get('horas_estimadas')
         tipo_prenda = request.POST.get('tipoPrenda')
         cantidad = request.POST.get('cantidadPrendas')
 
-        asignacion.fechaInicio = fecha_inicio if fecha_inicio and fecha_inicio.strip() else None
+        fecha_inicio_dt = _parsear_fecha(fecha_inicio)
+        fecha_limite_dt = _parsear_fecha(fecha_limite)
+
+        # Solo bloquear fecha de inicio pasada si realmente la están cambiando
+        # (una tarea creada hace días legítimamente ya tiene fechaInicio pasada).
+        if fecha_inicio_dt and fecha_inicio_dt != asignacion.fechaInicio and fecha_inicio_dt < date.today():
+            messages.error(request, 'La fecha de inicio no puede ser anterior a hoy.')
+            return redirect('admin_tareas')
+
+        if fecha_limite_dt and fecha_limite_dt < date.today():
+            messages.error(request, 'La fecha límite no puede ser anterior a hoy.')
+            return redirect('admin_tareas')
+
+        if fecha_inicio_dt and fecha_limite_dt and fecha_limite_dt < fecha_inicio_dt:
+            messages.error(request, 'La fecha límite no puede ser anterior a la fecha de inicio.')
+            return redirect('admin_tareas')
+
+        asignacion.fechaInicio = fecha_inicio_dt
+        asignacion.fechaLimite = fecha_limite_dt
         asignacion.horasEstimadas = horas_estimadas if horas_estimadas and horas_estimadas.strip() else None
         asignacion.tipoPrenda = tipo_prenda or None
         asignacion.cantidadPrendas = int(cantidad) if cantidad and cantidad.strip() else None

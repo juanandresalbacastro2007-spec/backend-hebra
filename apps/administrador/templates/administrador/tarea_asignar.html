@@ -118,6 +118,19 @@
               </div>
             </div>
 
+            <!-- Fecha límite -->
+            <div class="col-md-6">
+              <label for="fechaLimite" class="form-label fw-medium small">
+                Fecha límite
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-calendar-x"></i></span>
+                <input type="date" name="fechaLimite" id="fechaLimite" class="form-control">
+                <div class="invalid-feedback">La fecha límite no puede ser anterior a la fecha de inicio.</div>
+              </div>
+              <small class="text-muted fs-7">Si se supera esta fecha, la tarea se marca automáticamente como retrasada.</small>
+            </div>
+
             <!-- Prioridad -->
             <div class="col-md-6">
               <label for="prioridad" class="form-label fw-medium small">
@@ -218,12 +231,30 @@
     const procesoPersonalizado = document.getElementById('procesoPersonalizado');
     const formAsignarTarea = document.getElementById('formAsignarTarea');
     const fechaInicioInput = document.getElementById('fechaInicio');
+    const fechaLimiteInput = document.getElementById('fechaLimite');
+
+    // Fecha mínima seleccionable: hoy (no se permite agendar en el pasado)
+    const todayStr = new Date().toISOString().split('T')[0];
+    fechaInicioInput.min = todayStr;
+    fechaLimiteInput.min = todayStr;
 
     // Auto-establecer fecha mínima (hoy) en el input de fecha
     if (fechaInicioInput && !fechaInicioInput.value) {
-      const today = new Date().toISOString().split('T')[0];
-      fechaInicioInput.value = today;
+      fechaInicioInput.value = todayStr;
     }
+
+    // Sincronizar el mínimo permitido de fechaLimite con fechaInicio
+    function sincronizarFechaLimiteMin() {
+      if (fechaInicioInput.value) {
+        fechaLimiteInput.min = fechaInicioInput.value;
+        // Si ya había una fecha límite cargada y quedó antes del nuevo inicio, se limpia
+        if (fechaLimiteInput.value && fechaLimiteInput.value < fechaInicioInput.value) {
+          fechaLimiteInput.value = '';
+        }
+      }
+    }
+    sincronizarFechaLimiteMin();
+    fechaInicioInput.addEventListener('change', sincronizarFechaLimiteMin);
 
     // Toggle de campos de tarea personalizada
     selectTarea.addEventListener('change', function() {
@@ -261,7 +292,17 @@
 
     // Validación del formulario Bootstrap
     formAsignarTarea.addEventListener('submit', function(e) {
-      if (!formAsignarTarea.checkValidity()) {
+      let valido = formAsignarTarea.checkValidity();
+
+      // Validación extra: fecha límite no puede ser anterior a fecha de inicio
+      if (fechaLimiteInput.value && fechaInicioInput.value && fechaLimiteInput.value < fechaInicioInput.value) {
+        fechaLimiteInput.setCustomValidity('La fecha límite no puede ser anterior a la fecha de inicio.');
+        valido = false;
+      } else {
+        fechaLimiteInput.setCustomValidity('');
+      }
+
+      if (!valido) {
         e.preventDefault();
         e.stopPropagation();
       }

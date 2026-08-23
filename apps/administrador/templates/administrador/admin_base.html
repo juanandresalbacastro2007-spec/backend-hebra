@@ -37,6 +37,9 @@
       </a>
 
       <div class="nav-section-label">Gestión</div>
+      <a href="{% url 'admin_produccion' %}" class="nav-item {% if seccion_activa == 'produccion' %}active{% endif %}">
+        <i class="bi bi-gear-wide-connected"></i> Producción
+      </a>
       <a href="{% url 'admin_usuarios' %}" class="nav-item {% if seccion_activa == 'usuarios' %}active{% endif %}">
         <i class="bi bi-people-fill"></i> Usuarios
       </a>
@@ -51,11 +54,6 @@
       </a>
       <a href="{% url 'admin_inventario' %}" class="nav-item {% if seccion_activa == 'inventario' %}active{% endif %}">
         <i class="bi bi-box-seam-fill"></i> Inventario
-      </a>
-
-      <div class="nav-section-label">Módulos</div>
-      <a href="{% url 'admin_produccion' %}" class="nav-item {% if seccion_activa == 'produccion' %}active{% endif %}">
-        <i class="bi bi-gear-wide-connected"></i> Producción
       </a>
       <a href="{% url 'admin_proveedores' %}" class="nav-item {% if seccion_activa == 'proveedores' %}active{% endif %}">
         <i class="bi bi-truck"></i> Proveedores

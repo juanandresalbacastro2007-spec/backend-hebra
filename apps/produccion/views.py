@@ -8,6 +8,7 @@ from .models import Producto, Produccion
 from datetime import date
 
 from apps.core.decorators import login_required_rol, login_required_api
+from apps.administrador.models import Usuario
 
 # ── Decoradores de protección (solo administrador) ──────────────────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
@@ -29,7 +30,11 @@ def _normalizar(texto):
 # ── PORTAL (Template HTML) ───────────────────────────
 @admin_required
 def produccion_portal(request):
-    return render(request, 'produccion/produccion_portal.html')
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+    return render(request, 'produccion/produccion_portal.html', {
+        'usuario': usuario,
+        'seccion_activa': 'produccion',
+    })
 
 
 # ── UTILIDADES ───────────────────────────────────────
@@ -72,8 +77,6 @@ def productos(request):
     if not nombre:
         return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
 
-    # Validar que no exista ya un producto con el mismo nombre
-    # (ignora mayúsculas/minúsculas y tildes: "Camiseta Básica" == "camiseta basica")
     nombre_normalizado = _normalizar(nombre)
     duplicado = any(
         _normalizar(p_nombre) == nombre_normalizado
@@ -144,10 +147,8 @@ def ordenes(request):
         lista = Produccion.objects.select_related('idProducto').all()
         return JsonResponse([produccion_to_dict(o) for o in lista], safe=False)
 
-    # POST → crear nueva orden de producción
     data = json.loads(request.body)
 
-    # Validar que el producto no tenga ya una orden activa (Pendiente / En Progreso)
     activo = Produccion.objects.filter(
         idProducto_id=data['idProducto'],
         estado__in=['Pendiente', 'En Progreso']
@@ -191,7 +192,6 @@ def orden_detalle(request, id):
 
         nuevo_estado = data.get('estado', o.estado)
         if nuevo_estado in ['Pendiente', 'En Progreso'] and o.estado not in ['Pendiente', 'En Progreso']:
-            # Se está reactivando esta orden: verificar que no haya otra activa del mismo producto
             otro_activo = Produccion.objects.filter(
                 idProducto=o.idProducto,
                 estado__in=['Pendiente', 'En Progreso']

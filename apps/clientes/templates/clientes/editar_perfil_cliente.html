@@ -4,69 +4,183 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Editar Perfil - HebraTech</title>
+  <title>Mi Perfil - HebraTech</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
   <style>
-    .form-group-label {
+    :root {
+      --primary: #395B64;
+      --primary-dark: #2C3333;
+      --accent: #A5C9CA;
+      --bg-light: #E7F6F2;
+      --ff-display: 'Fredoka', sans-serif;
+      --ff-body: 'Roboto', sans-serif;
+    }
+
+    body { background: #f0f4f5; font-family: var(--ff-body); }
+
+    /* Topbar igual que el portal */
+    .topbar {
+      background: linear-gradient(90deg, #1e3540 0%, #2C3333 100%);
+      padding: 0.6rem 0;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .ht-brand { display:flex; align-items:center; gap:0.65rem; text-decoration:none; }
+    .brand-icon {
+      width:34px; height:34px; border-radius:8px;
+      background:#fff; overflow:hidden; display:flex;
+      align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .brand-title { font-family:var(--ff-display); font-size:1rem; font-weight:700; color:#fff; line-height:1.1; }
+    .brand-sub { font-size:0.65rem; color:var(--accent); opacity:0.85; }
+
+    /* Layout centrado */
+    .perfil-wrap {
+      max-width: 700px;
+      margin: 2.5rem auto;
+      padding: 0 1rem;
+    }
+
+    /* Avatar */
+    .perfil-avatar-hero {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #1A2F3B 0%, #395B64 100%);
+      color: var(--accent);
+      font-family: var(--ff-display);
+      font-size: 1.8rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Card principal */
+    .perfil-card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid rgba(165,201,202,0.35);
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(57,91,100,0.08);
+    }
+
+    .perfil-card-header {
+      background: linear-gradient(135deg, #1A2F3B 0%, #395B64 100%);
+      padding: 1.4rem 1.6rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+
+    .perfil-header-info { flex: 1; }
+    .perfil-header-nombre {
+      font-family: var(--ff-display);
+      font-size: 1.2rem; font-weight: 700; color: #fff; margin: 0 0 0.15rem;
+    }
+    .perfil-header-empresa { font-size: 0.8rem; color: var(--accent); opacity: 0.85; }
+
+    .perfil-card-body { padding: 1.6rem; }
+
+    /* Sección de campos */
+    .campo-seccion {
+      margin-bottom: 1.4rem;
+    }
+    .campo-seccion-titulo {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9aa;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid rgba(165,201,202,0.2);
+    }
+
+    /* Campos */
+    .form-label {
+      font-size: 0.82rem;
       font-weight: 600;
       color: #2C3333;
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
+      margin-bottom: 0.3rem;
     }
+
     .form-control, .form-select {
-      border: 1px solid rgba(165, 201, 202, 0.4);
-      border-radius: 8px;
-      padding: 0.75rem;
-      font-size: 0.95rem;
+      border: 1px solid rgba(165,201,202,0.5);
+      border-radius: 9px;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.88rem;
+      font-family: var(--ff-body);
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     .form-control:focus, .form-select:focus {
-      border-color: #395B64;
-      box-shadow: 0 0 0 0.2rem rgba(57, 91, 100, 0.15);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.18rem rgba(57,91,100,0.15);
+      outline: none;
     }
-    .btn-primary-custom {
-      background-color: #395B64;
-      border-color: #395B64;
-      border-radius: 8px;
-      padding: 0.75rem 2rem;
-      font-weight: 600;
+
+    /* Campo bloqueado (solo lectura) */
+    .campo-bloqueado {
+      background: #f5f7f8 !important;
+      border-color: rgba(165,201,202,0.25) !important;
+      color: #8aa !important;
+      cursor: not-allowed;
     }
-    .btn-primary-custom:hover {
-      background-color: #2C3333;
-      border-color: #2C3333;
+    .campo-bloqueado-wrap {
+      position: relative;
     }
-    .btn-secondary-custom {
-      background-color: transparent;
-      border: 1px solid #A5C9CA;
-      color: #395B64;
-      border-radius: 8px;
-      padding: 0.75rem 2rem;
-      font-weight: 600;
+    .campo-bloqueado-badge {
+      position: absolute;
+      right: 10px; top: 50%; transform: translateY(-50%);
+      display: flex; align-items: center; gap: 4px;
+      font-size: 0.68rem; color: #aab;
     }
-    .btn-secondary-custom:hover {
-      background-color: rgba(165, 201, 202, 0.1);
-      border-color: #395B64;
-      color: #2C3333;
+    .aviso-bloqueado {
+      font-size: 0.72rem;
+      color: #9aa;
+      margin-top: 0.3rem;
+      display: flex; align-items: center; gap: 4px;
     }
-    .card-header-custom {
-      background-color: rgba(57, 91, 100, 0.06);
-      border-bottom: 1px solid rgba(165, 201, 202, 0.3);
-      padding: 1.5rem;
-      border-radius: 12px 12px 0 0;
+
+    /* Botones */
+    .btn-guardar {
+      background: var(--primary);
+      color: #fff; border: none;
+      border-radius: 10px;
+      padding: 0.6rem 1.8rem;
+      font-family: var(--ff-display);
+      font-size: 0.95rem; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    .alert-custom {
-      border-radius: 8px;
-      border: none;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
+    .btn-guardar:hover { background: var(--primary-dark); color: #fff; }
+
+    .btn-cancelar {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid rgba(57,91,100,0.3);
+      border-radius: 10px;
+      padding: 0.6rem 1.8rem;
+      font-family: var(--ff-body);
+      font-size: 0.88rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s;
     }
+    .btn-cancelar:hover { background: rgba(57,91,100,0.05); color: var(--primary-dark); }
+
+    /* Nota info */
+    .info-nota {
+      background: rgba(57,91,100,0.05);
+      border: 1px solid rgba(57,91,100,0.12);
+      border-radius: 9px;
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      color: #6a7f85;
+    }
+    .info-nota i { color: var(--primary); }
   </style>
 </head>
 <body>
 
-  <!-- Topbar mínima -->
+  <!-- Topbar -->
   <nav class="navbar topbar">
     <div class="container-fluid px-4 d-flex align-items-center gap-3">
       <a class="ht-brand" href="{% url 'cliente_portal' %}">
@@ -78,172 +192,175 @@
           <small class="brand-sub">Portal de Clientes</small>
         </div>
       </a>
+      <div class="ms-3 d-none d-md-block" style="font-size:0.8rem;color:rgba(255,255,255,0.5);">
+        <i class="bi bi-chevron-right me-1"></i>Mi perfil
+      </div>
     </div>
   </nav>
 
-  <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-md-8">
+  <div class="perfil-wrap">
 
-        <!-- Título -->
-        <div class="mb-4">
-          <h3 style="font-family: var(--ff-display); color: #2C3333;">
-            <i class="bi bi-person-circle me-2"></i>Mi Perfil
-          </h3>
-          <p class="text-muted">Actualiza tu información de contacto y dirección</p>
-        </div>
-
-        <!-- Mensajes -->
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-custom alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
-              {{ message }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-          {% endfor %}
-        {% endif %}
-
-        <!-- Tarjeta de formulario -->
-        <div class="card shadow-sm" style="border: 1px solid rgba(165, 201, 202, 0.3); border-radius: 12px; overflow: hidden;">
-
-          <div class="card-header-custom">
-            <h5 class="mb-0" style="color: #395B64;">
-              <i class="bi bi-pencil me-2"></i>Editar Información
-            </h5>
-          </div>
-
-          <div class="card-body p-4">
-            <form method="POST" action="{% url 'editar_perfil_cliente' %}" id="formPerfil">
-              {% csrf_token %}
-
-              <div class="row g-4">
-
-                <!-- Nombre del Cliente -->
-                <div class="col-md-6">
-                  <label class="form-group-label">Nombre <span class="text-danger">*</span></label>
-                  <input type="text" 
-                    name="nombre" 
-                    class="form-control" 
-                    placeholder="Tu nombre"
-                    value="{{ cliente.nombre|default:'' }}"
-                    required>
-                  <small class="text-muted">Nombre de contacto o persona natural</small>
-                </div>
-
-                <!-- Empresa (opcional) -->
-                <div class="col-md-6">
-                  <label class="form-group-label">Empresa <span class="text-muted">(opcional)</span></label>
-                  <input type="text" 
-                    name="empresa" 
-                    class="form-control" 
-                    placeholder="Nombre de tu empresa"
-                    value="{{ cliente.empresa|default:'' }}">
-                  <small class="text-muted">Nombre de tu negocio o empresa</small>
-                </div>
-
-                <!-- Teléfono -->
-                <div class="col-md-6">
-                  <label class="form-group-label">
-                    <i class="bi bi-telephone me-1"></i>Teléfono <span class="text-danger">*</span>
-                  </label>
-                  <input type="tel" 
-                    name="telefono" 
-                    class="form-control" 
-                    placeholder="+57 300 123 4567"
-                    value="{{ cliente.telefono|default:'' }}"
-                    pattern="[0-9+\-\s()]*"
-                    required>
-                  <small class="text-muted">Número donde podamos contactarte</small>
-                </div>
-
-                <!-- Ciudad -->
-                <div class="col-md-6">
-                  <label class="form-group-label">
-                    <i class="bi bi-geo-alt me-1"></i>Ciudad
-                  </label>
-                  <input type="text" 
-                    name="ciudad" 
-                    class="form-control" 
-                    placeholder="Bogotá"
-                    value="{{ cliente.ciudad|default:'' }}">
-                  <small class="text-muted">Ciudad de entrega</small>
-                </div>
-
-                <!-- Dirección -->
-                <div class="col-12">
-                  <label class="form-group-label">
-                    <i class="bi bi-house me-1"></i>Dirección
-                  </label>
-                  <textarea 
-                    name="direccion" 
-                    class="form-control" 
-                    rows="3"
-                    placeholder="Calle / Carrera / Número, Apto/Casa, Referencias..."
-                    maxlength="255">{{ cliente.direccion|default:'' }}</textarea>
-                  <small class="text-muted">Dirección completa para entregas</small>
-                </div>
-
-                <!-- Info adicional (solo lectura) -->
-                <div class="col-12 mt-3">
-                  <div class="p-3 rounded" style="background-color: rgba(57, 91, 100, 0.05); border: 1px solid rgba(57, 91, 100, 0.1);">
-                    <small class="text-muted">
-                      <i class="bi bi-info-circle me-1"></i>
-                      <strong>Nota:</strong> Tu correo electrónico se encuentra registrado bajo {{ cliente.idUsuario.correoElectronico }}. 
-                      Si necesitas cambiar tu correo, por favor contacta con HebraTech.
-                    </small>
-                  </div>
-                </div>
-
-              </div>
-
-              <!-- Botones de acción -->
-              <div class="d-flex gap-2 justify-content-end mt-5">
-                <a href="{% url 'cliente_portal' %}" class="btn btn-secondary-custom">
-                  <i class="bi bi-x-lg me-1"></i>Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary-custom" style="color: white;">
-                  <i class="bi bi-check-lg me-1"></i>Guardar cambios
-                </button>
-              </div>
-
-            </form>
-          </div>
-
-        </div>
-
-        <!-- Footer info -->
-        <div class="mt-4 text-center">
-          <p class="text-muted small">
-            <i class="bi bi-shield-check me-1"></i>Tus datos son seguros y se guardan encriptados en nuestros servidores.
-          </p>
-        </div>
-
+    <!-- Mensajes ─────────────────────────────── -->
+    {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show mb-3" style="border-radius:10px;">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Card principal ───────────────────────── -->
+    <div class="perfil-card">
+
+      <!-- Header visual -->
+      <div class="perfil-card-header">
+        <div class="perfil-avatar-hero">
+          {{ cliente.nombre|first|upper|default:"C" }}
+        </div>
+        <div class="perfil-header-info">
+          <div class="perfil-header-nombre">{{ cliente.nombre|default:"Cliente" }}</div>
+          {% if cliente.empresa %}
+          <div class="perfil-header-empresa">
+            <i class="bi bi-building me-1"></i>{{ cliente.empresa }}
+          </div>
+          {% endif %}
+          <div style="font-size:0.72rem;color:rgba(165,201,202,0.7);margin-top:3px;">
+            <i class="bi bi-envelope me-1"></i>{{ cliente.idUsuario.correoElectronico }}
+          </div>
+        </div>
+        <div>
+          <span style="background:rgba(165,201,202,0.2);color:#A5C9CA;font-size:0.7rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:999px;letter-spacing:0.05em;">
+            CLIENTE ACTIVO
+          </span>
+        </div>
+      </div>
+
+      <!-- Formulario -->
+      <div class="perfil-card-body">
+        <form method="POST" action="{% url 'editar_perfil_cliente' %}" id="formPerfil">
+          {% csrf_token %}
+
+          <!-- Sección: Identidad (solo lectura) -->
+          <div class="campo-seccion">
+            <div class="campo-seccion-titulo">
+              <i class="bi bi-shield-lock me-1"></i>Datos de identidad
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nombre registrado</label>
+                <div class="campo-bloqueado-wrap">
+                  <input type="text"
+                         class="form-control campo-bloqueado"
+                         value="{{ cliente.nombre|default:'—' }}"
+                         disabled readonly tabindex="-1">
+                  <span class="campo-bloqueado-badge">
+                    <i class="bi bi-lock-fill"></i>
+                  </span>
+                </div>
+                <div class="aviso-bloqueado">
+                  <i class="bi bi-info-circle"></i>
+                  Para cambiar tu nombre, contacta a HebraTech.
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Empresa</label>
+                <div class="campo-bloqueado-wrap">
+                  <input type="text"
+                         class="form-control campo-bloqueado"
+                         value="{{ cliente.empresa|default:'—' }}"
+                         disabled readonly tabindex="-1">
+                  <span class="campo-bloqueado-badge">
+                    <i class="bi bi-lock-fill"></i>
+                  </span>
+                </div>
+                <div class="aviso-bloqueado">
+                  <i class="bi bi-info-circle"></i>
+                  Campo administrado por HebraTech.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Contacto (editable) -->
+          <div class="campo-seccion">
+            <div class="campo-seccion-titulo">
+              <i class="bi bi-telephone me-1"></i>Información de contacto
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text text-muted fw-bold" style="border-color:rgba(165,201,202,0.5);border-radius:9px 0 0 9px;">+57</span>
+                  <input type="tel"
+                         name="telefono"
+                         class="form-control"
+                         placeholder="300 123 4567"
+                         value="{{ cliente.telefono|default:'' }}"
+                         pattern="[0-9+\-\s()]*"
+                         style="border-radius:0 9px 9px 0;"
+                         required>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Ciudad</label>
+                <input type="text"
+                       name="ciudad"
+                       class="form-control"
+                       placeholder="Bogotá"
+                       value="{{ cliente.ciudad|default:'' }}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Dirección de entrega</label>
+                <textarea name="direccion"
+                          class="form-control"
+                          rows="2"
+                          placeholder="Calle / Carrera / Número, Apto, Referencias..."
+                          maxlength="255">{{ cliente.direccion|default:'' }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nota informativa -->
+          <div class="info-nota mb-4">
+            <i class="bi bi-shield-check me-1"></i>
+            Tu correo de acceso es <strong>{{ cliente.idUsuario.correoElectronico }}</strong>.
+            Si necesitas cambiarlo, comunícate directamente con el equipo de HebraTech.
+          </div>
+
+          <!-- Acciones -->
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'cliente_portal' %}" class="btn-cancelar">
+              <i class="bi bi-x-lg me-1"></i>Cancelar
+            </a>
+            <button type="submit" class="btn-guardar">
+              <i class="bi bi-check-lg me-1"></i>Guardar cambios
+            </button>
+          </div>
+
+        </form>
+      </div>
+
     </div>
+
+    <p class="text-center text-muted small mt-3">
+      <i class="bi bi-shield-lock me-1"></i>Tus datos están protegidos en los servidores de HebraTech.
+    </p>
+
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Validación básica en cliente
     document.getElementById('formPerfil').addEventListener('submit', function(e) {
-      const nombre = document.querySelector('input[name="nombre"]').value.trim();
       const telefono = document.querySelector('input[name="telefono"]').value.trim();
-
-      if (!nombre) {
-        e.preventDefault();
-        alert('⚠️ El nombre es requerido.');
-        return false;
-      }
-
       if (!telefono) {
         e.preventDefault();
-        alert('⚠️ El teléfono es requerido.');
+        alert('El teléfono de contacto es requerido.');
         return false;
       }
-
       if (!/^[0-9+\-\s()]{7,}$/.test(telefono)) {
         e.preventDefault();
-        alert('⚠️ Ingresa un teléfono válido (mínimo 7 dígitos).');
+        alert('Ingresa un teléfono válido (mínimo 7 dígitos).');
         return false;
       }
     });

@@ -1,10 +1,17 @@
+# clientes/apps.py
+
 from django.apps import AppConfig
+
 
 class ClientesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.clientes'
+    name = 'apps.clientes'   # ← ajusta al path real de tu app si difiere
+    verbose_name = 'Portal de Clientes'
 
     def ready(self):
-        # ── ¡AGREGA ESTAS LÍNEAS AQUÍ! ──
-        from django.db.backends.mysql.features import DatabaseFeatures
-        DatabaseFeatures.can_return_columns_from_insert = property(lambda self: False)
+        """
+        Django llama a ready() una sola vez al arrancar el servidor.
+        Importar signals aquí conecta los @receiver al ciclo de vida
+        de los modelos sin necesidad de importarlos en ningún otro lado.
+        """
+        import apps.clientes.signals  # noqa: F401

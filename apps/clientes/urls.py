@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # ── rutas existentes (no tocar) ──────────────────────────
     path('', views.cliente_portal, name='cliente_portal'),
     path('editar-perfil/', views.editar_perfil_cliente, name='editar_perfil_cliente'),
     path('registrar/', views.registrar_orden, name='registrar_orden'),
@@ -11,4 +12,7 @@ urlpatterns = [
     path('factura/<int:idFactura>/descargar/', views.descargar_factura, name='descargar_factura'),
     path('actualizar-ordenes/', views.actualizar_ordenes, name='actualizar_ordenes'),
 
+    # ── NUEVAS: notificaciones ───────────────────────────────
+    path('notificaciones/', views.notificaciones_json, name='notificaciones_json'),
+    path('notificaciones/<int:idNotificacion>/leer/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
 ]

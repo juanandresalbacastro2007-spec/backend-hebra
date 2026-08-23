@@ -1,6 +1,7 @@
 # clientes/views.py
 
 import os
+from .models import Notificacion 
 from datetime import datetime
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -333,3 +334,90 @@ def actualizar_ordenes(request):
     html = render_to_string('clientes/_tabla_ordenes.html', {'ordenes': ordenes})
 
     return JsonResponse({'html': html})
+
+cliente_required
+def notificaciones_json(request):
+    """
+    Devuelve las notificaciones del cliente en JSON.
+    El portal las consulta cada 30 segundos para actualizar
+    el contador del campanita sin recargar la página.
+ 
+    GET /clientes/notificaciones/
+    Respuesta:
+    {
+        "no_leidas": 2,
+        "notificaciones": [
+            {
+                "id": 5,
+                "tipo": "orden",
+                "titulo": "🔧 Tu orden está en producción",
+                "mensaje": "El equipo de HebraTech...",
+                "leida": false,
+                "fecha": "22/08/2026 14:35"
+            },
+            ...
+        ]
+    }
+    """
+    usuario_id = request.session['usuario_id']
+ 
+    try:
+        cliente = Cliente.objects.get(idUsuario=usuario_id)
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+ 
+    notificaciones = Notificacion.objects.filter(
+        idCliente=cliente
+    ).order_by('-fechaCreacion')[:20]   # Últimas 20
+ 
+    data = {
+        'no_leidas': notificaciones.filter(leida=False).count(),
+        'notificaciones': [
+            {
+                'id':      n.idNotificacion,
+                'tipo':    n.tipo,
+                'titulo':  n.titulo,
+                'mensaje': n.mensaje,
+                'leida':   n.leida,
+                'fecha':   n.fechaCreacion.strftime('%d/%m/%Y %H:%M'),
+            }
+            for n in notificaciones
+        ],
+    }
+    return JsonResponse(data)
+ 
+ 
+@cliente_required
+def marcar_notificacion_leida(request, idNotificacion):
+    """
+    Marca una notificación como leída.
+    POST /clientes/notificaciones/<id>/leer/
+ 
+    También acepta idNotificacion=0 para marcar TODAS como leídas.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+ 
+    usuario_id = request.session['usuario_id']
+ 
+    try:
+        cliente = Cliente.objects.get(idUsuario=usuario_id)
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+ 
+    if idNotificacion == 0:
+        # Marcar todas
+        Notificacion.objects.filter(idCliente=cliente, leida=False).update(leida=True)
+        return JsonResponse({'ok': True, 'accion': 'todas_leidas'})
+ 
+    try:
+        notif = Notificacion.objects.get(
+            idNotificacion=idNotificacion,
+            idCliente=cliente   # seguridad: solo las propias
+        )
+        notif.leida = True
+        notif.save(update_fields=['leida'])
+        return JsonResponse({'ok': True, 'accion': 'leida', 'id': idNotificacion})
+    except Notificacion.DoesNotExist:
+        return JsonResponse({'error': 'Notificación no encontrada'}, status=404)
+ 

@@ -1,305 +1,373 @@
+{% extends "administrador/admin_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es" data-bs-theme="light">
-  <head>
-    <title>Proveedores</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous" />
-    <link rel="stylesheet" href="{% static 'css/proveedores/proveedores.css' %}">
-  </head>
-<body style="position: relative; margin: 0; padding: 0; overflow-x: hidden;">
-  
-  <!-- Video de fondo reproducible -->
-  <video autoplay muted loop playsinline id="bg-video" style="position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%; z-index: -1; object-fit: cover;">
-    <source src="{% static 'img/video fondo proveedores.mp4' %}" type="video/mp4">
-    Tu navegador no soporta videos en HTML5.
-  </video>
+{% block titulo %}Proveedores{% endblock %}
+{% block topbar_titulo %}Directorio de Proveedores{% endblock %}
+{% block topbar_sub %}Fichas de contacto, NIT y estado de tus proveedores{% endblock %}
 
-  <!-- Resto de tu contenido aquí (encabezados, modales, tablas, etc.) -->
-
-  <!-- ✅ Botón volver fijo esquina superior izquierda -->
-  <button class="btn-logout" onclick="window.location.href='{% url 'admin_portal' %}'">
-    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-    </svg>
-    Volver
+{% block topbar_extra %}
+<div class="ms-auto d-flex align-items-center gap-2">
+  <button type="button" class="btn btn-primary-ht btn-sm" data-bs-toggle="modal" data-bs-target="#modalAgregarProveedor">
+    <i class="bi bi-plus-lg me-1"></i>Agregar proveedor
   </button>
+</div>
+{% endblock %}
 
-  <div class="w-100 min-vh-100">
- <!-- 🔔 Bloque de mensajes de alerta corregido -->
-{% if messages %}
-  <div class="container mt-3">
-    {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm rounded-3" role="alert">
-        {{ message }}
-        <!-- 💡 CAMBIO AQUÍ: data-bs-dismiss="alert" -->
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    {% endfor %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/proveedores/proveedores.css' %}">
+{% endblock %}
+
+{% block contenido %}
+<div class="proveedores-page">
+
+  <!-- ── KPI Strip ────────────────────────────────────────── -->
+  <div class="kpi-strip mb-3">
+    <div class="kpi-pill">
+      <span class="kpi-dot dot-all"></span>
+      <span class="kpi-num">{{ proveedores|length }}</span>
+      <span class="kpi-lbl">Total</span>
+    </div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-pill">
+      <span class="kpi-dot dot-active"></span>
+      <span class="kpi-num" id="cntActivos">—</span>
+      <span class="kpi-lbl">Activos</span>
+    </div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-pill">
+      <span class="kpi-dot dot-inactive"></span>
+      <span class="kpi-num" id="cntInactivos">—</span>
+      <span class="kpi-lbl">Inactivos</span>
+    </div>
+    <div class="kpi-spacer"></div>
+    <!-- Filtro rápido -->
+    <div class="filtro-tabs" id="filtroEstado" role="group" aria-label="Filtrar por estado">
+      <button class="ftab active" data-filtro="todos">Todos</button>
+      <button class="ftab" data-filtro="activo">Activos</button>
+      <button class="ftab" data-filtro="inactivo">Inactivos</button>
+    </div>
   </div>
-{% endif %}
-    <header class="container mt-4 mb-4">
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <div class="card border-0 shadow-sm rounded-5 py-4 px-5 bg-white text-center">
-            <span class="text-uppercase tracking-wider fw-bold small d-block mb-1 text-primary" style="letter-spacing: 3px; font-size: 0.7rem;">PANEL DE CONTROL</span>
-            <h1 class="fw-bold text-dark h3 mb-2">Directorio de Proveedores Textiles</h1>
-            <p class="text-muted small mb-0 mx-auto" style="max-width: 550px;">Consulte las fichas de contacto, NIT y estados de sincronización de sus proveedores en tiempo real.</p>
-          </div>
-        </div>
-      </div>
-    </header>
 
-    <section class="container mt-4">
-      <div class="row m-0" style="height: 70vh;">
-        
-        <!-- Panel izquierdo: Lista de proveedores -->
-        <div class="col-lg-4 h-100 p-0">
-          <div class="card border-0 h-100 d-flex flex-column rounded-start-4 rounded-end-0" style="background-color: #1A2F3B;">
-            <div class="p-3">
-              <h6 class="text-white opacity-75">PROVEEDORES REGISTRADOS</h6>
-              
-              <button type="button" class="btn btn-primary w-100 mb-3 rounded-3" data-bs-toggle="modal" data-bs-target="#modalAgregarProveedor">
-                Agregar
-              </button>
-              
-              <input type="text" id="campoBusqueda" class="form-control rounded-3" placeholder="Buscar...">
-            </div>
-            
-            <div class="flex-grow-1 overflow-auto p-2">
-              <div class="nav flex-column nav-pills" role="tablist">
-                  {% for p in proveedores %}
-                  <button class="nav-link text-start border-0 mb-1 text-white {% if forloop.first %}active{% endif %}" 
-                          data-bs-toggle="pill" data-bs-target="#tab-{{ p.idProveedor }}">
-                      <div class="d-flex align-items-center gap-2">
-                      <span class="rounded-circle" style="width: 14px; height: 14px; flex-shrink: 0; {% if p.estado == 'activo' %}background-color: #28a745;{% else %}background-color: #dc3545;{% endif %}"></span>
-                      <div>
-                          <strong>{{ p.nombreEmpresa }}</strong>
-                          <small class="d-block text-white-50">NIT: {{ p.nit }}</small>
-                      </div>
-                      </div>
-                  </button>
-                  {% endfor %}
-              </div>
-            </div>
+  <!-- ── Layout principal ─────────────────────────────────── -->
+  <section>
+    <div class="prov-layout">
+
+      <!-- ── Panel izquierdo: lista ───── -->
+      <aside class="prov-sidebar">
+        <div class="prov-sidebar-head">
+          <p class="sidebar-eyebrow">Proveedores registrados</p>
+          <div class="search-wrap">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" id="campoBusqueda" class="search-input" placeholder="Buscar empresa o NIT…">
+            <button class="search-clear d-none" id="btnLimpiarBusqueda" title="Limpiar búsqueda">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
         </div>
 
-        <!-- Panel derecho: Contenido del proveedor seleccionado -->
-        <div class="col-lg-8 h-100 p-0">
-          <div class="tab-content h-100">
+        <div class="prov-list" id="listaProveedores">
+          <div class="nav flex-column nav-pills" role="tablist">
             {% for p in proveedores %}
-            <div class="tab-pane fade h-100 {% if forloop.first %}show active{% endif %}" id="tab-{{ p.idProveedor }}" role="tabpanel">
-              <div class="card border-0 shadow rounded-4 p-4 bg-white h-100 overflow-auto">
-                
-                <!-- Header con estado y ID -->
-                <div class="d-flex justify-content-between align-items-start mb-4">
-                    <div>
-                        <h4 class="fw-bold text-dark mb-1">{{ p.nombreEmpresa }}</h4>
-                        <p class="text-muted small mb-0">Registrado el: {{ p.fechaRegistro|date:"d/m/Y" }}</p>
-                    </div>
-                    
-                    <div class="text-end text-muted small">
-                        <p class="mb-1"><strong>ID Proveedor:</strong> #{{ p.idProveedor }}</p>
-                        <p class="mb-0"><strong>ID Usuario Asoc.:</strong> #{{ p.idUsuario }}</p>
-                    </div>
-                </div>
-
-                <hr class="my-3">
-
-                <!-- Información Principal -->
-                <div class="row g-4 mb-4">
-                  <div class="col-md-6">
-                    <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Contacto Principal</label>
-                    <div class="text-dark fw-semibold">{{ p.nombreContacto }}</div>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Número de Identificación (NIT)</label>
-                    <div class="text-dark fw-semibold">{{ p.nit }}</div>
-                  </div>
-                </div>
-
-                <!-- Información de Contacto -->
-                <div class="row g-4 mb-4">
-                  <div class="col-md-6">
-                    <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Correo Electrónico</label>
-                    <div class="text-dark">
-                      <a href="mailto:{{ p.correo }}" class="text-decoration-none">{{ p.correo }}</a>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Teléfono de Línea</label>
-                    <div class="text-dark fw-semibold">{{ p.telefono }}</div>
-                  </div>
-                </div>
-
-                <!-- Dirección -->
-                <div class="row g-4 mb-4">
-                  <div class="col-12">
-                    <label class="text-uppercase text-muted fw-bold d-block mb-2" style="font-size: 0.75rem;">Dirección</label>
-                    <div class="text-dark">{{ p.direccion }}</div>
-                  </div>
-                </div>
-
-                <!-- Botones de Acción -->
-                <div class="border-top pt-4 mt-4">
-                  <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-primary rounded-3" data-bs-toggle="modal" data-bs-target="#modalEditarProveedor-{{ p.idProveedor }}">
-                      ✏️ Editar
-                    </button>
-                    <a href="{% url 'eliminar_proveedor' p.idProveedor %}" class="btn btn-sm btn-danger rounded-3" onclick="return confirm('¿Desactivar este proveedor?')">
-                      🗑️ Desactivar
-                    </a>
-                  </div>
-                </div>
-
+            <button class="prov-item {% if forloop.first %}active{% endif %}"
+                    data-bs-toggle="pill"
+                    data-bs-target="#tab-{{ p.idProveedor }}"
+                    data-estado="{{ p.estado }}"
+                    role="tab"
+                    aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+              <span class="prov-dot {% if p.estado == 'activo' %}dot-active{% else %}dot-inactive{% endif %}"></span>
+              <div class="prov-item-info">
+                <strong class="prov-item-nombre">{{ p.nombreEmpresa }}</strong>
+                <span class="prov-item-nit">NIT: {{ p.nit }}</span>
               </div>
+              <i class="bi bi-chevron-right prov-item-arrow"></i>
+            </button>
+            {% empty %}
+            <div class="prov-empty-list">
+              <i class="bi bi-truck-flatbed fs-2 mb-2 opacity-50"></i>
+              <p class="mb-0 small">Sin proveedores aún.</p>
+              <button type="button" class="btn btn-sm btn-primary-ht mt-3"
+                      data-bs-toggle="modal" data-bs-target="#modalAgregarProveedor">
+                Agregar el primero
+              </button>
             </div>
             {% endfor %}
           </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- MODALES PARA EDITAR CADA PROVEEDOR -->
-    {% for p in proveedores %}
-    <div class="modal fade" id="modalEditarProveedor-{{ p.idProveedor }}" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Editar Proveedor: {{ p.nombreEmpresa }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <form method="POST" action="{% url 'editar_proveedor' p.idProveedor %}">
-            {% csrf_token %}
-            <div class="modal-body">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label">Nombre Empresa</label>
-                  <input type="text" name="nombreEmpresa" class="form-control" value="{{ p.nombreEmpresa }}" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">NIT</label>
-                  <input type="text" name="nit" class="form-control" value="{{ p.nit }}" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Contacto</label>
-                  <input type="text" name="nombreContacto" class="form-control" value="{{ p.nombreContacto }}" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Teléfono</label>
-                  <input type="text" name="telefono" class="form-control" value="{{ p.telefono }}" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label">Correo</label>
-                  <input type="email" name="correo" class="form-control" value="{{ p.correo }}" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label">Dirección</label>
-                  <textarea name="direccion" class="form-control" rows="3" required>{{ p.direccion }}</textarea>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Estado</label>
-                  <select name="estado" class="form-select" required>
-                    <option value="activo" {% if p.estado == "activo" %}selected{% endif %}>ACTIVO</option>
-                    <option value="inactivo" {% if p.estado == "inactivo" %}selected{% endif %}>INACTIVO</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  <!-- MODAL PARA AGREGAR PROVEEDOR -->
-  <div class="modal fade" id="modalAgregarProveedor" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content border-0 shadow-lg rounded-4">
-      <div class="modal-header bg-dark text-white rounded-top-4">
-        <h5 class="modal-title fw-bold">➕ Agregar Nuevo Proveedor</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <form method="POST" action="{% url 'crear_proveedor' %}" novalidate>
-        {% csrf_token %}
-        <input type="hidden" name="idUsuario" value="{{ request.user.idUsuario|default:request.user.id }}">
-        <div class="modal-body p-4">
-          <div id="alertaErrorModal" class="alert alert-danger d-none py-2 px-3 mb-3 small rounded-3" role="alert">
-                       <!-- El mensaje se inserta con JavaScript -->
-           </div>
-          <div class="row g-3">
-            
-            <!-- Nombre Empresa -->
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Nombre de la Empresa</label>
-              <input type="text" name="nombreEmpresa" class="form-control" placeholder="Ej. Textiles Del Valle S.A.S." required>
-            </div>
-
-            <!-- NIT con regla de 9 dígitos -->
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">NIT (Sin digito de verificación)</label>
-              <input type="tel" name="nit" class="form-control" placeholder="Ej. 900123456" pattern="[0-9]{9,10}" maxlength="10" title="Ingrese entre 9 y 10 dígitos numéricos" required>
-              <small class="form-text text-muted" style="font-size: 0.75rem;">9 dígitos principales del NIT en Colombia</small>
-            </div>
-
-            <!-- Contacto -->
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Persona de Contacto</label>
-              <input type="text" name="nombreContacto" class="form-control" placeholder="Ej. Carlos Mendoza" required>
-            </div>
-
-            <!-- Teléfono con prefijo +57 -->
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Teléfono de Contacto</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light fw-bold text-muted">+57</span>
-                <input type="tel" name="telefono" class="form-control" placeholder="300 123 4567" pattern="[0-9]{7,10}" maxlength="10" title="Ingrese un número celular (10 dígitos) o fijo (7 dígitos)" required>
-              </div>
-            </div>
-
-            <!-- Correo -->
-            <div class="col-12">
-              <label class="form-label fw-semibold">Correo Electrónico</label>
-              <input type="email" name="correo" class="form-control" placeholder="contacto@empresa.com" required>
-            </div>
-
-            <!-- Dirección -->
-            <div class="col-12">
-              <label class="form-label fw-semibold">Dirección Comercial</label>
-              <textarea name="direccion" class="form-control" rows="2" placeholder="Ej. Calle 45 # 12-34, Bodega 3, Medellín" required></textarea>
-            </div>
-
-            <!-- Estado -->
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Estado Inicial</label>
-              <select name="estado" class="form-select" required>
-                <option value="" disabled selected>Seleccione el estado...</option>
-                <option value="activo">🟢 ACTIVO</option>
-                <option value="inactivo">🔴 INACTIVO</option>
-              </select>
-            </div>
-
+          <div class="prov-no-results d-none" id="sinResultados">
+            <i class="bi bi-search fs-3 opacity-50"></i>
+            <p class="mt-2 mb-0 small">Sin resultados para esa búsqueda.</p>
           </div>
         </div>
-        <div class="modal-footer bg-light rounded-bottom-4">
-          <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary rounded-3 px-4 fw-semibold">Guardar Proveedor</button>
+      </aside>
+
+      <!-- ── Panel derecho: detalle ───── -->
+      <main class="prov-detail-wrap">
+        <div class="tab-content h-100">
+
+          {% for p in proveedores %}
+          <div class="tab-pane fade h-100 {% if forloop.first %}show active{% endif %}"
+               id="tab-{{ p.idProveedor }}"
+               role="tabpanel">
+
+            <div class="prov-card">
+
+              <!-- Cabecera ─────────── -->
+              <div class="prov-card-header">
+                <div class="prov-avatar">{{ p.nombreEmpresa|first|upper }}</div>
+                <div class="prov-card-title-group">
+                  <h4 class="prov-card-empresa">{{ p.nombreEmpresa }}</h4>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="estado-badge {% if p.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
+                      <span class="estado-dot"></span>
+                      {% if p.estado == 'activo' %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                    <span class="prov-meta"><i class="bi bi-calendar3 me-1"></i>Registrado el {{ p.fechaRegistro|date:"d/m/Y" }}</span>
+                    <span class="prov-meta"><i class="bi bi-hash me-1"></i>ID {{ p.idProveedor }}</span>
+                  </div>
+                </div>
+                <div class="prov-card-actions ms-auto d-flex gap-2">
+                  <button type="button"
+                          class="btn btn-sm btn-outline-ht"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEditarProveedor-{{ p.idProveedor }}">
+                    <i class="bi bi-pencil-square me-1"></i>Editar
+                  </button>
+                  <a href="{% url 'eliminar_proveedor' p.idProveedor %}"
+                     class="btn btn-sm btn-danger-ht"
+                     onclick="return confirm('¿Desactivar este proveedor?')">
+                    <i class="bi bi-slash-circle me-1"></i>Desactivar
+                  </a>
+                </div>
+              </div>
+
+              <!-- Cuerpo ──────────── -->
+              <div class="prov-card-body">
+
+                <!-- Fila 1: Contacto + NIT -->
+                <div class="info-grid">
+                  <div class="info-block">
+                    <label class="info-label"><i class="bi bi-person-fill me-1"></i>Contacto principal</label>
+                    <div class="info-value">{{ p.nombreContacto }}</div>
+                  </div>
+                  <div class="info-block">
+                    <label class="info-label"><i class="bi bi-building me-1"></i>NIT</label>
+                    <div class="info-value font-mono">{{ p.nit }}</div>
+                  </div>
+                  <div class="info-block">
+                    <label class="info-label"><i class="bi bi-envelope-fill me-1"></i>Correo electrónico</label>
+                    <div class="info-value">
+                      <a href="mailto:{{ p.correo }}" class="info-link">{{ p.correo }}</a>
+                    </div>
+                  </div>
+                  <div class="info-block">
+                    <label class="info-label"><i class="bi bi-telephone-fill me-1"></i>Teléfono</label>
+                    <div class="info-value">
+                      <a href="tel:+57{{ p.telefono }}" class="info-link">+57 {{ p.telefono }}</a>
+                    </div>
+                  </div>
+                  <div class="info-block info-block-full">
+                    <label class="info-label"><i class="bi bi-geo-alt-fill me-1"></i>Dirección comercial</label>
+                    <div class="info-value">{{ p.direccion }}</div>
+                  </div>
+                  <div class="info-block">
+                    <label class="info-label"><i class="bi bi-link-45deg me-1"></i>Usuario asociado</label>
+                    <div class="info-value prov-meta">#{{ p.idUsuario }}</div>
+                  </div>
+                </div>
+
+                <!-- Accesos rápidos ─ -->
+                <div class="quick-actions mt-4">
+                  <a href="mailto:{{ p.correo }}" class="quick-btn">
+                    <i class="bi bi-envelope me-1"></i>Enviar correo
+                  </a>
+                  <a href="tel:+57{{ p.telefono }}" class="quick-btn">
+                    <i class="bi bi-telephone me-1"></i>Llamar
+                  </a>
+                  <button class="quick-btn" onclick="copiarNIT('{{ p.nit }}', this)">
+                    <i class="bi bi-clipboard me-1"></i>Copiar NIT
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          {% empty %}
+
+          <!-- Estado vacío ─────────── -->
+          <div class="prov-empty-detail">
+            <div class="prov-empty-icon">
+              <i class="bi bi-truck-flatbed"></i>
+            </div>
+            <h5 class="mt-3 mb-1" style="font-family: var(--ff-display);">Sin proveedores registrados</h5>
+            <p class="text-muted small mb-3">Agrega tu primer proveedor para comenzar.</p>
+            <button type="button" class="btn btn-primary-ht btn-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalAgregarProveedor">
+              <i class="bi bi-plus-lg me-1"></i>Agregar proveedor
+            </button>
+          </div>
+
+          {% endfor %}
         </div>
-      </form>
+      </main>
+
+    </div>
+  </section>
+
+
+  <!-- ══════════ MODALES EDITAR ══════════════════════════════ -->
+  {% for p in proveedores %}
+  <div class="modal fade" id="modalEditarProveedor-{{ p.idProveedor }}" tabindex="-1"
+       aria-labelledby="modalEditarLabel-{{ p.idProveedor }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 rounded-4 shadow-lg">
+
+        <div class="modal-header ht-modal-header">
+          <div class="d-flex align-items-center gap-2">
+            <div class="prov-avatar prov-avatar-sm">{{ p.nombreEmpresa|first|upper }}</div>
+            <div>
+              <h5 class="modal-title mb-0" id="modalEditarLabel-{{ p.idProveedor }}">Editar proveedor</h5>
+              <small class="text-white-50">{{ p.nombreEmpresa }}</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <form method="POST" action="{% url 'editar_proveedor' p.idProveedor %}">
+          {% csrf_token %}
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Nombre empresa</label>
+                <input type="text" name="nombreEmpresa" class="form-control" value="{{ p.nombreEmpresa }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">NIT</label>
+                <input type="text" name="nit" class="form-control" value="{{ p.nit }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Persona de contacto</label>
+                <input type="text" name="nombreContacto" class="form-control" value="{{ p.nombreContacto }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Teléfono</label>
+                <div class="input-group">
+                  <span class="input-group-text text-muted fw-bold">+57</span>
+                  <input type="tel" name="telefono" class="form-control" value="{{ p.telefono }}" required>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Correo electrónico</label>
+                <input type="email" name="correo" class="form-control" value="{{ p.correo }}" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Dirección comercial</label>
+                <textarea name="direccion" class="form-control" rows="2" required>{{ p.direccion }}</textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select" required>
+                  <option value="activo"   {% if p.estado == "activo"   %}selected{% endif %}>🟢 Activo</option>
+                  <option value="inactivo" {% if p.estado == "inactivo" %}selected{% endif %}>🔴 Inactivo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light rounded-bottom-4">
+            <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-ht rounded-3">Guardar cambios</button>
+          </div>
+        </form>
+
+      </div>
     </div>
   </div>
+  {% endfor %}
+
+
+  <!-- ══════════ MODAL AGREGAR ═══════════════════════════════ -->
+  <div class="modal fade" id="modalAgregarProveedor" tabindex="-1"
+       aria-labelledby="modalAgregarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 rounded-4 shadow-lg">
+
+        <div class="modal-header ht-modal-header">
+          <h5 class="modal-title fw-bold" id="modalAgregarLabel">
+            <i class="bi bi-plus-circle me-2"></i>Nuevo proveedor
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <form method="POST" action="{% url 'crear_proveedor' %}" novalidate>
+          {% csrf_token %}
+          <div class="modal-body p-4">
+
+            <div id="alertaErrorModal" class="alert alert-danger d-none py-2 px-3 mb-3 small rounded-3" role="alert"></div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Nombre de la empresa</label>
+                <input type="text" name="nombreEmpresa" class="form-control"
+                       placeholder="Ej. Textiles Del Valle S.A.S." required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">
+                  NIT
+                  <span class="text-muted fw-normal" style="font-size:.75rem;">(sin dígito de verificación)</span>
+                </label>
+                <input type="tel" name="nit" class="form-control"
+                       placeholder="900123456" pattern="[0-9]{9,10}" maxlength="10"
+                       title="9 a 10 dígitos numéricos" required>
+                <div class="form-text">9 dígitos principales del NIT en Colombia</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Persona de contacto</label>
+                <input type="text" name="nombreContacto" class="form-control"
+                       placeholder="Ej. Carlos Mendoza" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Teléfono de contacto</label>
+                <div class="input-group">
+                  <span class="input-group-text fw-bold text-muted">+57</span>
+                  <input type="tel" name="telefono" class="form-control"
+                         placeholder="300 123 4567" pattern="[0-9]{7,10}" maxlength="10"
+                         title="10 dígitos celular o 7 dígitos fijo" required>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Correo electrónico</label>
+                <input type="email" name="correo" class="form-control"
+                       placeholder="contacto@empresa.com" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Dirección comercial</label>
+                <textarea name="direccion" class="form-control" rows="2"
+                          placeholder="Ej. Calle 45 # 12-34, Bodega 3, Medellín" required></textarea>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Estado inicial</label>
+                <select name="estado" class="form-select" required>
+                  <option value="" disabled selected>Selecciona…</option>
+                  <option value="activo">🟢 Activo</option>
+                  <option value="inactivo">🔴 Inactivo</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light rounded-bottom-4">
+            <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary-ht rounded-3 px-4">
+              <i class="bi bi-floppy me-1"></i>Guardar proveedor
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
 </div>
+{% endblock %}
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-  <script src="{% static 'js/proveedores.js' %}"></script>
-  </body>
-</html>
+{% block extra_js %}
+<script src="{% static 'js/proveedores.js' %}"></script>
+{% endblock %}

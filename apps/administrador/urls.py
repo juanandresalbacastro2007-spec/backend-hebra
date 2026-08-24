@@ -31,13 +31,20 @@ urlpatterns = [
     path('incidencias/<int:idIncidencia>/editar/', views.incidencia_editar, name='admin_editar_incidencia'),
     path('incidencias/<int:idIncidencia>/eliminar/', views.incidencia_eliminar, name='admin_eliminar_incidencia'),
 
-    # Inventario
+    # Inventario & Materiales
     path('inventario/', views.inventario_lista, name='admin_inventario'),
+
+    # CRUD Materiales
+    path('materiales/crear/', views.crear_material, name='crear_material'),
+    path('materiales/editar/<int:pk>/', views.editar_material, name='editar_material'),
+    path('materiales/eliminar/<int:pk>/', views.eliminar_material, name='eliminar_material'),
+
+    # CRUD Inventario (Productos)
+    path('inventario/crear/', views.crear_inventario, name='crear_inventario'),
+    path('inventario/editar/<int:pk>/', views.editar_inventario, name='editar_inventario'),
+    path('inventario/eliminar/<int:pk>/', views.eliminar_inventario, name='eliminar_inventario'),
 
     # Módulos externos
     path('produccion/', views.produccion_placeholder, name='admin_produccion'),
-    # OJO: admin_base.html usa {% url 'admin_proveedores' %} en el sidebar.
-    # Ese 'name' debe existir DENTRO de apps/proveedores/urls.py (p.ej. en la
-    # ruta raíz de ese include), o el sidebar romperá con NoReverseMatch.
     path('proveedores/', include('apps.proveedores.urls')),
 ]

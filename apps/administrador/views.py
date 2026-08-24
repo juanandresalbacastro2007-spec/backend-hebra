@@ -5,9 +5,10 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.db import connection
 from django.db.models import Q
+from django.utils import timezone
 from .models import (
     Usuario, Operario, Tarea,
-    AsignacionTarea, Orden, Cliente, Incidencia,Inventario,Material,
+    AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto,
     TIEMPOS_ESTANDAR_MINUTOS,
 )
 import openpyxl
@@ -190,6 +191,7 @@ def usuario_eliminar(request, idUsuario):
 
     return redirect('admin_usuarios')
 
+
 # ── Órdenes ──────────────────────────────────────────────────
 @admin_required
 def ordenes_lista(request):
@@ -353,8 +355,6 @@ def tarea_asignar(request):
                 return redirect('admin_tarea_asignar')
 
             # ── Calcular horas estimadas ─────────────────────────
-            # Si no escribieron horas manualmente, se calculan solas:
-            # cantidad de prendas x minutos estándar del tipo / 60
             if (not horas_estimadas or not horas_estimadas.strip()) and tipo_prenda and cantidad_int:
                 minutos_unidad = TIEMPOS_ESTANDAR_MINUTOS.get(tipo_prenda, 0)
                 horas_calculadas = round((cantidad_int * minutos_unidad) / 60, 2)
@@ -408,8 +408,6 @@ def tarea_editar(request, idAsignacion):
         fecha_inicio_dt = _parsear_fecha(fecha_inicio)
         fecha_limite_dt = _parsear_fecha(fecha_limite)
 
-        # Solo bloquear fecha de inicio pasada si realmente la están cambiando
-        # (una tarea creada hace días legítimamente ya tiene fechaInicio pasada).
         if fecha_inicio_dt and fecha_inicio_dt != asignacion.fechaInicio and fecha_inicio_dt < date.today():
             messages.error(request, 'La fecha de inicio no puede ser anterior a hoy.')
             return redirect('admin_tareas')
@@ -606,7 +604,7 @@ def exportar_ordenes_pdf(request):
     return response
 
 
-
+# ── Inventario y Materiales ──────────────────────────────────
 @admin_required
 def inventario_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
@@ -617,6 +615,7 @@ def inventario_lista(request):
     # Consultas base
     inventario_list = Inventario.objects.all().select_related('producto')
     materiales_list = Material.objects.all()
+    productos_list = Producto.objects.all()
 
     # Aplicar filtro si se ingresó un valor en la caja de búsqueda
     if buscar:
@@ -638,11 +637,147 @@ def inventario_lista(request):
         'total_items': inventario_list.count(),
         'materiales_list': materiales_list,
         'total_materiales': materiales_list.count(),
+        'productos_list': productos_list,
         'buscar_filtro': buscar,  # Necesario para mantener el texto en el input
     }
     return render(request, 'administrador/inventario_lista.html', context)
 
 
+# ── CRUD: MATERIALES ─────────────────────────────────────────
+
+@admin_required
+def crear_material(request):
+    if request.method == 'POST':
+        nombre = request.POST.get('nombreMaterial')
+        descripcion = request.POST.get('descripcion')
+        stock_actual = request.POST.get('stockActual') or 0
+        stock_minimo = request.POST.get('stockMinimo') or 0
+        unidad = request.POST.get('unidadBase')
+        costo = request.POST.get('costoUnitario') or 0
+
+        Material.objects.create(
+            nombreMaterial=nombre,
+            descripcion=descripcion,
+            stockActual=stock_actual,
+            stockMinimo=stock_minimo,
+            unidadBase=unidad,
+            costoUnitario=costo
+        )
+        messages.success(request, f"Material '{nombre}' creado con éxito.")
+    return redirect('admin_inventario')
+
+
+@admin_required
+def editar_material(request, pk):
+    material = get_object_or_404(Material, pk=pk)
+    if request.method == 'POST':
+        material.nombreMaterial = request.POST.get('nombreMaterial')
+        material.descripcion = request.POST.get('descripcion')
+        material.stockActual = request.POST.get('stockActual')
+        material.stockMinimo = request.POST.get('stockMinimo')
+        material.unidadBase = request.POST.get('unidadBase')
+        material.costoUnitario = request.POST.get('costoUnitario')
+        
+        material.save()
+        messages.success(request, f"Material '{material.nombreMaterial}' actualizado correctamente.")
+    return redirect('admin_inventario')
+
+
+@admin_required
+def eliminar_material(request, pk):
+    material = get_object_or_404(Material, pk=pk)
+    if request.method == 'POST':
+        nombre = material.nombreMaterial
+        material.delete()
+        messages.success(request, f"Material '{nombre}' eliminado correctamente.")
+    return redirect('admin_inventario')
+
+
+# ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
+
+@admin_required
+def crear_inventario(request):
+    if request.method == 'POST':
+        producto_id = request.POST.get('producto')
+        producto = get_object_or_404(Producto, pk=producto_id)
+        
+        cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
+        min_definido = int(request.POST.get('minimoDefinido') or 0)
+        
+        # Parseo seguro a entero para nivelStock
+        nivel_stock_input = request.POST.get('nivelStock')
+        try:
+            nivel_stock = int(nivel_stock_input)
+        except (ValueError, TypeError):
+            nivel_stock = cant_disponible - min_definido
+
+        unidades = request.POST.get('unidades') or 'Unidades'
+        ubicacion = request.POST.get('ubicacion')
+        cant_ingresada = int(request.POST.get('cantidadIngresada') or 0)
+        cant_egresada = int(request.POST.get('cantidadEgresada') or 0)
+        fecha_ingreso = request.POST.get('fechaIngreso') or timezone.now().date()
+        fecha_salida = request.POST.get('fechaSalida') or None
+
+        Inventario.objects.create(
+            producto=producto,
+            cantidadDisponible=cant_disponible,
+            minimoDefinido=min_definido,
+            nivelStock=nivel_stock,
+            unidades=unidades,
+            ubicacion=ubicacion,
+            cantidadIngresada=cant_ingresada,
+            cantidadEgresada=cant_egresada,
+            fechaIngreso=fecha_ingreso,
+            fechaSalida=fecha_salida if fecha_salida else None
+        )
+        messages.success(request, "Registro de inventario creado exitosamente.")
+    return redirect('admin_inventario')
+
+
+@admin_required
+def editar_inventario(request, pk):
+    item = get_object_or_404(Inventario, pk=pk)
+    if request.method == 'POST':
+        producto_id = request.POST.get('producto')
+        item.producto = get_object_or_404(Producto, pk=producto_id)
+        
+        cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
+        min_definido = int(request.POST.get('minimoDefinido') or 0)
+
+        item.cantidadDisponible = cant_disponible
+        item.minimoDefinido = min_definido
+        
+        # Parseo seguro a entero para nivelStock
+        nivel_stock_input = request.POST.get('nivelStock')
+        try:
+            item.nivelStock = int(nivel_stock_input)
+        except (ValueError, TypeError):
+            item.nivelStock = cant_disponible - min_definido
+
+        item.unidades = request.POST.get('unidades')
+        item.ubicacion = request.POST.get('ubicacion')
+        item.cantidadIngresada = int(request.POST.get('cantidadIngresada') or 0)
+        item.cantidadEgresada = int(request.POST.get('cantidadEgresada') or 0)
+        
+        fecha_salida = request.POST.get('fechaSalida')
+        item.fechaSalida = fecha_salida if fecha_salida else None
+
+        item.save()
+        messages.success(request, f"Registro de inventario #{item.idInventario} actualizado.")
+    return redirect('admin_inventario')
+
+
+@admin_required
+def eliminar_inventario(request, pk):
+    item = get_object_or_404(Inventario, pk=pk)
+    if request.method == 'POST':
+        id_inv = item.idInventario
+        item.delete()
+        messages.success(request, f"Registro de inventario #{id_inv} eliminado.")
+    return redirect('admin_inventario')
+
+
+# ── Perfil de Usuario ────────────────────────────────────────
 
 @admin_required
 @require_POST
@@ -655,33 +790,21 @@ def editar_perfil(request):
         correo = request.POST.get('email', '').strip()
         telefono = request.POST.get('telefono', '').strip()
         pass1 = request.POST.get('password1', '').strip()
-        pass2 = request.POST.get('password2', '').strip()
 
-        # ── Validaciones básicas ──
-        if not nombre or not apellido or not correo:
-            return JsonResponse({'success': False, 'mensaje': 'Nombre, apellido y correo son obligatorios.'}, status=400)
+        if nombre:
+            usuario.nombre = nombre
+        if apellido:
+            usuario.apellido = apellido
+        if correo:
+            usuario.correoElectronico = correo
+        usuario.telefono = telefono or None
 
-        # ── Validar correo duplicado (excluyendo al propio usuario) ──
-        if Usuario.objects.filter(correoElectronico=correo).exclude(idUsuario=usuario.idUsuario).exists():
-            return JsonResponse({'success': False, 'mensaje': 'Ese correo ya está en uso por otro usuario.'}, status=400)
-
-        # ── Validar contraseña si la mandaron ──
-        if pass1 or pass2:
-            if pass1 != pass2:
-                return JsonResponse({'success': False, 'mensaje': 'Las contraseñas no coinciden.'}, status=400)
-            if len(pass1) < 8:
-                return JsonResponse({'success': False, 'mensaje': 'La contraseña debe tener al menos 8 caracteres.'}, status=400)
+        if pass1:
             usuario.contrasena = make_password(pass1)
 
-        usuario.nombre = nombre
-        usuario.apellido = apellido
-        usuario.correoElectronico = correo
-        usuario.telefono = telefono or None
         usuario.save()
-
-        return JsonResponse({'success': True, 'mensaje': 'Perfil actualizado correctamente.'})
-
-    except Usuario.DoesNotExist:
-        return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
+        messages.success(request, "Perfil actualizado correctamente.")
     except Exception as e:
-        return JsonResponse({'success': False, 'mensaje': f'Error al actualizar el perfil: {str(e)}'}, status=500)
+        messages.error(request, f"Error al actualizar el perfil: {str(e)}")
+
+    return redirect('admin_portal')

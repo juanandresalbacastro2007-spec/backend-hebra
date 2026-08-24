@@ -6,27 +6,25 @@
 
 {% block topbar_extra %}
 <div class="ms-auto d-flex gap-2 align-items-center">
-  <form method="GET" action="{% url 'admin_inventario' %}" class="d-flex align-items-center">
-  <div class="input-group input-group-sm" style="max-width: 280px;">
-    <span class="input-group-text bg-white border-end-0 text-muted">
-      <i class="bi bi-search"></i>
-    </span>
-    
-    <input type="search" name="buscar" id="buscarInput"
-           class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
-           placeholder="Buscar producto o material..." value="{{ buscar_filtro|default:'' }}">
+  <form method="GET" action="{% url 'admin_inventario' %}" id="searchForm" class="d-flex align-items-center">
+    <div class="input-group input-group-sm" style="max-width: 280px;">
+      <span class="input-group-text bg-white border-end-0 text-muted">
+        <i class="bi bi-search"></i>
+      </span>
+      
+      <input type="search" name="buscar" id="buscarInput"
+             class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
+             placeholder="Buscar producto o material..." value="{{ buscar_filtro|default:'' }}">
 
-    {% if buscar_filtro %}
-    <a href="{% url 'admin_inventario' %}" class="input-group-text bg-white border-start-0 text-muted"
-       title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
-      <i class="bi bi-x-circle-fill"></i>
-    </a>
-    {% endif %}
-  </div>
-
-  <!-- Botón invisible para permitir el envío al presionar ENTER -->
-  <button type="submit" class="d-none"></button>
-</form>
+      {% if buscar_filtro %}
+      <a href="{% url 'admin_inventario' %}" class="input-group-text bg-white border-start-0 text-muted"
+         title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
+        <i class="bi bi-x-circle-fill"></i>
+      </a>
+      {% endif %}
+    </div>
+    <button type="submit" class="d-none"></button>
+  </form>
 </div>
 {% endblock %}
 
@@ -57,7 +55,12 @@
 <div class="section-card mb-4">
   <div class="section-card-header d-flex justify-content-between align-items-center">
     <h6 class="mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Registros de Inventario (Productos)</h6>
-    <span class="badge-ht badge-info">Total: {{ total_items|default:inventario_list|length }}</span>
+    <div>
+      <span class="badge-ht badge-info me-2">Total: {{ total_items|default:inventario_list|length }}</span>
+      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo Registro
+      </button>
+    </div>
   </div>
 
   <div class="table-responsive">
@@ -75,7 +78,7 @@
           <th class="text-end">Egresado</th>
           <th class="text-center">Fecha Ingreso</th>
           <th class="text-center">Fecha Salida</th>
-          <th class="text-center">Última Act.</th>
+          <th class="text-center">Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -109,7 +112,16 @@
           <td class="text-end text-danger fw-medium">-{{ item.cantidadEgresada }}</td>
           <td class="text-center">{{ item.fechaIngreso|date:"d/m/Y" }}</td>
           <td class="text-center">{{ item.fechaSalida|date:"d/m/Y"|default:"—" }}</td>
-          <td class="text-center"><small class="text-muted">{{ item.fechaActualizacion|date:"d/m/Y" }}</small></td>
+          <td class="text-center">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarInventario{{ item.idInventario }}" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarInventario{{ item.idInventario }}" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
         </tr>
         {% empty %}
         <tr>
@@ -124,11 +136,110 @@
   </div>
 </div>
 
+<!-- Modales de Inventario (Edit y Delete) fuera de la tabla -->
+{% for item in inventario_list %}
+  <!-- Modal Editar Inventario -->
+  <div class="modal fade" id="modalEditarInventario{{ item.idInventario }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" action="{% url 'editar_inventario' item.idInventario %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Inventario #{{ item.idInventario }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Producto</label>
+              <select name="producto" class="form-select" required>
+                {% for prod in productos_list %}
+                  <option value="{{ prod.idProducto }}" {% if prod.idProducto == item.producto.idProducto %}selected{% endif %}>
+                    {{ prod.nombre }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label">Disponible</label>
+                <input type="number" name="cantidadDisponible" class="form-control" value="{{ item.cantidadDisponible }}" required>
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label">Mínimo Definido</label>
+                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label">Nivel de Stock</label>
+                <input type="text" name="nivelStock" class="form-control" value="{{ item.nivelStock|default:'' }}">
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label">Unidades</label>
+                <input type="text" name="unidades" class="form-control" value="{{ item.unidades }}" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Ubicación</label>
+              <input type="text" name="ubicacion" class="form-control" value="{{ item.ubicacion|default:'' }}">
+            </div>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label">Ingresado</label>
+                <input type="number" name="cantidadIngresada" class="form-control" value="{{ item.cantidadIngresada }}">
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label">Egresado</label>
+                <input type="number" name="cantidadEgresada" class="form-control" value="{{ item.cantidadEgresada }}">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Fecha Salida</label>
+              <input type="date" name="fechaSalida" class="form-control" value="{{ item.fechaSalida|date:'Y-m-d' }}">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Inventario -->
+  <div class="modal fade" id="modalEliminarInventario{{ item.idInventario }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" action="{% url 'eliminar_inventario' item.idInventario %}">
+          {% csrf_token %}
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar Inventario</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro de que deseas eliminar el registro de inventario <strong>#{{ item.idInventario }}</strong> para el producto <strong>{{ item.producto.nombre }}</strong>?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
 <!-- Tabla 2: Control de Materiales -->
 <div class="section-card">
   <div class="section-card-header d-flex justify-content-between align-items-center">
     <h6 class="mb-0"><i class="bi bi-scissors me-2 text-primary"></i>Control de Materiales (Materias Primas)</h6>
-    <span class="badge-ht badge-info">Total: {{ total_materiales|default:materiales_list|length }}</span>
+    <div>
+      <span class="badge-ht badge-info me-2">Total: {{ total_materiales|default:materiales_list|length }}</span>
+      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo Material
+      </button>
+    </div>
   </div>
 
   <div class="table-responsive">
@@ -143,6 +254,7 @@
           <th class="text-center">Unidad Base</th>
           <th class="text-end">Costo Unitario</th>
           <th class="text-center">Última Act.</th>
+          <th class="text-center">Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -174,10 +286,20 @@
             {% endif %}
           </td>
           <td class="text-center"><small class="text-muted">{{ mat.fechaActualizacion|date:"d/m/Y" }}</small></td>
+          <td class="text-center">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarMaterial{{ mat.idMaterial }}" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarMaterial{{ mat.idMaterial }}" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" class="text-center text-muted py-5">
+          <td colspan="9" class="text-center text-muted py-5">
             <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
             <p class="mb-0 fw-medium">No hay materias primas registradas en el sistema.</p>
           </td>
@@ -185,6 +307,193 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Modales de Materiales (Edit y Delete) fuera de la tabla -->
+{% for mat in materiales_list %}
+  <!-- Modal Editar Material -->
+  <div class="modal fade" id="modalEditarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" action="{% url 'editar_material' mat.idMaterial %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Material: {{ mat.nombreMaterial }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Nombre del Material</label>
+              <input type="text" name="nombreMaterial" class="form-control" value="{{ mat.nombreMaterial }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Descripción</label>
+              <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion|default:'' }}</textarea>
+            </div>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label">Stock Actual</label>
+                <input type="number" step="0.01" name="stockActual" class="form-control" value="{{ mat.stockActual }}" required>
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label">Stock Mínimo</label>
+                <input type="number" step="0.01" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6 mb-3">
+                <label class="form-label">Unidad Base</label>
+                <input type="text" name="unidadBase" class="form-control" value="{{ mat.unidadBase }}" required>
+              </div>
+              <div class="col-6 mb-3">
+                <label class="form-label">Costo Unitario</label>
+                <input type="number" step="0.01" name="costoUnitario" class="form-control" value="{{ mat.costoUnitario|default:'' }}">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Material -->
+  <div class="modal fade" id="modalEliminarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" action="{% url 'eliminar_material' mat.idMaterial %}">
+          {% csrf_token %}
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar Material</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro de que deseas eliminar la materia prima <strong>{{ mat.nombreMaterial }}</strong>?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+<!-- Modal Crear Inventario -->
+<div class="modal fade" id="modalCrearInventario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'crear_inventario' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Nuevo Registro de Inventario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Producto</label>
+            <select name="producto" class="form-select" required>
+              <option value="">-- Seleccionar Producto --</option>
+              {% for prod in productos_list %}
+                <option value="{{ prod.idProducto }}">{{ prod.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Cantidad Disponible</label>
+              <input type="number" name="cantidadDisponible" class="form-control" value="0" required>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Mínimo Definido</label>
+              <input type="number" name="minimoDefinido" class="form-control" value="0" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Nivel de Stock</label>
+              <input type="text" name="nivelStock" class="form-control" placeholder="Ej: Normal, Bajo">
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Unidades</label>
+              <input type="text" name="unidades" class="form-control" value="Unidades" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ubicación</label>
+            <input type="text" name="ubicacion" class="form-control" placeholder="Ej: Bodega Principal">
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Cantidad Ingresada</label>
+              <input type="number" name="cantidadIngresada" class="form-control" value="0">
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Cantidad Egresada</label>
+              <input type="number" name="cantidadEgresada" class="form-control" value="0">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Registro</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Crear Material -->
+<div class="modal fade" id="modalCrearMaterial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'crear_material' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Nuevo Material</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre del Material</label>
+            <input type="text" name="nombreMaterial" class="form-control" required placeholder="Ej: Tela Algodón 100%">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles o especificaciones del material"></textarea>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Stock Actual</label>
+              <input type="number" step="0.01" name="stockActual" class="form-control" value="0" required>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Stock Mínimo</label>
+              <input type="number" step="0.01" name="stockMinimo" class="form-control" value="0" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Unidad Base</label>
+              <input type="text" name="unidadBase" class="form-control" placeholder="Ej: Metros, Kg, Conos" required>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Costo Unitario</label>
+              <input type="number" step="0.01" name="costoUnitario" class="form-control" placeholder="0.00">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Material</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 

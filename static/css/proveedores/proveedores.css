@@ -13,6 +13,11 @@
   --prov-transition: 0.18s ease;
 }
 
+body{
+
+  background-color:#e7f6f2 !important;
+}
+
 /* ── KPI Strip ───────────────────────────────────────────── */
 .kpi-strip {
   display: flex;

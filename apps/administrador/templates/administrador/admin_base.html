@@ -10,6 +10,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   
   <!-- Estilos propios -->
   <link rel="stylesheet" href="{% static 'css/administrador/admin.css' %}">
@@ -30,67 +31,67 @@
       </div>
     </div>
 
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Principal</div>
-      <a href="{% url 'admin_portal' %}" class="nav-item {% if seccion_activa == 'dashboard' %}active{% endif %}">
-        <i class="bi bi-grid-1x2-fill"></i> Dashboard
-      </a>
-
-      <div class="nav-section-label">Gestión</div>
-      <a href="{% url 'admin_produccion' %}" class="nav-item {% if seccion_activa == 'produccion' %}active{% endif %}">
-        <i class="bi bi-gear-wide-connected"></i> Producción
-      </a>
-      <a href="{% url 'admin_usuarios' %}" class="nav-item {% if seccion_activa == 'usuarios' %}active{% endif %}">
-        <i class="bi bi-people-fill"></i> Usuarios
-      </a>
-      <a href="{% url 'admin_ordenes' %}" class="nav-item {% if seccion_activa == 'ordenes' %}active{% endif %}">
-        <i class="bi bi-bag-fill"></i> Órdenes
-      </a>
-      <a href="{% url 'admin_tareas' %}" class="nav-item {% if seccion_activa == 'tareas' %}active{% endif %}">
-        <i class="bi bi-clipboard2-check-fill"></i> Tareas
-      </a>
-      <a href="{% url 'admin_incidencias' %}" class="nav-item {% if seccion_activa == 'incidencias' %}active{% endif %}">
-        <i class="bi bi-exclamation-triangle-fill"></i> Incidencias
-      </a>
-      <a href="{% url 'admin_inventario' %}" class="nav-item {% if seccion_activa == 'inventario' %}active{% endif %}">
-        <i class="bi bi-box-seam-fill"></i> Inventario
-      </a>
-      <a href="{% url 'admin_proveedores' %}" class="nav-item {% if seccion_activa == 'proveedores' %}active{% endif %}">
-        <i class="bi bi-truck"></i> Proveedores
-      </a>
-
-      <div class="sidebar-footer">
-        <div class="admin-info admin-info-clickable" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" title="Editar perfil">
-          <div class="admin-avatar">
-            {% if usuario.foto %}
-              <img src="{{ usuario.foto.url }}" alt="Avatar" class="admin-avatar-img">
-            {% else %}
-              {{ usuario.nombre|first|upper }}
-            {% endif %}
-          </div>
-          <div>
-            <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
-            <div class="admin-role">Administrador <i class="bi bi-pencil-fill perfil-edit-hint"></i></div>
-          </div>
-        </div>
-        <a href="{% url 'logout' %}" class="btn-logout">
-          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Principal</div>
+        <a href="{% url 'admin_portal' %}" class="nav-item {% if seccion_activa == 'dashboard' %}active{% endif %}">
+          <i class="bi bi-grid-1x2-fill"></i> Dashboard
         </a>
-      </div>
-    </nav>
+
+        <div class="nav-section-label">Gestión</div>
+        <a href="{% url 'admin_produccion' %}" class="nav-item {% if seccion_activa == 'produccion' %}active{% endif %}">
+          <i class="bi bi-gear-wide-connected"></i> Producción
+        </a>
+        <a href="{% url 'admin_usuarios' %}" class="nav-item {% if seccion_activa == 'usuarios' %}active{% endif %}">
+          <i class="bi bi-people-fill"></i> Usuarios
+        </a>
+        <a href="{% url 'admin_ordenes' %}" class="nav-item {% if seccion_activa == 'ordenes' %}active{% endif %}">
+          <i class="bi bi-bag-fill"></i> Órdenes
+        </a>
+        <a href="{% url 'admin_tareas' %}" class="nav-item {% if seccion_activa == 'tareas' %}active{% endif %}">
+          <i class="bi bi-clipboard2-check-fill"></i> Tareas
+        </a>
+        <a href="{% url 'admin_incidencias' %}" class="nav-item {% if seccion_activa == 'incidencias' %}active{% endif %}">
+          <i class="bi bi-exclamation-triangle-fill"></i> Incidencias
+        </a>
+        <a href="{% url 'admin_inventario' %}" class="nav-item {% if seccion_activa == 'inventario' %}active{% endif %}">
+          <i class="bi bi-box-seam-fill"></i> Inventario
+        </a>
+        <a href="{% url 'admin_proveedores' %}" class="nav-item {% if seccion_activa == 'proveedores' %}active{% endif %}">
+          <i class="bi bi-truck"></i> Proveedores
+        </a>
+
+        <div class="sidebar-footer">
+          <div class="admin-info admin-info-clickable" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" title="Editar perfil">
+            <div class="admin-avatar">
+              {% if usuario.foto %}
+                <img src="{{ usuario.foto.url }}" alt="Avatar" class="admin-avatar-img">
+              {% else %}
+                {{ usuario.nombre|first|upper }}
+              {% endif %}
+            </div>
+            <div>
+              <div class="admin-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
+              <div class="admin-role">Administrador <i class="bi bi-pencil-fill perfil-edit-hint"></i></div>
+            </div>
+          </div>
+          <a href="{% url 'logout' %}" class="btn-logout">
+            <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+          </a>
+        </div>
+      </nav>
   </aside>
 
   <!-- ══ MAIN ══ -->
   <div class="main-content">
 
     <!-- Topbar -->
-    <header class="topbar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
+    <header class="topbar d-flex align-items-center gap-3 p-3 bg-white border-bottom">
+      <button type="button" class="sidebar-toggle" onclick="toggleSidebar()" title="Alternar menú">
         <i class="bi bi-list fs-4"></i>
       </button>
       <div>
-        <h5 class="topbar-title">{% block topbar_titulo %}{% endblock %}</h5>
-        <small class="topbar-sub">{% block topbar_sub %}{% endblock %}</small>
+        <h5 class="topbar-title mb-0">{% block topbar_titulo %}{% endblock %}</h5>
+        <small class="topbar-sub text-muted">{% block topbar_sub %}{% endblock %}</small>
       </div>
       {% block topbar_extra %}{% endblock %}
     </header>
@@ -209,5 +210,30 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'js/administrador/perfil.js' %}"></script>
   {% block extra_js %}{% endblock %}
+
+  <script>
+function toggleSidebar() {
+  // Busca por clase .sidebar, etiqueta aside o clase .app-sidebar
+  const sidebar = document.querySelector('.sidebar, aside, .app-sidebar');
+  
+  if (sidebar) {
+    sidebar.classList.toggle('open');
+    console.log("Clase 'open' alternada con éxito.");
+  } else {
+    alert("Error: No se encontró ningún elemento de menú lateral en el HTML.");
+  }
+}
+
+document.addEventListener('click', function(event) {
+  const sidebar = document.querySelector('.sidebar');
+  const toggleBtn = document.querySelector('.sidebar-toggle');
+  
+  if (sidebar && sidebar.classList.contains('open')) {
+    if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+      sidebar.classList.remove('open');
+    }
+  }
+});
+</script>
 </body>
 </html>

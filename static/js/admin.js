@@ -1,25 +1,6 @@
 // admin.js — HebraTech Panel de Administración
 
-// ── Sidebar toggle (mobile) ──────────────────────────────
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('open');
-}
-
 // Cerrar sidebar al hacer click fuera (mobile)
-document.addEventListener('click', function (e) {
-  const sidebar = document.getElementById('sidebar');
-  const toggle = document.querySelector('.sidebar-toggle');
-  if (
-    sidebar &&
-    sidebar.classList.contains('open') &&
-    !sidebar.contains(e.target) &&
-    toggle &&
-    !toggle.contains(e.target)
-  ) {
-    sidebar.classList.remove('open');
-  }
-});
 
 // ── Reloj en topbar ──────────────────────────────────────
 function updateClock() {
@@ -33,7 +14,7 @@ function updateClock() {
   el.innerHTML = `<strong>${hora}</strong><br><span style="font-size:0.68rem;">${fecha}</span>`;
 }
 setInterval(updateClock, 1000);
-updateClock();
+updateClock();  
 
 // ── Marcar nav-item activo según URL actual ──────────────
 document.addEventListener('DOMContentLoaded', function () {

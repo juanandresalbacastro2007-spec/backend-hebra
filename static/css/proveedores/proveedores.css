@@ -513,27 +513,54 @@ body{
 .ht-modal-header .modal-title { color: #fff; font-size: 1rem; }
 
 /* ── Responsive ──────────────────────────────────────────── */
+/* Ajustes para móviles y tablets */
 @media (max-width: 900px) {
   .prov-layout {
     flex-direction: column;
     height: auto;
-    min-height: unset;
   }
 
+  /* La lista de proveedores se oculta a la izquierda como Drawer */
   .prov-sidebar {
-    width: 100%;
-    max-height: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 85%;
+    max-width: 320px;
+    height: 100vh;
+    background: #ffffff;
+    z-index: 1050;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    overflow-y: auto;
+  }
+
+  .prov-sidebar.active {
+    transform: translateX(0);
+  }
+
+  /* Fondo oscuro al desplegar la lista */
+  .prov-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1040;
+  }
+
+  .prov-backdrop.active {
+    display: block;
   }
 
   .prov-detail-wrap { min-height: 420px; }
-
   .prov-card-header { flex-direction: column; }
-
   .prov-card-actions { width: 100%; }
-
   .info-grid { grid-template-columns: 1fr; }
   .info-block-full { grid-column: 1; }
-
   .kpi-spacer { display: none; }
   .filtro-tabs { margin-top: 0.5rem; width: 100%; justify-content: center; }
 }

@@ -105,3 +105,40 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btnAnt = document.getElementById('btnProvAnterior');
+  const btnSig = document.getElementById('btnProvSiguiente');
+
+  function cambiarProveedor(direccion) {
+    // Obtener todos los botones de la lista de proveedores visible o no filtrada
+    const items = Array.from(document.querySelectorAll('.prov-list .prov-item:not(.d-none)'));
+    if (items.length === 0) return;
+
+    // Encontrar el índice del proveedor actualmente activo
+    const indiceActual = items.findIndex(item => item.classList.contains('active'));
+
+    let nuevoIndice;
+    if (direccion === 'siguiente') {
+      nuevoIndice = (indiceActual + 1) % items.length; // Avanza y vuelve al inicio al llegar al final
+    } else {
+      nuevoIndice = (indiceActual - 1 + items.length) % items.length; // Retrocede y va al final si está al inicio
+    }
+
+    // Activar la pestaña del Bootstrap Tab
+    const targetButton = items[nuevoIndice];
+    if (targetButton) {
+      const tabTrigger = new bootstrap.Tab(targetButton);
+      tabTrigger.show();
+      targetButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  if (btnSig) {
+    btnSig.addEventListener('click', () => cambiarProveedor('siguiente'));
+  }
+  
+  if (btnAnt) {
+    btnAnt.addEventListener('click', () => cambiarProveedor('anterior'));
+  }
+});

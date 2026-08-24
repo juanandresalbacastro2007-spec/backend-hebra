@@ -19,7 +19,6 @@
 
 {% block contenido %}
 <div class="proveedores-page">
-
   <!-- ── KPI Strip ────────────────────────────────────────── -->
   <div class="kpi-strip mb-3">
     <div class="kpi-pill">
@@ -45,6 +44,15 @@
       <button class="ftab active" data-filtro="todos">Todos</button>
       <button class="ftab" data-filtro="activo">Activos</button>
       <button class="ftab" data-filtro="inactivo">Inactivos</button>
+    </div>
+    <!-- Cambiar d-md-none por d-lg-none para que coincida con la vista de 900px -->
+    <div class="d-flex gap-2 d-lg-none mt-2 w-100">
+      <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" id="btnProvAnterior">
+        <i class="bi bi-chevron-left me-1"></i> Anterior
+      </button>
+      <button type="button" class="btn btn-primary-ht btn-sm flex-fill" id="btnProvSiguiente">
+        Siguiente <i class="bi bi-chevron-right ms-1"></i>
+      </button>
     </div>
   </div>
 
@@ -375,5 +383,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/proveedores.js' %}"></script>
+<script src="{% static 'js/proveedores.js' %}" defer></script>
 {% endblock %}

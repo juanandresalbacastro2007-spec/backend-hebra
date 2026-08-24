@@ -116,39 +116,42 @@
               class="btn btn-sm btn-outline-primary me-1" title="Editar usuario">
               <i class="bi bi-pencil"></i>
             </a>
-            <button type="button" class="btn btn-sm btn-outline-danger"
-              data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.idUsuario }}" title="Eliminar usuario">
-              <i class="bi bi-trash"></i>
-            </button>
 
-            <!-- 3. MODAL CONFIRMAR ELIMINACIÓN DETALLADO -->
-            <div class="modal fade" id="deleteModal{{ u.idUsuario }}" tabindex="-1" aria-hidden="true">
-              <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content" style="border-radius:14px; overflow:hidden;">
-                  <div class="modal-body text-center p-4">
-                    <div class="mb-3">
-                      <span class="p-3 bg-danger-subtle text-danger rounded-circle d-inline-block">
-                        <i class="bi bi-exclamation-triangle-fill fs-2"></i>
-                      </span>
-                    </div>
-                    <h5 class="fw-bold">¿Eliminar a {{ u.nombre }} {{ u.apellido }}?</h5>
-                    <p class="text-muted small mb-1">Correo: <strong>{{ u.correoElectronico }}</strong></p>
-                    <div class="alert alert-danger py-2 px-3 small mt-3 mb-3 text-start">
-                      <i class="bi bi-info-circle me-1"></i> Esta acción eliminará permanentemente la cuenta del usuario y sus accesos asociados.
-                    </div>
-                    <form method="POST" action="{% url 'admin_usuario_eliminar' u.idUsuario %}">
-                      {% csrf_token %}
-                      <div class="d-flex gap-2 justify-content-center mt-3">
-                        <button type="button" class="btn btn-light px-4 border" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger px-4">Sí, eliminar</button>
+            {# Solo mostrar botón de eliminar si el usuario es Operario #}
+            {% if u.rol == 'operario' %}
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.idUsuario }}" title="Eliminar usuario">
+                <i class="bi bi-trash"></i>
+              </button>
+
+              <!-- 3. MODAL CONFIRMAR ELIMINACIÓN DETALLADO -->
+              <div class="modal fade" id="deleteModal{{ u.idUsuario }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+                    <div class="modal-body text-center p-4">
+                      <div class="mb-3">
+                        <span class="p-3 bg-danger-subtle text-danger rounded-circle d-inline-block">
+                          <i class="bi bi-exclamation-triangle-fill fs-2"></i>
+                        </span>
                       </div>
-                    </form>
+                      <h5 class="fw-bold">¿Eliminar a {{ u.nombre }} {{ u.apellido }}?</h5>
+                      <p class="text-muted small mb-1">Correo: <strong>{{ u.correoElectronico }}</strong></p>
+                      <div class="alert alert-danger py-2 px-3 small mt-3 mb-3 text-start">
+                        <i class="bi bi-info-circle me-1"></i> Esta acción eliminará permanentemente la cuenta del usuario operario y sus accesos asociados.
+                      </div>
+                      <form method="POST" action="{% url 'admin_usuario_eliminar' u.idUsuario %}">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-center mt-3">
+                          <button type="button" class="btn btn-light px-4 border" data-bs-dismiss="modal">Cancelar</button>
+                          <button type="submit" class="btn btn-danger px-4">Sí, eliminar</button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            {% endif %}
           </td>
-        </tr>
 
         <!-- 4. ESTADO VACÍO MEJORADO -->
         {% empty %}

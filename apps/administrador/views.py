@@ -177,12 +177,18 @@ def usuario_editar(request, idUsuario):
 @admin_required
 def usuario_eliminar(request, idUsuario):
     if request.method == 'POST':
-        usuario_obj = Usuario.objects.get(idUsuario=idUsuario)
+        usuario_obj = get_object_or_404(Usuario, idUsuario=idUsuario)
+        
+        # Validación de seguridad: Solo permitir eliminar si es operario
+        if usuario_obj.rol != 'operario':
+            messages.error(request, '⚠️ No está permitido eliminar usuarios con rol diferente a Operario.')
+            return redirect('admin_usuarios')
+
         nombre = f'{usuario_obj.nombre} {usuario_obj.apellido}'
         usuario_obj.delete()
-        messages.success(request, f'Usuario {nombre} eliminado correctamente.')
-    return redirect('admin_usuarios')
+        messages.success(request, f'✅ Usuario operario {nombre} eliminado correctamente.')
 
+    return redirect('admin_usuarios')
 
 # ── Órdenes ──────────────────────────────────────────────────
 @admin_required

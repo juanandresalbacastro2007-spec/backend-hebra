@@ -120,18 +120,10 @@
             <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>{{ orden.estado }}</span>
             {% endif %}
           </td>
-          <td>
-            <button type="button" class="btn btn-sm text-primary p-0 border-0 me-2" data-bs-toggle="modal" data-bs-target="#modalEditarOrden{{ orden.idOrden }}" title="Editar orden">
+          <td class="text-center">
+            <button type="button" class="btn btn-sm  text-primary border-0 " data-bs-toggle="modal" data-bs-target="#modalEditarOrden{{ orden.idOrden }}" title="Editar orden">
               <i class="bi bi-pencil-fill"></i>
             </button>
-
-            <!-- 2. AVISO DE CONFIRMACIÓN DE ELIMINACIÓN -->
-            <a href="{% url 'admin_eliminar_orden' orden.idOrden %}" 
-               class="btn btn-sm text-danger p-0 border-0" 
-               onclick="return confirm('⚠️ ¿Confirmas eliminar la orden #{{ orden.idOrden }}?\n\nEsta acción no se puede deshacer.');" 
-               title="Eliminar orden">
-              <i class="bi bi-trash-fill"></i>
-            </a>
           </td>
         </tr>
 

@@ -8,13 +8,6 @@
         @page {
             size: letter landscape;
             margin: 10mm 12mm 12mm 12mm;
-
-            @bottom-right {
-                content: "Página " counter(page) " de " counter(pages);
-                font-family: Helvetica, Arial, sans-serif;
-                font-size: 8px;
-                color: #777777;
-            }
         }
         
         /* Estilos Base (compatibles con xhtml2pdf / ReportLab) */
@@ -243,6 +236,7 @@
             {% endfor %}
         </tbody>
     </table>
+
 
     <!-- Paginación para xhtml2pdf -->
     <div class="footer-note">

@@ -2,6 +2,7 @@
 const BASE = '/produccion';
 let allProductos = [];
 let allOrdenes = [];
+let allOperariosAvance = [];
 
 // ── INIT / EVENT LISTENERS ────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,14 +12,21 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarKPIs();
   cargarProductos();
   cargarOrdenes();
+  cargarAvanceOperarios();
 
   // Cerrar modales haciendo click fuera de la caja
-  document.getElementById('modal-producto').addEventListener('click', e => {
-    if (e.target === e.currentTarget) cerrarModalProducto();
-  });
-  document.getElementById('modal-orden').addEventListener('click', e => {
-    if (e.target === e.currentTarget) cerrarModalOrden();
-  });
+  const modalProducto = document.getElementById('modal-producto');
+  if (modalProducto) {
+    modalProducto.addEventListener('click', e => {
+      if (e.target === e.currentTarget) cerrarModalProducto();
+    });
+  }
+  const modalOrden = document.getElementById('modal-orden');
+  if (modalOrden) {
+    modalOrden.addEventListener('click', e => {
+      if (e.target === e.currentTarget) cerrarModalOrden();
+    });
+  }
 });
 
 // ── NAVEGACIÓN (TABS) ─────────────────────────────
@@ -106,7 +114,6 @@ function renderProductos(lista) {
       <td>
         <div class="action-btns">
           <button class="action-btn edit" title="Editar" onclick="editarProducto(${p.idProducto})">✏️</button>
-          <button class="action-btn del" title="Eliminar" onclick="eliminarProducto(${p.idProducto})">🗑️</button>
         </div>
       </td>
     </tr>`).join('');
@@ -210,6 +217,7 @@ async function cargarOrdenes() {
     const data = await r.json();
     allOrdenes = Array.isArray(data) ? data : (data.ordenes || []);
     renderOrdenes(allOrdenes);
+    renderGanttOrdenes(allOrdenes);
   } catch (e) {
     console.error('Error cargando órdenes:', e);
   }
@@ -238,7 +246,6 @@ function renderOrdenes(lista) {
         <td>
           <div class="action-btns">
             <button class="action-btn edit" onclick="editarOrden(${o.idProduccion})">✏️</button>
-            <button class="action-btn del" onclick="eliminarOrden(${o.idProduccion})">🗑️</button>
           </div>
         </td>
       </tr>`;
@@ -248,12 +255,96 @@ function renderOrdenes(lista) {
 function filtrarOrdenes() {
   const q = document.getElementById('search-ordenes').value.toLowerCase();
   const st = document.getElementById('filter-estado-ord').value;
-  
-  renderOrdenes(allOrdenes.filter(o => {
+
+  const filtradas = allOrdenes.filter(o => {
     const matchQ = (o.descripcion && o.descripcion.toLowerCase().includes(q)) || (o.producto && o.producto.toLowerCase().includes(q));
     const matchSt = !st || o.estado === st;
     return matchQ && matchSt;
-  }));
+  });
+
+  renderOrdenes(filtradas);
+  renderGanttOrdenes(filtradas);
+}
+
+// ── CALENDARIO / LÍNEA DE TIEMPO DE ÓRDENES ───────
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function renderGanttOrdenes(lista) {
+  const cont = document.getElementById('gantt-ordenes');
+  if (!cont) return;
+
+  const validas = lista.filter(o => o.fechaInicio && o.fechaEstimadaFin);
+
+  if (!validas.length) {
+    cont.innerHTML = `<div class="empty-state"><p>No hay órdenes con fechas para mostrar en el calendario</p></div>`;
+    return;
+  }
+
+  const parseF = s => new Date(s + 'T00:00:00');
+  const finReal = o => o.fechaRealFin ? parseF(o.fechaRealFin) : parseF(o.fechaEstimadaFin);
+
+  let minFecha = validas.reduce((min, o) => { const d = parseF(o.fechaInicio); return d < min ? d : min; }, parseF(validas[0].fechaInicio));
+  let maxFecha = validas.reduce((max, o) => { const d = finReal(o); return d > max ? d : max; }, finReal(validas[0]));
+
+  // Margen de unos días a cada lado para que las barras no queden pegadas al borde
+  minFecha = new Date(minFecha.getTime() - 3 * 86400000);
+  maxFecha = new Date(maxFecha.getTime() + 3 * 86400000);
+
+  const totalMs = maxFecha.getTime() - minFecha.getTime();
+  const pctDe = fecha => ((fecha.getTime() - minFecha.getTime()) / totalMs) * 100;
+
+  // ── Encabezado de meses ──
+  const meses = [];
+  let cursor = new Date(minFecha.getFullYear(), minFecha.getMonth(), 1);
+  while (cursor <= maxFecha) {
+    const inicioMes = cursor < minFecha ? minFecha : cursor;
+    const finMesReal = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    meses.push({
+      label: `${MESES_CORTOS[cursor.getMonth()]} ${cursor.getFullYear()}`,
+      left: pctDe(inicioMes),
+    });
+    cursor = finMesReal;
+  }
+
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const hoyDentro = hoy >= minFecha && hoy <= maxFecha;
+  const hoyPct = pctDe(hoy);
+
+  const filasHtml = validas.map(o => {
+    const inicio = parseF(o.fechaInicio);
+    const fin = finReal(o);
+    const left = pctDe(inicio);
+    const width = Math.max(pctDe(fin) - left, 1.2);
+    const clsEst = 'estado-ord-' + (o.estado || 'Pendiente').replace(/\s+/g, '-');
+    const rango = `${formatoCorto(inicio)} → ${formatoCorto(fin)}`;
+
+    return `
+      <div class="gantt-row">
+        <div class="gantt-row-label" title="${o.producto || ''}">#${o.idProduccion} · ${o.producto || 'Sin producto'}</div>
+        <div class="gantt-track">
+          <div class="gantt-bar ${clsEst}" style="left:${left}%;width:${width}%"
+               title="${o.producto || ''} — ${rango} — ${o.estado}">
+            ${rango}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div class="gantt-inner">
+      <div class="gantt-months">
+        ${meses.map(m => `<div class="gantt-month-lbl" style="left:${m.left}%">${m.label}</div>`).join('')}
+      </div>
+      <div class="gantt-rows" style="position:relative">
+        ${hoyDentro ? `<div class="gantt-today" style="left:calc(200px + ${(hoyPct / 100).toFixed(4)} * (100% - 200px))"><span class="gantt-today-lbl">Hoy</span></div>` : ''}
+        ${filasHtml}
+      </div>
+    </div>`;
+}
+
+function formatoCorto(fecha) {
+  const dias = fecha.getDate().toString().padStart(2, '0');
+  return `${dias} ${MESES_CORTOS[fecha.getMonth()]}`;
 }
 
 // ── CONTROL DEL MODAL DE ÓRDENES ──────────────────
@@ -341,6 +432,101 @@ async function eliminarOrden(id) {
   }
 }
 
+// ── AVANCE DE OPERARIOS (proceso de confección) ───
+async function cargarAvanceOperarios() {
+  const grid = document.getElementById('operarios-grid');
+  try {
+    const r = await fetch(`${BASE}/operarios-avance/`);
+    if (!r.ok) throw new Error('Error al cargar el avance de operarios');
+    const data = await r.json();
+    allOperariosAvance = data.operarios || [];
+    renderOperariosAvance(allOperariosAvance);
+  } catch (e) {
+    console.error('Error cargando avance de operarios:', e);
+    if (grid) {
+      grid.innerHTML = `<div class="empty-state"><p>No se pudo cargar el avance de operarios</p></div>`;
+    }
+  }
+}
+
+function renderOperariosAvance(lista) {
+  const grid = document.getElementById('operarios-grid');
+  if (!grid) return;
+
+  if (!lista.length) {
+    grid.innerHTML = `<div class="empty-state"><p>No hay operarios activos con tareas registradas</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = lista.map(op => {
+    const iniciales = (op.nombre || '?')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(n => n[0].toUpperCase())
+      .join('');
+
+    const c = op.contadores || {};
+    const totalTareas = op.tareas.length;
+
+    const filasTareas = totalTareas
+      ? op.tareas.map(t => {
+          const clsEst = 'estado-tarea-' + (t.estado || 'Pendiente').replace(/\s+/g, '-');
+          const prenda = t.tipoPrenda
+            ? `${t.tipoPrenda}${t.cantidadPrendas ? ' × ' + t.cantidadPrendas : ''}`
+            : (t.proceso || '—');
+          return `
+            <div class="tarea-item">
+              <div class="tarea-info">
+                <div class="tarea-nombre">${t.nombreTarea}</div>
+                <div class="tarea-sub">${prenda}</div>
+              </div>
+              <div class="tarea-badges">
+                <span class="estado-badge ${clsEst}">${t.estado}</span>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="operario-sin-tareas">Sin tareas asignadas</div>`;
+
+    return `
+      <div class="operario-card" data-nombre="${(op.nombre || '').toLowerCase()}">
+        <div class="operario-card-head">
+          <div class="operario-avatar">${iniciales || '—'}</div>
+          <div class="operario-info">
+            <div class="operario-nombre">${op.nombre}</div>
+            <div class="operario-especialidad">${op.especialidad || 'Sin especialidad'}</div>
+          </div>
+          <div class="operario-avance-pct">${op.avancePct}%</div>
+        </div>
+        <div class="operario-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${op.avancePct}%"></div></div>
+        </div>
+        <div class="operario-contadores">
+          <span class="mini-badge pendiente">⏳ ${c.pendiente || 0} pendiente</span>
+          <span class="mini-badge en-progreso">🧵 ${c.enProgreso || 0} en progreso</span>
+          <span class="mini-badge completada">✅ ${c.completada || 0} completada</span>
+          ${c.cancelada ? `<span class="mini-badge cancelada">✕ ${c.cancelada} cancelada</span>` : ''}
+        </div>
+        <div class="operario-tareas" data-tareas>${filasTareas}</div>
+      </div>`;
+  }).join('');
+}
+
+function filtrarOperarios() {
+  const q = (document.getElementById('search-operarios').value || '').toLowerCase();
+  const est = document.getElementById('filter-estado-tarea').value;
+
+  const filtrado = allOperariosAvance
+    .filter(op => (op.nombre || '').toLowerCase().includes(q))
+    .map(op => {
+      if (!est) return op;
+      return { ...op, tareas: op.tareas.filter(t => t.estado === est) };
+    })
+    .filter(op => !est || op.tareas.length > 0);
+
+  renderOperariosAvance(filtrado);
+}
+
 // ── UTILERÍAS / TOAST ─────────────────────────────
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -350,6 +536,84 @@ function showToast(msg, type = 'success') {
   setTimeout(() => { t.classList.remove('show'); }, 3000);
 }
 
+// ── EXPORTAR A PDF ─────────────────────────────────
 function exportarCSV() {
-  showToast('Función de exportación lista para programar', 'info');
+  exportarPDF();
+}
+
+function exportarPDF() {
+  if (!window.jspdf) {
+    showToast('No se pudo cargar la librería de PDF', 'error');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const activeContent = document.querySelector('.tab-content.active');
+  const activeTabLabel = document.querySelector('.tab.active');
+  const titulo = activeTabLabel ? activeTabLabel.textContent.trim() : 'Producción';
+
+  doc.setFontSize(15);
+  doc.text('HebraTech — Módulo de Producción', 14, 16);
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(titulo, 14, 23);
+  doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 29);
+
+  let head = [];
+  let body = [];
+  let archivo = 'produccion';
+
+  if (activeContent && activeContent.id === 'tab-productos') {
+    head = [['Nombre', 'Categoría', 'Precio', 'Descripción']];
+    body = allProductos.map(p => [
+      p.nombre,
+      p.categoria,
+      `$${Number(p.precio).toLocaleString('es-CO')}`,
+      p.descripcion || '—'
+    ]);
+    archivo = 'productos';
+  } else if (activeContent && activeContent.id === 'tab-ordenes') {
+    head = [['ID', 'Producto', 'Cantidad', 'Fecha Inicio', 'Fecha Est. Fin', 'Estado']];
+    body = allOrdenes.map(o => [
+      o.idProduccion,
+      o.producto || 'Sin producto',
+      o.cantidadRequerida,
+      o.fechaInicio,
+      o.fechaEstimadaFin,
+      o.estado
+    ]);
+    archivo = 'ordenes_produccion';
+  } else if (activeContent && activeContent.id === 'tab-operarios') {
+    head = [['Operario', 'Especialidad', 'Avance', 'Pendiente', 'En progreso', 'Completada']];
+    body = allOperariosAvance.map(op => {
+      const c = op.contadores || {};
+      return [
+        op.nombre,
+        op.especialidad || 'Sin especialidad',
+        `${op.avancePct}%`,
+        c.pendiente || 0,
+        c.enProgreso || 0,
+        c.completada || 0
+      ];
+    });
+    archivo = 'avance_operarios';
+  }
+
+  if (!body.length) {
+    showToast('No hay datos para exportar en esta pestaña', 'info');
+    return;
+  }
+
+  doc.autoTable({
+    startY: 35,
+    head: head,
+    body: body,
+    headStyles: { fillColor: [57, 91, 100] },
+    styles: { fontSize: 9, cellPadding: 4 }
+  });
+
+  const fecha = new Date().toISOString().split('T')[0];
+  doc.save(`${archivo}_${fecha}.pdf`);
+  showToast('PDF generado con éxito', 'success');
 }

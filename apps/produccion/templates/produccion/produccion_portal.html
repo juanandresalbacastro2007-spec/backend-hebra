@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}" />
+<link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}?v={% now 'U' %}" />
 {% endblock %}
 
 {% block contenido %}
@@ -57,6 +57,7 @@
   <div class="tabs">
     <div class="tab active" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
     <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
+    <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance de Operarios</div>
   </div>
 
   <div id="tab-productos" class="tab-content active">
@@ -82,6 +83,7 @@
           </select>
         </div>
       </div>
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -100,6 +102,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -124,6 +127,7 @@
           </select>
         </div>
       </div>
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -145,17 +149,60 @@
           </tr>
         </tbody>
       </table>
+      </div>
+    </div>
+
+    <div class="table-card gantt-card">
+      <div class="table-toolbar">
+        <h3>📅 Calendario de Producción</h3>
+        <div class="gantt-legend">
+          <span class="legend-item"><span class="legend-dot estado-ord-Pendiente"></span>Pendiente</span>
+          <span class="legend-item"><span class="legend-dot estado-ord-En-Progreso"></span>En Progreso</span>
+          <span class="legend-item"><span class="legend-dot estado-ord-Completado"></span>Completado</span>
+          <span class="legend-item"><span class="legend-dot estado-ord-Detenido"></span>Detenido</span>
+        </div>
+      </div>
+      <div id="gantt-ordenes" class="gantt-wrap">
+        <div class="empty-state"><span class="spinner"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-operarios" class="tab-content">
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h3>Proceso de Confección por Operario</h3>
+        <div class="toolbar-right">
+          <div class="search-wrap">
+            <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input id="search-operarios" type="text" placeholder="Buscar operario..." oninput="filtrarOperarios()" />
+          </div>
+          <select id="filter-estado-tarea" class="filter-select" onchange="filtrarOperarios()">
+            <option value="">Todos los estados</option>
+            <option>Pendiente</option>
+            <option>En Progreso</option>
+            <option>Completada</option>
+            <option>Cancelada</option>
+          </select>
+        </div>
+      </div>
+      <div id="operarios-grid" class="operarios-grid">
+        <div class="empty-state"><span class="spinner"></span></div>
+      </div>
     </div>
   </div>
 
   <!-- MODAL: Nuevo/Editar producto -->
-  <div class="modal-backdrop" id="modal-producto">
-    <div class="modal">
-      <div class="modal-header">
+  <div class="prod-modal-backdrop" id="modal-producto">
+    <div class="prod-modal">
+      <div class="prod-modal-header">
         <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
-        <button class="modal-close" onclick="cerrarModalProducto()">×</button>
+        <button class="prod-modal-close" onclick="cerrarModalProducto()">×</button>
       </div>
-      <div class="modal-body">
+      <div class="prod-modal-body">
         <input type="hidden" id="producto-id" />
         <div class="form-row">
           <div class="form-group">
@@ -187,7 +234,7 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="prod-modal-footer">
         <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
       </div>
@@ -200,7 +247,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/produccion.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
 <script>
   // Sobrescribimos guardarProducto() con la ruta corregida (/produccion/productos/)
   async function guardarProducto() {

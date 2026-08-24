@@ -9,6 +9,7 @@ from datetime import date
 
 from apps.core.decorators import login_required_rol, login_required_api
 from apps.administrador.models import Usuario
+from apps.operarios.models import Operario, AsignacionTarea
 
 # ── Decoradores de protección (solo administrador) ──────────────────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
@@ -211,6 +212,76 @@ def orden_detalle(request, id):
 
     o.delete()
     return JsonResponse({'mensaje': 'Registro eliminado'})
+
+
+# ── AVANCE DE OPERARIOS (proceso de confección) ───────
+@admin_required_api
+def avance_operarios(request):
+    """
+    GET /produccion/operarios-avance/
+    Devuelve, por cada operario activo, el estado de sus tareas de
+    confección (asignaciones) para que Producción vea el proceso
+    completo de forma organizada.
+    """
+    operarios = (
+        Operario.objects
+        .select_related('idUsuario')
+        .filter(estado='activo')
+        .order_by('idUsuario__nombre', 'idUsuario__apellido')
+    )
+
+    asignaciones = (
+        AsignacionTarea.objects
+        .select_related('idTarea', 'idOperario')
+        .order_by('fechaInicio')
+    )
+
+    tareas_por_operario = {}
+    for a in asignaciones:
+        tareas_por_operario.setdefault(a.idOperario_id, []).append(a)
+
+    resultado = []
+    for op in operarios:
+        tareas = tareas_por_operario.get(op.idOperario, [])
+
+        pendientes  = sum(1 for t in tareas if t.estado == 'Pendiente')
+        en_progreso = sum(1 for t in tareas if t.estado == 'En Progreso')
+        completadas = sum(1 for t in tareas if t.estado == 'Completada')
+        canceladas  = sum(1 for t in tareas if t.estado == 'Cancelada')
+        total_activas = len(tareas) - canceladas
+        avance_pct = round((completadas / total_activas) * 100) if total_activas > 0 else 0
+
+        resultado.append({
+            'idOperario':   op.idOperario,
+            'nombre':       f'{op.idUsuario.nombre} {op.idUsuario.apellido}'.strip(),
+            'especialidad': op.especialidad,
+            'estado':       op.estado,
+            'contadores': {
+                'pendiente':   pendientes,
+                'enProgreso':  en_progreso,
+                'completada':  completadas,
+                'cancelada':   canceladas,
+            },
+            'avancePct': avance_pct,
+            'tareas': [
+                {
+                    'idAsignacion':      t.idAsignacion,
+                    'nombreTarea':       t.idTarea.nombreTarea,
+                    'proceso':           t.idTarea.proceso,
+                    'tipoPrenda':        t.tipoPrenda,
+                    'cantidadPrendas':   t.cantidadPrendas,
+                    'estado':            t.estado,
+                    'prioridad':         t.prioridad,
+                    'fechaInicio':       str(t.fechaInicio),
+                    'fechaFinalizacion': str(t.fechaFinalizacion) if t.fechaFinalizacion else None,
+                    'horasEstimadas':    float(t.horasEstimadas) if t.horasEstimadas is not None else None,
+                    'horasReales':       float(t.horasReales) if t.horasReales is not None else None,
+                }
+                for t in sorted(tareas, key=lambda t: t.fechaInicio)
+            ],
+        })
+
+    return JsonResponse({'operarios': resultado})
 
 
 # ── KPIs ─────────────────────────────────────────────

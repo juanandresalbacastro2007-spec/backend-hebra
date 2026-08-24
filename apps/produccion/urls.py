@@ -15,4 +15,7 @@ urlpatterns = [
 
     # ── API KPIs ─────────────────────────────────────
     path('kpis/', views.kpis, name='kpis'),
+
+    # ── API Avance de Operarios (proceso de confección) ──
+    path('operarios-avance/', views.avance_operarios, name='avance-operarios'),
 ]

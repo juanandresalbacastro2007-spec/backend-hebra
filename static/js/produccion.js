@@ -28,13 +28,23 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target === e.currentTarget) cerrarModalOrden();
     });
   }
+
+  // Quitar el error de un campo apenas el usuario empieza a corregirlo
+  document.querySelectorAll('.prod-modal input, .prod-modal select, .prod-modal textarea').forEach(el => {
+    const evento = (el.tagName === 'SELECT') ? 'change' : 'input';
+    el.addEventListener(evento, () => {
+      el.classList.remove('campo-invalido');
+      const err = document.getElementById('err-' + el.id);
+      if (err) err.classList.remove('show');
+    });
+  });
 });
 
 // ── NAVEGACIÓN (TABS) ─────────────────────────────
 function switchTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  
+
   el.classList.add('active');
   const tabContent = document.getElementById('tab-' + name);
   if (tabContent) {
@@ -49,11 +59,38 @@ function actualizarFechaHora() {
   const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const horas   = ahora.getHours().toString().padStart(2, '0');
   const minutos = ahora.getMinutes().toString().padStart(2, '0');
-  
+
   const elDateTime = document.getElementById('live-datetime');
   if (elDateTime) {
     elDateTime.textContent = `${dias[ahora.getDay()]} ${ahora.getDate()} ${meses[ahora.getMonth()]} — ${horas}:${minutos}`;
   }
+}
+
+// ── VALIDACIÓN GENÉRICA DE CAMPOS OBLIGATORIOS ────
+// Marca (o desmarca) un input/select/textarea como inválido y muestra/oculta
+// su mensaje de error asociado (id="err-<inputId>"), igual al estilo de la imagen de referencia.
+function validarCampo(inputId, esValido) {
+  const input = document.getElementById(inputId);
+  const err = document.getElementById('err-' + inputId);
+  if (!input) return esValido;
+
+  if (!esValido) {
+    input.classList.add('campo-invalido');
+    if (err) err.classList.add('show');
+  } else {
+    input.classList.remove('campo-invalido');
+    if (err) err.classList.remove('show');
+  }
+  return esValido;
+}
+
+function limpiarValidacion(ids) {
+  ids.forEach(id => {
+    const input = document.getElementById(id);
+    const err = document.getElementById('err-' + id);
+    if (input) input.classList.remove('campo-invalido');
+    if (err) err.classList.remove('show');
+  });
 }
 
 // ── KPIs ──────────────────────────────────────────
@@ -74,7 +111,6 @@ async function cargarKPIs() {
     document.getElementById('kpi-proceso').textContent     = enProceso;
     document.getElementById('kpi-pendientes').textContent  = pendientes;
 
-    // Barra de proporción: qué % representa cada estado sobre el total de órdenes
     const pct = (n) => totalOrdenes > 0 ? Math.max(Math.round((n / totalOrdenes) * 100), 4) : 0;
     setBarraKPI('kpi-bar-completadas', pct(completadas));
     setBarraKPI('kpi-bar-proceso', pct(enProceso));
@@ -214,7 +250,7 @@ function actualizarQuickNav(kpis) {
   });
 }
 
-
+// ── PRODUCTOS ──────────────────────────────────────
 async function cargarProductos() {
   try {
     const r = await fetch(`${BASE}/productos/`);
@@ -229,8 +265,6 @@ async function cargarProductos() {
 function renderProductos(lista) {
   const tb = document.getElementById('tbody-productos');
   if (!tb) return;
-
-  const iconos = { Camisa: '👔', 'Pantalón': '👖', Uniforme: '🎽', Chaqueta: '🧥', Accesorio: '👜' };
 
   if (!lista.length) {
     tb.innerHTML = `
@@ -273,56 +307,70 @@ function filtrarProductos() {
 function poblarSelectProductos() {
   const select = document.getElementById('o-producto');
   if (!select) return;
-  select.innerHTML = '<option value="">Seleccionar producto...</option>' + 
+  const valorActual = select.value;
+  select.innerHTML = '<option value="">Seleccionar producto...</option>' +
     allProductos.map(p => `<option value="${p.idProducto}">${p.nombre}</option>`).join('');
+  if (valorActual) select.value = valorActual;
 }
 
 // ── CONTROL DEL MODAL DE PRODUCTOS ────────────────
 function abrirModalProducto() {
+  limpiarValidacion(['prod-nombre', 'prod-categoria', 'prod-descripcion']);
   document.getElementById('modal-producto-title').textContent = '➕ Nuevo Producto';
   document.getElementById('producto-id').value = '';
   document.getElementById('prod-nombre').value = '';
   document.getElementById('prod-categoria').value = '';
   document.getElementById('prod-precio').value = 0;
   document.getElementById('prod-descripcion').value = '';
+  document.getElementById('modal-producto').classList.add('open');
   document.getElementById('modal-producto').style.display = 'flex';
 }
 
 function cerrarModalProducto() {
+  document.getElementById('modal-producto').classList.remove('open');
   document.getElementById('modal-producto').style.display = 'none';
 }
 
 function editarProducto(id) {
   const p = allProductos.find(prod => prod.idProducto === id);
   if (!p) return;
-  
+
+  limpiarValidacion(['prod-nombre', 'prod-categoria', 'prod-descripcion']);
   document.getElementById('modal-producto-title').textContent = '✏️ Editar Producto';
   document.getElementById('producto-id').value = p.idProducto;
   document.getElementById('prod-nombre').value = p.nombre;
   document.getElementById('prod-categoria').value = p.categoria;
   document.getElementById('prod-precio').value = p.precio;
   document.getElementById('prod-descripcion').value = p.descripcion;
+  document.getElementById('modal-producto').classList.add('open');
   document.getElementById('modal-producto').style.display = 'flex';
 }
 
 async function guardarProducto() {
+  limpiarValidacion(['prod-nombre', 'prod-categoria', 'prod-descripcion']);
+
   const id = document.getElementById('producto-id').value;
   const data = {
-    nombre: document.getElementById('prod-nombre').value,
+    nombre: document.getElementById('prod-nombre').value.trim(),
     categoria: document.getElementById('prod-categoria').value,
     precio: parseFloat(document.getElementById('prod-precio').value) || 0,
-    descripcion: document.getElementById('prod-descripcion').value
+    descripcion: document.getElementById('prod-descripcion').value.trim()
   };
 
-  if (!data.nombre || !data.categoria) {
-    showToast('Por favor, llena los campos obligatorios (*)', 'error');
+  // ── Validación obligatoria por campo (borde rojo + mensaje) ──
+  const okNombre = validarCampo('prod-nombre', !!data.nombre);
+  const okCategoria = validarCampo('prod-categoria', !!data.categoria);
+  const okDescripcion = validarCampo('prod-descripcion', !!data.descripcion);
+
+  if (!okNombre || !okCategoria || !okDescripcion) {
+    showToast('Por favor, completa los campos obligatorios (*)', 'error');
     return;
   }
 
   try {
     const url = id ? `${BASE}/productos/${id}/` : `${BASE}/productos/`;
     const method = id ? 'PUT' : 'POST';
-    
+
     const r = await fetch(url, {
       method: method,
       headers: { 'Content-Type': 'application/json' },
@@ -330,7 +378,7 @@ async function guardarProducto() {
     });
 
     if (!r.ok) throw new Error('Error al guardar el producto');
-    
+
     showToast(id ? 'Producto actualizado con éxito' : 'Producto creado con éxito', 'success');
     cerrarModalProducto();
     cargarProductos();
@@ -429,14 +477,12 @@ function renderGanttOrdenes(lista) {
   let minFecha = validas.reduce((min, o) => { const d = parseF(o.fechaInicio); return d < min ? d : min; }, parseF(validas[0].fechaInicio));
   let maxFecha = validas.reduce((max, o) => { const d = finReal(o); return d > max ? d : max; }, finReal(validas[0]));
 
-  // Margen de unos días a cada lado para que las barras no queden pegadas al borde
   minFecha = new Date(minFecha.getTime() - 3 * 86400000);
   maxFecha = new Date(maxFecha.getTime() + 3 * 86400000);
 
   const totalMs = maxFecha.getTime() - minFecha.getTime();
   const pctDe = fecha => ((fecha.getTime() - minFecha.getTime()) / totalMs) * 100;
 
-  // ── Encabezado de meses ──
   const meses = [];
   let cursor = new Date(minFecha.getFullYear(), minFecha.getMonth(), 1);
   while (cursor <= maxFecha) {
@@ -492,6 +538,7 @@ function formatoCorto(fecha) {
 
 // ── CONTROL DEL MODAL DE ÓRDENES ──────────────────
 function abrirModalOrden() {
+  limpiarValidacion(['o-producto', 'o-cantidad', 'o-fecha-inicio', 'o-fecha-fin', 'o-estado']);
   document.getElementById('modal-orden-title').textContent = '🗒 Nueva Orden de Producción';
   document.getElementById('orden-id').value = '';
   document.getElementById('o-producto').value = '';
@@ -501,10 +548,12 @@ function abrirModalOrden() {
   document.getElementById('o-fecha-fin').value = '';
   document.getElementById('o-costo-estimado').value = '';
   document.getElementById('o-estado').value = 'Pendiente';
+  document.getElementById('modal-orden').classList.add('open');
   document.getElementById('modal-orden').style.display = 'flex';
 }
 
 function cerrarModalOrden() {
+  document.getElementById('modal-orden').classList.remove('open');
   document.getElementById('modal-orden').style.display = 'none';
 }
 
@@ -512,6 +561,7 @@ function editarOrden(id) {
   const o = allOrdenes.find(ord => ord.idProduccion === id);
   if (!o) return;
 
+  limpiarValidacion(['o-producto', 'o-cantidad', 'o-fecha-inicio', 'o-fecha-fin', 'o-estado']);
   document.getElementById('modal-orden-title').textContent = '✏️ Editar Orden';
   document.getElementById('orden-id').value = o.idProduccion;
   document.getElementById('o-producto').value = o.idProducto;
@@ -521,23 +571,47 @@ function editarOrden(id) {
   document.getElementById('o-fecha-fin').value = o.fechaEstimadaFin;
   document.getElementById('o-costo-estimado').value = o.costoEstimado || '';
   document.getElementById('o-estado').value = o.estado;
+  document.getElementById('modal-orden').classList.add('open');
   document.getElementById('modal-orden').style.display = 'flex';
 }
 
 async function guardarOrden() {
+  limpiarValidacion(['o-producto', 'o-cantidad', 'o-fecha-inicio', 'o-fecha-fin', 'o-estado']);
+
   const id = document.getElementById('orden-id').value;
+  const idProductoVal = document.getElementById('o-producto').value;
+  const cantidadVal = parseInt(document.getElementById('o-cantidad').value);
+  const fechaInicioVal = document.getElementById('o-fecha-inicio').value;
+  const fechaFinVal = document.getElementById('o-fecha-fin').value;
+  const estadoVal = document.getElementById('o-estado').value;
+
   const data = {
-    idProducto: parseInt(document.getElementById('o-producto').value),
-    cantidadRequerida: parseInt(document.getElementById('o-cantidad').value),
-    descripcion: document.getElementById('o-descripcion').value,
-    fechaInicio: document.getElementById('o-fecha-inicio').value,
-    fechaEstimadaFin: document.getElementById('o-fecha-fin').value,
+    idProducto: idProductoVal ? parseInt(idProductoVal) : null,
+    cantidadRequerida: isNaN(cantidadVal) ? 0 : cantidadVal,
+    descripcion: document.getElementById('o-descripcion').value.trim(),
+    fechaInicio: fechaInicioVal,
+    fechaEstimadaFin: fechaFinVal,
     costoEstimado: document.getElementById('o-costo-estimado').value ? parseFloat(document.getElementById('o-costo-estimado').value) : null,
-    estado: document.getElementById('o-estado').value
+    estado: estadoVal
   };
 
-  if (!data.idProducto || !data.cantidadRequerida || !data.fechaInicio || !data.fechaEstimadaFin) {
-    showToast('Por favor, llena los campos obligatorios (*)', 'error');
+  // ── Validación obligatoria por campo (borde rojo + mensaje) ──
+  const okProducto = validarCampo('o-producto', !!data.idProducto);
+  const okCantidad = validarCampo('o-cantidad', data.cantidadRequerida > 0);
+  const okInicio = validarCampo('o-fecha-inicio', !!data.fechaInicio);
+  const okFin = validarCampo('o-fecha-fin', !!data.fechaEstimadaFin);
+  const okEstado = validarCampo('o-estado', !!data.estado);
+
+  // Validación cruzada: la fecha fin no puede ser anterior a la fecha inicio
+  let okRangoFechas = true;
+  if (okInicio && okFin && data.fechaEstimadaFin < data.fechaInicio) {
+    okRangoFechas = validarCampo('o-fecha-fin', false);
+    const err = document.getElementById('err-o-fecha-fin');
+    if (err) err.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+  }
+
+  if (!okProducto || !okCantidad || !okInicio || !okFin || !okEstado || !okRangoFechas) {
+    showToast('Por favor, completa los campos obligatorios (*)', 'error');
     return;
   }
 
@@ -680,6 +754,16 @@ function showToast(msg, type = 'success') {
 }
 
 // ── EXPORTAR A PDF ─────────────────────────────────
+// Genera un único PDF organizado en secciones:
+//   1. Portada con resumen ejecutivo (KPIs generales)
+//   2. Catálogo de Productos
+//   3. Órdenes de Producción (respetando el filtro/búsqueda activos)
+//   4. Avance de Operarios
+// Cada página lleva encabezado con marca y pie de página con numeración.
+
+const PDF_COLOR_PRIMARIO = [57, 91, 100];   // var(--primary)
+const PDF_COLOR_TEXTO_MUTED = [106, 123, 130]; // var(--muted)
+
 function exportarCSV() {
   exportarPDF();
 }
@@ -692,78 +776,215 @@ function exportarPDF() {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  const activeContent = document.querySelector('.tab-content.active');
-  const activeTabLabel = document.querySelector('.tab.active');
-  const titulo = activeTabLabel ? activeTabLabel.textContent.trim() : 'Producción';
+  const fechaGeneracion = new Date().toLocaleString('es-CO');
 
-  doc.setFontSize(15);
-  doc.text('HebraTech — Módulo de Producción', 14, 16);
-  doc.setFontSize(11);
-  doc.setTextColor(100);
-  doc.text(titulo, 14, 23);
-  doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 29);
+  // ── Filtros/búsquedas actualmente aplicados en pantalla (para dejarlos registrados) ──
+  const filtroOrdenEstado = document.getElementById('filter-estado-ord')?.value || '';
+  const filtroOrdenBusqueda = document.getElementById('search-ordenes')?.value || '';
+  const filtroProdCategoria = document.getElementById('filter-cat')?.value || '';
+  const filtroProdBusqueda = document.getElementById('search-productos')?.value || '';
+  const filtroOperarioEstado = document.getElementById('filter-estado-tarea')?.value || '';
+  const filtroOperarioBusqueda = document.getElementById('search-operarios')?.value || '';
 
-  let head = [];
-  let body = [];
-  let archivo = 'produccion';
+  const ordenesFiltradas = aplicarFiltroOrdenes(allOrdenes, filtroOrdenBusqueda, filtroOrdenEstado);
+  const productosFiltrados = aplicarFiltroProductos(allProductos, filtroProdBusqueda, filtroProdCategoria);
 
-  if (activeContent && activeContent.id === 'tab-general') {
-    head = [['Indicador', 'Valor']];
-    body = Array.from(document.querySelectorAll('#overview-kpi-grid .overview-kpi-card')).map(card => [
-      card.querySelector('.overview-kpi-lbl')?.textContent || '',
-      card.querySelector('.overview-kpi-val')?.textContent || ''
-    ]);
-    archivo = 'vista_general_sistema';
-  } else if (activeContent && activeContent.id === 'tab-productos') {
-    head = [['Nombre', 'Categoría', 'Precio', 'Descripción']];
-    body = allProductos.map(p => [
-      p.nombre,
-      p.categoria,
-      `$${Number(p.precio).toLocaleString('es-CO')}`,
-      p.descripcion || '—'
-    ]);
-    archivo = 'productos';
-  } else if (activeContent && activeContent.id === 'tab-ordenes') {
-    head = [['ID', 'Producto', 'Cantidad', 'Fecha Inicio', 'Fecha Est. Fin', 'Estado']];
-    body = allOrdenes.map(o => [
-      o.idProduccion,
-      o.producto || 'Sin producto',
-      o.cantidadRequerida,
-      o.fechaInicio,
-      o.fechaEstimadaFin,
-      o.estado
-    ]);
-    archivo = 'ordenes_produccion';
-  } else if (activeContent && activeContent.id === 'tab-operarios') {
-    head = [['Operario', 'Especialidad', 'Avance', 'Pendiente', 'En progreso', 'Completada']];
-    body = allOperariosAvance.map(op => {
-      const c = op.contadores || {};
-      return [
-        op.nombre,
-        op.especialidad || 'Sin especialidad',
-        `${op.avancePct}%`,
-        c.pendiente || 0,
-        c.enProgreso || 0,
-        c.completada || 0
-      ];
-    });
-    archivo = 'avance_operarios';
-  }
-
-  if (!body.length) {
-    showToast('No hay datos para exportar en esta pestaña', 'info');
+  if (!allProductos.length && !allOrdenes.length && !allOperariosAvance.length) {
+    showToast('No hay datos disponibles para exportar', 'info');
     return;
   }
 
+  // ── PORTADA / RESUMEN EJECUTIVO ──
+  pdfEncabezadoPagina(doc, 'Reporte General de Producción');
+
+  doc.setFontSize(10);
+  doc.setTextColor(...PDF_COLOR_TEXTO_MUTED);
+  doc.text(`Generado: ${fechaGeneracion}`, 14, 34);
+
+  const completadas = allOrdenes.filter(o => o.estado === 'Completado').length;
+  const enProceso = allOrdenes.filter(o => o.estado === 'En Progreso').length;
+  const pendientes = allOrdenes.filter(o => o.estado === 'Pendiente').length;
+  const detenidas = allOrdenes.filter(o => o.estado === 'Detenido').length;
+
   doc.autoTable({
-    startY: 35,
-    head: head,
-    body: body,
-    headStyles: { fillColor: [57, 91, 100] },
-    styles: { fontSize: 9, cellPadding: 4 }
+    startY: 42,
+    head: [['Indicador', 'Valor']],
+    body: [
+      ['Tipos de producto registrados', allProductos.length],
+      ['Órdenes totales', allOrdenes.length],
+      ['Órdenes completadas', completadas],
+      ['Órdenes en progreso', enProceso],
+      ['Órdenes pendientes', pendientes],
+      ['Órdenes detenidas', detenidas],
+      ['Operarios con tareas activas', allOperariosAvance.length],
+    ],
+    headStyles: { fillColor: PDF_COLOR_PRIMARIO },
+    styles: { fontSize: 9.5, cellPadding: 4 },
+    margin: { top: 28 },
+    didDrawPage: () => pdfPiePagina(doc)
   });
 
-  const fecha = new Date().toISOString().split('T')[0];
-  doc.save(`${archivo}_${fecha}.pdf`);
+  // ── SECCIÓN: PRODUCTOS ──
+  doc.addPage();
+  pdfEncabezadoPagina(doc, 'Catálogo de Productos');
+  pdfLineaFiltros(doc, [
+    filtroProdBusqueda ? `Búsqueda: "${filtroProdBusqueda}"` : null,
+    filtroProdCategoria ? `Categoría: ${filtroProdCategoria}` : null,
+  ]);
+
+  if (productosFiltrados.length) {
+    doc.autoTable({
+      startY: 38,
+      head: [['Nombre', 'Categoría', 'Precio', 'Descripción']],
+      body: productosFiltrados.map(p => [
+        p.nombre,
+        p.categoria,
+        `$${Number(p.precio).toLocaleString('es-CO')}`,
+        p.descripcion || '—'
+      ]),
+      headStyles: { fillColor: PDF_COLOR_PRIMARIO },
+      styles: { fontSize: 9, cellPadding: 4 },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 'auto' }
+      },
+      margin: { top: 28 },
+      didDrawPage: () => pdfPiePagina(doc)
+    });
+  } else {
+    pdfMensajeSinDatos(doc, 'No hay productos que coincidan con el filtro aplicado.');
+  }
+
+  // ── SECCIÓN: ÓRDENES DE PRODUCCIÓN ──
+  doc.addPage();
+  pdfEncabezadoPagina(doc, 'Órdenes de Producción');
+  pdfLineaFiltros(doc, [
+    filtroOrdenBusqueda ? `Búsqueda: "${filtroOrdenBusqueda}"` : null,
+    filtroOrdenEstado ? `Estado: ${filtroOrdenEstado}` : null,
+  ]);
+
+  if (ordenesFiltradas.length) {
+    doc.autoTable({
+      startY: 38,
+      head: [['ID', 'Producto', 'Cantidad', 'Inicio', 'Fin Est.', 'Estado']],
+      body: ordenesFiltradas.map(o => [
+        o.idProduccion,
+        o.producto || 'Sin producto',
+        o.cantidadRequerida,
+        o.fechaInicio,
+        o.fechaEstimadaFin,
+        o.estado
+      ]),
+      headStyles: { fillColor: PDF_COLOR_PRIMARIO },
+      styles: { fontSize: 9, cellPadding: 4 },
+      columnStyles: {
+        0: { cellWidth: 14 },
+        2: { cellWidth: 22, halign: 'center' },
+        3: { cellWidth: 26 },
+        4: { cellWidth: 26 },
+        5: { cellWidth: 28 }
+      },
+      margin: { top: 28 },
+      didDrawPage: () => pdfPiePagina(doc)
+    });
+  } else {
+    pdfMensajeSinDatos(doc, 'No hay órdenes que coincidan con el filtro aplicado.');
+  }
+
+  // ── SECCIÓN: AVANCE DE OPERARIOS ──
+  doc.addPage();
+  pdfEncabezadoPagina(doc, 'Avance de Operarios');
+  pdfLineaFiltros(doc, [
+    filtroOperarioBusqueda ? `Búsqueda: "${filtroOperarioBusqueda}"` : null,
+    filtroOperarioEstado ? `Estado de tarea: ${filtroOperarioEstado}` : null,
+  ]);
+
+  if (allOperariosAvance.length) {
+    doc.autoTable({
+      startY: 38,
+      head: [['Operario', 'Especialidad', 'Avance', 'Pendiente', 'En progreso', 'Completada']],
+      body: allOperariosAvance.map(op => {
+        const c = op.contadores || {};
+        return [
+          op.nombre,
+          op.especialidad || 'Sin especialidad',
+          `${op.avancePct}%`,
+          c.pendiente || 0,
+          c.enProgreso || 0,
+          c.completada || 0
+        ];
+      }),
+      headStyles: { fillColor: PDF_COLOR_PRIMARIO },
+      styles: { fontSize: 9, cellPadding: 4 },
+      margin: { top: 28 },
+      didDrawPage: () => pdfPiePagina(doc)
+    });
+  } else {
+    pdfMensajeSinDatos(doc, 'No hay operarios con tareas registradas.');
+  }
+
+  // ── Repasar todas las páginas para que "Página X de Y" muestre el total correcto ──
+  const totalPaginasFinal = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPaginasFinal; i++) {
+    doc.setPage(i);
+    pdfPiePagina(doc, i, totalPaginasFinal);
+  }
+
+  const fechaArchivo = new Date().toISOString().split('T')[0];
+  doc.save(`reporte_produccion_${fechaArchivo}.pdf`);
   showToast('PDF generado con éxito', 'success');
+}
+
+// ── Helpers de filtrado (reutilizan la misma lógica que filtrarOrdenes/filtrarProductos) ──
+function aplicarFiltroOrdenes(lista, texto, estado) {
+  const q = (texto || '').toLowerCase();
+  return lista.filter(o => {
+    const matchQ = !q || (o.descripcion && o.descripcion.toLowerCase().includes(q)) || (o.producto && o.producto.toLowerCase().includes(q));
+    const matchEst = !estado || o.estado === estado;
+    return matchQ && matchEst;
+  });
+}
+
+function aplicarFiltroProductos(lista, texto, categoria) {
+  const q = (texto || '').toLowerCase();
+  return lista.filter(p => (!q || p.nombre.toLowerCase().includes(q)) && (!categoria || p.categoria === categoria));
+}
+
+// ── Helpers de maquetación del PDF ──
+function pdfEncabezadoPagina(doc, subtitulo) {
+  doc.setFontSize(15);
+  doc.setTextColor(...PDF_COLOR_PRIMARIO);
+  doc.text('HebraTech — Módulo de Producción', 14, 16);
+  doc.setDrawColor(...PDF_COLOR_PRIMARIO);
+  doc.setLineWidth(0.6);
+  doc.line(14, 19, 196, 19);
+  doc.setFontSize(12);
+  doc.setTextColor(44, 51, 51);
+  doc.text(subtitulo, 14, 27);
+}
+
+function pdfLineaFiltros(doc, partes) {
+  const activos = partes.filter(Boolean);
+  doc.setFontSize(9);
+  doc.setTextColor(...PDF_COLOR_TEXTO_MUTED);
+  doc.text(activos.length ? `Filtros aplicados: ${activos.join('  ·  ')}` : 'Filtros aplicados: ninguno', 14, 33);
+}
+
+function pdfMensajeSinDatos(doc, mensaje) {
+  doc.setFontSize(10);
+  doc.setTextColor(...PDF_COLOR_TEXTO_MUTED);
+  doc.text(mensaje, 14, 45);
+  pdfPiePagina(doc);
+}
+
+function pdfPiePagina(doc, paginaActual, totalPaginas) {
+  const alto = doc.internal.pageSize.getHeight();
+  const num = paginaActual || doc.internal.getCurrentPageInfo().pageNumber;
+  const total = totalPaginas || doc.internal.getNumberOfPages();
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PDF_COLOR_TEXTO_MUTED);
+  doc.text(`Página ${num} de ${total}`, 196, alto - 10, { align: 'right' });
+  doc.text('HebraTech · Sistema de Gestión de Producción', 14, alto - 10);
 }

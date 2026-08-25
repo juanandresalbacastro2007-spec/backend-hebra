@@ -6,12 +6,15 @@
 {% block topbar_sub %}Panorama completo de HebraTech: usuarios, órdenes, tareas, incidencias e inventario en tiempo real{% endblock %}
 
 {% block topbar_extra %}
-<div class="ms-auto d-flex gap-2">
-  <button class="btn btn-outline-danger btn-sm" onclick="exportarCSV()">
-    <i class="bi bi-file-earmark-pdf-fill me-1"></i>Exportar a pdf
+<div class="ms-auto d-flex gap-2 topbar-btn-group" style="flex-shrink:0;">
+  <button class="btn btn-outline-danger btn-sm btn-pill" onclick="exportarCSV()">
+    <i class="bi bi-file-earmark-pdf-fill me-1"></i>Exportar PDF
   </button>
-  <button class="btn btn-dark btn-sm" onclick="abrirModalProducto()">
+  <button class="btn btn-dark btn-sm btn-pill" onclick="abrirModalProducto()">
     <i class="bi bi-plus-lg me-1"></i>Nuevo Producto
+  </button>
+  <button class="btn btn-dark btn-sm btn-pill" onclick="abrirModalOrden()">
+    <i class="bi bi-plus-lg me-1"></i>Nueva Orden
   </button>
 </div>
 {% endblock %}
@@ -73,7 +76,6 @@
   <div id="tab-general" class="tab-content active">
 
     <div class="overview-kpi-grid" id="overview-kpi-grid">
-      <!-- Se rellena dinámicamente desde vista-general/ -->
       <div class="empty-state" style="grid-column:1/-1"><span class="spinner"></span></div>
     </div>
 
@@ -281,6 +283,7 @@
           <div class="form-group">
             <label>Nombre *</label>
             <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
+            <span class="campo-error-msg" id="err-prod-nombre">Ingresa el nombre del producto.</span>
           </div>
           <div class="form-group">
             <label>Categoría *</label>
@@ -292,6 +295,7 @@
               <option>Chaqueta</option>
               <option>Accesorio</option>
             </select>
+            <span class="campo-error-msg" id="err-prod-categoria">Selecciona una categoría.</span>
           </div>
         </div>
         <div class="form-row">
@@ -304,12 +308,78 @@
           <div class="form-group full">
             <label>Descripción *</label>
             <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
+            <span class="campo-error-msg" id="err-prod-descripcion">Ingresa una descripción del producto.</span>
           </div>
         </div>
       </div>
       <div class="prod-modal-footer">
         <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Nueva/Editar orden de producción -->
+  <div class="prod-modal-backdrop" id="modal-orden">
+    <div class="prod-modal">
+      <div class="prod-modal-header">
+        <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
+        <button class="prod-modal-close" onclick="cerrarModalOrden()">×</button>
+      </div>
+      <div class="prod-modal-body">
+        <input type="hidden" id="orden-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Producto *</label>
+            <select id="o-producto">
+              <option value="">Seleccionar producto...</option>
+            </select>
+            <span class="campo-error-msg" id="err-o-producto">Selecciona un producto.</span>
+          </div>
+          <div class="form-group">
+            <label>Cantidad requerida *</label>
+            <input id="o-cantidad" type="number" min="1" step="1" value="1" />
+            <span class="campo-error-msg" id="err-o-cantidad">Ingresa una cantidad mayor a 0.</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Descripción</label>
+            <textarea id="o-descripcion" placeholder="Descripción de la orden..."></textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha de inicio *</label>
+            <input id="o-fecha-inicio" type="date" />
+            <span class="campo-error-msg" id="err-o-fecha-inicio">Ingresa la fecha de inicio.</span>
+          </div>
+          <div class="form-group">
+            <label>Fecha estimada de fin *</label>
+            <input id="o-fecha-fin" type="date" />
+            <span class="campo-error-msg" id="err-o-fecha-fin">Ingresa la fecha estimada de fin.</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Costo estimado</label>
+            <input id="o-costo-estimado" type="number" min="0" step="0.01" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label>Estado *</label>
+            <select id="o-estado">
+              <option value="Pendiente">Pendiente</option>
+              <option value="En Progreso">En Progreso</option>
+              <option value="Completado">Completado</option>
+              <option value="Detenido">Detenido</option>
+            </select>
+            <span class="campo-error-msg" id="err-o-estado">Selecciona un estado inicial.</span>
+          </div>
+        </div>
+      </div>
+      <div class="prod-modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
       </div>
     </div>
   </div>
@@ -323,59 +393,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
-<script>
-  // Sobrescribimos guardarProducto() con la ruta corregida (/produccion/productos/)
-  async function guardarProducto() {
-      const idProducto = document.getElementById('producto-id').value;
-      const nombre = document.getElementById('prod-nombre').value.trim();
-      const categoria = document.getElementById('prod-categoria').value;
-      const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
-      const descripcion = document.getElementById('prod-descripcion').value.trim();
-
-      if (!nombre || !categoria || !descripcion) {
-          mostrarAlertaToast("Por favor, completa todos los campos obligatorios (*).", "error");
-          return;
-      }
-
-      const datosProducto = { nombre, categoria, precio, descripcion };
-      const url = idProducto ? `/produccion/productos/${idProducto}/` : '/produccion/productos/';
-      const metodo = idProducto ? 'PUT' : 'POST';
-
-      try {
-          const response = await fetch(url, {
-              method: metodo,
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(datosProducto)
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-              throw new Error(data.error || 'Ocurrió un error al procesar la solicitud.');
-          }
-
-          mostrarAlertaToast(idProducto ? '¡Producto actualizado con éxito!' : '¡Producto creado con éxito!', 'success');
-
-          if (typeof cerrarModalProducto === 'function') {
-              cerrarModalProducto();
-          }
-
-          setTimeout(() => { location.reload(); }, 1500);
-
-      } catch (error) {
-          mostrarAlertaToast(error.message, 'error');
-      }
-  }
-
-  function mostrarAlertaToast(mensaje, tipo = 'success') {
-      const toast = document.getElementById('toast');
-      if (!toast) {
-          alert(mensaje);
-          return;
-      }
-      toast.textContent = mensaje;
-      toast.className = `toast show ${tipo}`;
-      setTimeout(() => { toast.className = 'toast'; }, 4000);
-  }
-</script>
 {% endblock %}

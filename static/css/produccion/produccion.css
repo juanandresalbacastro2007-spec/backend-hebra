@@ -1351,3 +1351,99 @@ textarea {
     color: var(--muted);
     font-weight: 500;
 }
+
+/* ═══════════════════════════════════════════════════
+   VALIDACIÓN DE CAMPOS OBLIGATORIOS (Nueva Orden / Producto)
+   ═══════════════════════════════════════════════════ */
+.form-group input.campo-invalido,
+.form-group select.campo-invalido,
+.form-group textarea.campo-invalido {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 0.18rem rgba(220, 53, 69, 0.12) !important;
+}
+
+.campo-error-msg {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.campo-error-msg.show {
+    display: flex;
+}
+
+.campo-error-msg::before {
+    content: "⚠";
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.campo-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+}
+
+/* ═══════════════════════════════════════════════════
+   BOTONES DE TOPBAR ESTILO "PILL" (Exportar / Nuevo Producto / Nueva Orden)
+   ═══════════════════════════════════════════════════ */
+.topbar-btn-group {
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+}
+
+.topbar-btn-group .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px !important;
+    padding: 10px 20px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    border-width: 1.5px !important;
+    line-height: 1.2;
+    box-shadow: none;
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    transition: transform .12s, box-shadow .12s, background .15s, color .15s;
+}
+
+.topbar-btn-group .btn-pill:hover {
+    transform: translateY(-1px);
+}
+
+.topbar-btn-group .btn-pill i {
+    font-size: 16px;
+}
+
+/* Botón "Exportar a pdf" — outline rojo, como "Ver pendientes" en la referencia */
+.topbar-btn-group .btn-outline-danger.btn-pill {
+    background: #ffffff;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.topbar-btn-group .btn-outline-danger.btn-pill:hover {
+    background: rgba(220, 53, 69, 0.06);
+    border-color: var(--danger);
+    color: var(--danger);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.12);
+}
+
+/* Botones "Nuevo Producto" / "Nueva Orden" — sólidos oscuros, como "Nuevo usuario" en la referencia */
+.topbar-btn-group .btn-dark.btn-pill {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: #ffffff;
+}
+
+.topbar-btn-group .btn-dark.btn-pill:hover {
+    background: var(--primary-deep);
+    border-color: var(--primary-deep);
+    box-shadow: 0 4px 12px rgba(44, 51, 51, 0.25);
+}

@@ -1,648 +1,769 @@
-/* static/js/produccion.js */
+// ── CONFIGURACIÓN Y VARIABLES GLOBALES ────────────
+const BASE = '/produccion';
+let allProductos = [];
+let allOrdenes = [];
+let allOperariosAvance = [];
 
+// ── INIT / EVENT LISTENERS ────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  initProduccionModule();
+  actualizarFechaHora();
+  setInterval(actualizarFechaHora, 60000);
+
+  cargarKPIs();
+  cargarVistaGeneral();
+  cargarProductos();
+  cargarOrdenes();
+  cargarAvanceOperarios();
+
+  // Cerrar modales haciendo click fuera de la caja
+  const modalProducto = document.getElementById('modal-producto');
+  if (modalProducto) {
+    modalProducto.addEventListener('click', e => {
+      if (e.target === e.currentTarget) cerrarModalProducto();
+    });
+  }
+  const modalOrden = document.getElementById('modal-orden');
+  if (modalOrden) {
+    modalOrden.addEventListener('click', e => {
+      if (e.target === e.currentTarget) cerrarModalOrden();
+    });
+  }
 });
 
-// Variables Globales del Estado
-let chartOrdenes = null;
-let productosState = [];
-let ordenesState = [];
-
-const BASE_API = '/api/produccion'; // Adaptar al prefijo del Backend Django
-
-/**
- * Utilidad CSRF Token para peticiones AJAX en Django
- */
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
-/**
- * Inicializador principal del módulo
- */
-async function initProduccionModule() {
-  try {
-    await Promise.all([
-      cargarKPIs(),
-      cargarAlertas(),
-      cargarProductos(),
-      cargarOrdenes(),
-      cargarOperarios(),
-      cargarActividadReciente()
-    ]);
-  } catch (err) {
-    console.error('Error durante la inicialización del módulo:', err);
-  } finally {
-    ocultarSpinners();
-  }
-}
-
-/* ── OCULTAR SPINNERS Y LOADERS ── */
-function ocultarSpinners() {
-  const spinners = document.querySelectorAll('.spinner, .spinner-border, .loader, .loading-spinner, [class*="spinner"]');
-  spinners.forEach(s => {
-    s.style.display = 'none';
-  });
-}
-
-/* ── 1. GESTIÓN DE PESTAÑAS (TABS) ── */
-function switchTab(tabId, element) {
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+// ── NAVEGACIÓN (TABS) ─────────────────────────────
+function switchTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-
-  const target = document.getElementById(`tab-${tabId}`);
-  if (target) {
-    target.classList.add('active');
-  }
-  if (element) {
-    element.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  el.classList.add('active');
+  const tabContent = document.getElementById('tab-' + name);
+  if (tabContent) {
+    tabContent.classList.add('active');
   }
 }
 
-/* ── 2. KPIS Y CHARTS ── */
+// ── FECHA Y HORA EN VIVO ──────────────────────────
+function actualizarFechaHora() {
+  const ahora = new Date();
+  const dias  = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const horas   = ahora.getHours().toString().padStart(2, '0');
+  const minutos = ahora.getMinutes().toString().padStart(2, '0');
+  
+  const elDateTime = document.getElementById('live-datetime');
+  if (elDateTime) {
+    elDateTime.textContent = `${dias[ahora.getDay()]} ${ahora.getDate()} ${meses[ahora.getMonth()]} — ${horas}:${minutos}`;
+  }
+}
+
+// ── KPIs ──────────────────────────────────────────
 async function cargarKPIs() {
   try {
-    const response = await fetch(`${BASE_API}/kpis/`);
-    let data;
+    const r = await fetch(`${BASE}/kpis/`);
+    if (!r.ok) throw new Error('Error en la respuesta de KPIs');
+    const d = await r.json();
 
-    if (response.ok) {
-      data = await response.json();
-    } else {
-      data = calcularMetricasLocalesData();
-    }
+    const productos    = d.totalProductos ?? 0;
+    const completadas   = d.ordenesCompletadas ?? 0;
+    const enProceso     = d.ordenesEnProceso ?? 0;
+    const pendientes    = d.ordenesPendientes ?? 0;
+    const totalOrdenes  = completadas + enProceso + pendientes;
 
-    aplicarKPIsUI(data);
+    document.getElementById('kpi-productos').textContent   = productos;
+    document.getElementById('kpi-completadas').textContent = completadas;
+    document.getElementById('kpi-proceso').textContent     = enProceso;
+    document.getElementById('kpi-pendientes').textContent  = pendientes;
 
-  } catch (err) {
-    console.warn('Error al cargar KPIs, calculando desde el estado local:', err);
-    aplicarKPIsUI(calcularMetricasLocalesData());
+    // Barra de proporción: qué % representa cada estado sobre el total de órdenes
+    const pct = (n) => totalOrdenes > 0 ? Math.max(Math.round((n / totalOrdenes) * 100), 4) : 0;
+    setBarraKPI('kpi-bar-completadas', pct(completadas));
+    setBarraKPI('kpi-bar-proceso', pct(enProceso));
+    setBarraKPI('kpi-bar-pendientes', pct(pendientes));
+  } catch (e) {
+    console.error('Error KPIs:', e);
   }
 }
 
-function calcularMetricasLocalesData() {
-  const totalProductos = productosState.length || 8;
-  const completadas = ordenesState.filter(o => o.estado === 'Completado').length || 1;
-  const enProceso = ordenesState.filter(o => o.estado === 'En Progreso').length || 0;
-  const pendientes = ordenesState.filter(o => o.estado === 'Pendiente').length || 0;
-  const detenidas = ordenesState.filter(o => o.estado === 'Detenido').length || 0;
-
-  return {
-    totalProductos,
-    ordenesCompletadas: completadas,
-    ordenesEnProceso: enProceso,
-    ordenesPendientes: pendientes,
-    ordenesDetenidas: detenidas,
-    saludScore: 94,
-    incidenciasAbiertas: 2,
-    stockStatus: 'Normal'
-  };
+function setBarraKPI(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = `${pct}%`;
 }
 
-function aplicarKPIsUI(data) {
-  const kpiProd = document.getElementById('kpi-productos');
-  const kpiComp = document.getElementById('kpi-completadas');
-  const kpiProc = document.getElementById('kpi-proceso');
+// ── Navegación desde las KPI cards clickeables ────
+function irAProductos() {
+  const tabEl = document.querySelector('.tab[onclick*="productos"]');
+  if (tabEl) switchTab('productos', tabEl);
+}
 
-  if (kpiProd) kpiProd.textContent = data.totalProductos ?? 0;
-  if (kpiComp) kpiComp.textContent = data.ordenesCompletadas ?? 0;
-  if (kpiProc) kpiProc.textContent = data.ordenesEnProceso ?? 0;
+function irAOrdenesFiltradas(estado) {
+  const tabEl = document.querySelector('.tab[onclick*="ordenes"]');
+  if (tabEl) switchTab('ordenes', tabEl);
 
-  const healthVal = document.getElementById('health-score-val');
-  const healthBar = document.getElementById('health-bar-fill');
-  if (healthVal && healthBar) {
-    healthVal.textContent = `${data.saludScore}%`;
-    healthBar.style.width = `${data.saludScore}%`;
+  const filtro = document.getElementById('filter-estado-ord');
+  if (filtro) {
+    filtro.value = estado;
+    filtrarOrdenes();
   }
 
-  const stockElem = document.getElementById('val-stock-health');
-  if (stockElem) stockElem.textContent = data.stockStatus;
-
-  const incElem = document.getElementById('val-incidencias-health');
-  if (incElem) incElem.textContent = `${data.incidenciasAbiertas} abiertas`;
-
-  renderChartOrdenes(
-    data.ordenesCompletadas || 0,
-    data.ordenesEnProceso || 0,
-    data.ordenesPendientes || 0,
-    data.ordenesDetenidas || 0
-  );
+  const card = document.getElementById('tab-ordenes');
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderChartOrdenes(completadas, enProceso, pendientes, detenidas = 0) {
-  const ctx = document.getElementById('chartOrdenesEstado');
-  if (!ctx) return;
+// ── VISTA GENERAL DEL SISTEMA (panorama cross-módulo) ─
+const ICONOS_KPI_GENERAL = {
+  usuarios:            { icono: '👥', label: 'Usuarios Registrados' },
+  usuariosPendientes:  { icono: '🕓', label: 'Usuarios por Aprobar' },
+  clientes:            { icono: '🤝', label: 'Clientes' },
+  operariosActivos:    { icono: '🧑‍🏭', label: 'Operarios Activos' },
+  ordenesTotales:      { icono: '🧾', label: 'Órdenes Totales' },
+  ordenesPendientes:   { icono: '📋', label: 'Órdenes Pendientes' },
+  ordenesUrgentes:     { icono: '🔥', label: 'Órdenes Urgentes' },
+  tareasPendientes:    { icono: '📌', label: 'Tareas Pendientes' },
+  tareasEnProgreso:    { icono: '🧵', label: 'Tareas en Progreso' },
+  incidenciasAbiertas: { icono: '⚠️', label: 'Incidencias Abiertas' },
+  productos:           { icono: '👕', label: 'Productos Catálogo' },
+  produccionActiva:    { icono: '⚙️', label: 'Producción Activa' },
+  proveedores:         { icono: '🚚', label: 'Proveedores' },
+};
 
-  const dataValues = [completadas, enProceso, pendientes, detenidas];
-  const labels = ['Completadas', 'En Confección', 'Pendientes', 'Detenidas'];
-  const colors = ['#198754', '#395B64', '#FFC107', '#DC2626'];
-
-  if (chartOrdenes) {
-    chartOrdenes.destroy();
-  }
-
-  chartOrdenes = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: dataValues,
-        backgroundColor: colors,
-        borderWidth: 2,
-        borderColor: '#ffffff'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (context) => ` ${context.label}: ${context.raw}`
-          }
-        }
-      },
-      cutout: '72%'
-    }
-  });
-
-  const legendCont = document.getElementById('chart-legend');
-  if (legendCont) {
-    const total = dataValues.reduce((a, b) => a + b, 0) || 1;
-    legendCont.innerHTML = labels.map((lbl, i) => {
-      const pct = Math.round((dataValues[i] / total) * 100);
-      return `
-        <div class="legend-row">
-          <span class="legend-dot-item">
-            <span class="legend-color-dot" style="background:${colors[i]}"></span>
-            ${lbl}
-          </span>
-          <strong>${dataValues[i]} <span style="font-weight:400;color:#64748B;">(${pct}%)</span></strong>
-        </div>`;
-    }).join('');
-  }
-}
-
-/* ── 3. CARGA DE ALERTAS Y VISTA GENERAL ── */
-async function cargarAlertas() {
-  const container = document.getElementById('alertas-banner');
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="alert-item warning">
-      <span>⚠️ <strong>3 órdenes de producción</strong> próximas a vencer esta semana.</span>
-      <a onclick="switchTab('ordenes')">Ver detalle →</a>
-    </div>
-    <div class="alert-item danger">
-      <span>📦 <strong>Inventario crítico:</strong> Hilo industrial azul por debajo del mínimo.</span>
-      <a href="/administrador/inventario/">Ver detalle →</a>
-    </div>
-  `;
-}
-
-/* ── 4. ACTIVIDAD RECIENTE DEL SISTEMA ── */
-async function cargarActividadReciente() {
-  let actividad = [];
-
+async function cargarVistaGeneral() {
   try {
-    const res = await fetch(`${BASE_API}/actividad/`);
-    if (res.ok) {
-      actividad = await res.json();
-    } else {
-      actividad = [
-        { id: 1, titulo: 'Orden #ORD-001 finalizada', descripcion: 'Camisa Polo Industrial - 500 pcs completadas', fecha: 'Hace 10 min', icono: '✅' },
-        { id: 2, titulo: 'Alerta de Inventario', descripcion: 'Hilo industrial azul por debajo del stock mínimo', fecha: 'Hace 30 min', icono: '📦' },
-        { id: 3, titulo: 'Nueva Orden Creada', descripcion: 'Pantalón Jean Trabajo registrada en el sistema', fecha: 'Hace 1 hora', icono: '📋' },
-        { id: 4, titulo: 'Operario Asignado', descripcion: 'Carlos Mendoza asignado a Módulo de Corte', fecha: 'Hace 2 horas', icono: '👤' }
-      ];
-    }
-  } catch (err) {
-    actividad = [
-      { id: 1, titulo: 'Orden #ORD-001 finalizada', descripcion: 'Camisa Polo Industrial - 500 pcs completadas', fecha: 'Hace 10 min', icono: '✅' },
-      { id: 2, titulo: 'Alerta de Inventario', descripcion: 'Hilo industrial azul por debajo del stock mínimo', fecha: 'Hace 30 min', icono: '📦' },
-      { id: 3, titulo: 'Nueva Orden Creada', descripcion: 'Pantalón Jean Trabajo registrada en el sistema', fecha: 'Hace 1 hora', icono: '📋' }
-    ];
-  }
+    const r = await fetch(`${BASE}/vista-general/`);
+    if (!r.ok) throw new Error('Error al cargar la vista general');
+    const data = await r.json();
 
-  renderActividadReciente(actividad);
+    renderOverviewKPIs(data.kpis || {});
+    renderOverviewAlertas(data.alertas || []);
+    renderOverviewActividad(data.actividad || []);
+    actualizarQuickNav(data.kpis || {});
+  } catch (e) {
+    console.error('Error cargando vista general:', e);
+    const grid = document.getElementById('overview-kpi-grid');
+    if (grid) grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>No se pudo cargar la vista general del sistema</p></div>`;
+  }
 }
 
-function renderActividadReciente(lista) {
-  const target = document.getElementById('overview-actividad');
-  if (!target) return;
+function renderOverviewKPIs(kpis) {
+  const grid = document.getElementById('overview-kpi-grid');
+  if (!grid) return;
 
-  if (lista.length === 0) {
-    target.innerHTML = `<p style="text-align:center;color:#64748B;padding:1rem;">No hay actividad reciente.</p>`;
+  const claves = Object.keys(ICONOS_KPI_GENERAL).filter(k => kpis[k] !== null && kpis[k] !== undefined);
+
+  if (!claves.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Sin datos disponibles</p></div>`;
     return;
   }
 
-  target.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
-      ${lista.map(item => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:16px;">${item.icono || '📌'}</span>
-            <div>
-              <strong style="font-size:13px;color:#1E293B;display:block;">${item.titulo}</strong>
-              <span style="font-size:12px;color:#64748B;">${item.descripcion}</span>
-            </div>
-          </div>
-          <span style="font-size:11px;color:#94A3B8;white-space:nowrap;">${item.fecha}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-/* ── 5. PRODUCTOS ── */
-async function cargarProductos() {
-  const tbody = document.getElementById('tbody-productos');
-
-  try {
-    const res = await fetch(`${BASE_API}/productos/`);
-    if (res.ok) {
-      productosState = await res.json();
-    } else {
-      productosState = [
-        { id: 1, nombre: 'Camisa Polo Industrial', categoria: 'Camisa', precio: 45000, descripcion: 'Tela algodón con cuello reforzado' },
-        { id: 2, nombre: 'Pantalón Jean Trabajo', categoria: 'Pantalón', precio: 78000, descripcion: 'Mezclilla de alta resistencia' },
-        { id: 3, nombre: 'Chaqueta Impermeable', categoria: 'Chaqueta', precio: 120000, descripcion: 'Con forro térmico y parches reflectivos' }
-      ];
-    }
-    renderTablaProductos(productosState);
-  } catch (err) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger)">Error al cargar productos</td></tr>`;
-  }
-}
-
-function renderTablaProductos(lista) {
-  const tbody = document.getElementById('tbody-productos');
-  if (!tbody) return;
-
-  if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No hay productos encontrados</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = lista.map(p => `
-    <tr>
-      <td><strong>${p.nombre}</strong></td>
-      <td><span class="badge-status" style="background:#E2E8F0;color:#334155">${p.categoria}</span></td>
-      <td>$${Number(p.precio).toLocaleString('es-CO')}</td>
-      <td>${p.descripcion || '—'}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-secondary" onclick="editarProducto(${p.id})">✏️</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function filtrarProductos() {
-  const q = document.getElementById('search-productos')?.value.toLowerCase() || '';
-  const cat = document.getElementById('filter-cat')?.value || '';
-
-  const filtrados = productosState.filter(p => {
-    const matchQ = p.nombre.toLowerCase().includes(q) || p.descripcion.toLowerCase().includes(q);
-    const matchCat = cat === '' || p.categoria === cat;
-    return matchQ && matchCat;
-  });
-
-  renderTablaProductos(filtrados);
-}
-
-/* ── 6. ÓRDENES DE PRODUCCIÓN ── */
-async function cargarOrdenes() {
-  const tbody = document.getElementById('tbody-ordenes');
-
-  try {
-    const res = await fetch(`${BASE_API}/ordenes/`);
-    if (res.ok) {
-      ordenesState = await res.json();
-    } else {
-      ordenesState = [
-        { id: 'ORD-001', producto: 'Camisa Polo Industrial', descripcion: 'Lote de 500 unidades para cliente corporativo', cantidad: 500, fecha_inicio: '2026-08-01', fecha_fin: '2026-08-28', estado: 'Completado' },
-        { id: 'ORD-002', producto: 'Pantalón Jean Trabajo', descripcion: 'Lote prioritario de reposición', cantidad: 200, fecha_inicio: '2026-08-10', fecha_fin: '2026-08-25', estado: 'Pendiente' },
-        { id: 'ORD-003', producto: 'Chaqueta Impermeable', descripcion: 'Dotación completa en confección', cantidad: 150, fecha_inicio: '2026-08-15', fecha_fin: '2026-09-05', estado: 'En Progreso' }
-      ];
-    }
-    renderTablaOrdenes(ordenesState);
-    renderGanttOrdenes(ordenesState);
-  } catch (err) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger)">Error al cargar órdenes</td></tr>`;
-  }
-}
-
-function renderTablaOrdenes(lista) {
-  const tbody = document.getElementById('tbody-ordenes');
-  if (!tbody) return;
-
-  if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No hay órdenes registradas</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = lista.map(o => {
-    const statusClass = o.estado.toLowerCase().replace(' ', '-');
+  grid.innerHTML = claves.map(k => {
+    const meta = ICONOS_KPI_GENERAL[k];
     return `
-      <tr>
-        <td><strong>${o.id}</strong></td>
-        <td>${o.producto}</td>
-        <td>${o.descripcion}</td>
-        <td>${o.cantidad} pcs</td>
-        <td>${o.fecha_inicio}</td>
-        <td>${o.fecha_fin}</td>
-        <td><span class="badge-status ${statusClass}">${o.estado}</span></td>
-        <td>
-          <button class="btn btn-sm btn-outline-dark" onclick="verDetalleOrden('${o.id}')">✏️</button>
-        </td>
-      </tr>
-    `;
+      <div class="overview-kpi-card">
+        <div class="overview-kpi-top">
+          <div class="overview-kpi-icon">${meta.icono}</div>
+          <div class="overview-kpi-val">${kpis[k]}</div>
+        </div>
+        <div class="overview-kpi-lbl">${meta.label}</div>
+      </div>`;
   }).join('');
 }
 
-function renderGanttOrdenes(lista) {
-  const container = document.getElementById('gantt-ordenes');
-  if (!container) return;
+function renderOverviewAlertas(alertas) {
+  const cont = document.getElementById('alertas-banner');
+  if (!cont) return;
 
-  if (lista.length === 0) {
-    container.innerHTML = `<p style="text-align:center;color:#64748B;">Sin datos para el calendario.</p>`;
+  if (!alertas.length) {
+    cont.innerHTML = '';
     return;
   }
 
-  container.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:10px;padding:10px 0;">
-      ${lista.map(o => `
-        <div style="display:flex;align-items:center;justify-content:space-between;background:#F1F5F9;padding:8px 12px;border-radius:6px;">
-          <div>
-            <strong>${o.id} - ${o.producto}</strong>
-            <div style="font-size:12px;color:#64748B;">${o.fecha_inicio} ➔ ${o.fecha_fin}</div>
-          </div>
-          <span class="badge-status ${o.estado.toLowerCase().replace(' ', '-')}">${o.estado}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
+  cont.innerHTML = alertas.map(a => `
+    <div class="alerta-item ${a.tipo}">
+      <span class="alerta-icono">${a.icono}</span>
+      <span>${a.texto}</span>
+    </div>`).join('');
 }
 
-function filtrarOrdenes() {
-  const q = document.getElementById('search-ordenes')?.value.toLowerCase() || '';
-  const est = document.getElementById('filter-estado-ord')?.value || '';
+function renderOverviewActividad(actividad) {
+  const cont = document.getElementById('overview-actividad');
+  if (!cont) return;
 
-  const filtradas = ordenesState.filter(o => {
-    const matchQ = o.id.toLowerCase().includes(q) || o.producto.toLowerCase().includes(q);
-    const matchEst = est === '' || o.estado === est;
-    return matchQ && matchEst;
-  });
-
-  renderTablaOrdenes(filtradas);
-}
-
-/* ── 7. OPERARIOS ── */
-async function cargarOperarios() {
-  const container = document.getElementById('operarios-grid');
-  if (!container) return;
-
-  const mockOperarios = [
-    { nombre: 'Carlos Mendoza', rol: 'Corte y Trazo', asignadas: 3, avance: 80 },
-    { nombre: 'María Rodríguez', rol: 'Confección Senior', asignadas: 5, avance: 65 },
-    { nombre: 'Juan Pablo Gómez', rol: 'Ensamble y Remate', asignadas: 2, avance: 90 },
-    { nombre: 'Ana Lucía Torres', rol: 'Control de Calidad', asignadas: 4, avance: 40 }
-  ];
-
-  container.innerHTML = mockOperarios.map(op => `
-    <div class="operario-card">
-      <div class="operario-header">
-        <div class="operario-avatar">${op.nombre.charAt(0)}</div>
-        <div>
-          <h4 class="operario-name">${op.nombre}</h4>
-          <p class="operario-role">${op.rol}</p>
-        </div>
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;">
-        <span>Carga de trabajo: ${op.asignadas} tareas</span>
-        <strong>${op.avance}%</strong>
-      </div>
-      <div class="health-progress-bar">
-        <div class="health-progress-fill" style="width: ${op.avance}%;"></div>
-      </div>
-    </div>
-  `).join('');
-}
-
-/* ── 8. GESTIÓN DE MODALES ── */
-function cerrarModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.style.display = 'none';
-}
-
-function abrirModalProducto(id = null) {
-  const modal = document.getElementById('modal-producto');
-  const title = document.getElementById('modal-producto-titulo');
-  const form = document.getElementById('form-producto');
-  if (!modal || !form) return;
-
-  form.reset();
-  document.getElementById('prod-id').value = '';
-
-  if (id) {
-    const prod = productosState.find(p => p.id === id);
-    if (prod) {
-      title.textContent = 'Editar Producto';
-      document.getElementById('prod-id').value = prod.id;
-      document.getElementById('prod-nombre').value = prod.nombre;
-      document.getElementById('prod-categoria').value = prod.categoria;
-      document.getElementById('prod-precio').value = prod.precio;
-      document.getElementById('prod-descripcion').value = prod.descripcion || '';
-    }
-  } else {
-    title.textContent = 'Nuevo Producto';
+  if (!actividad.length) {
+    cont.innerHTML = `<div class="empty-state"><p>No hay actividad reciente registrada</p></div>`;
+    return;
   }
 
-  modal.style.display = 'flex';
+  cont.innerHTML = actividad.map(a => `
+    <div class="activity-item">
+      <div class="activity-icon">${a.icono || '•'}</div>
+      <div class="activity-body">
+        <div class="activity-title">${a.titulo || ''}</div>
+        <div class="activity-detail">${a.detalle || ''}</div>
+        <div class="activity-meta">
+          ${a.estado ? `<span class="estado-badge estado-ord-${(a.estado || '').replace(/\s+/g, '-')}">${a.estado}</span>` : ''}
+          <span class="activity-fecha">${a.fecha || ''}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function actualizarQuickNav(kpis) {
+  document.querySelectorAll('[data-qn]').forEach(el => {
+    const clave = el.getAttribute('data-qn');
+    const valor = kpis[clave];
+    el.textContent = (valor === null || valor === undefined) ? 'Ver módulo' : `${valor} registro(s)`;
+  });
+}
+
+
+async function cargarProductos() {
+  try {
+    const r = await fetch(`${BASE}/productos/`);
+    allProductos = await r.json();
+    renderProductos(allProductos);
+    poblarSelectProductos();
+  } catch (e) {
+    console.error('Error cargando productos:', e);
+  }
+}
+
+function renderProductos(lista) {
+  const tb = document.getElementById('tbody-productos');
+  if (!tb) return;
+
+  const iconos = { Camisa: '👔', 'Pantalón': '👖', Uniforme: '🎽', Chaqueta: '🧥', Accesorio: '👜' };
+
+  if (!lista.length) {
+    tb.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="empty-state">
+            <p>No hay productos registrados</p>
+          </div>
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tb.innerHTML = lista.map(p => `
+    <tr>
+      <td>
+        <div class="prenda-cell">
+          <div class="prenda-name">${p.nombre}</div>
+        </div>
+      </td>
+      <td><span class="badge-cat">${p.categoria}</span></td>
+      <td style="font-weight:600">$${Number(p.precio).toLocaleString('es-CO')}</td>
+      <td style="color:var(--muted);font-size:13px">${p.descripcion || '—'}</td>
+      <td>
+        <div class="action-btns">
+          <button class="action-btn edit" title="Editar" onclick="editarProducto(${p.idProducto})">✏️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filtrarProductos() {
+  const q = document.getElementById('search-productos').value.toLowerCase();
+  const cat = document.getElementById('filter-cat').value;
+  renderProductos(allProductos.filter(p =>
+    p.nombre.toLowerCase().includes(q) && (!cat || p.categoria === cat)
+  ));
+}
+
+function poblarSelectProductos() {
+  const select = document.getElementById('o-producto');
+  if (!select) return;
+  select.innerHTML = '<option value="">Seleccionar producto...</option>' + 
+    allProductos.map(p => `<option value="${p.idProducto}">${p.nombre}</option>`).join('');
+}
+
+// ── CONTROL DEL MODAL DE PRODUCTOS ────────────────
+function abrirModalProducto() {
+  document.getElementById('modal-producto-title').textContent = '➕ Nuevo Producto';
+  document.getElementById('producto-id').value = '';
+  document.getElementById('prod-nombre').value = '';
+  document.getElementById('prod-categoria').value = '';
+  document.getElementById('prod-precio').value = 0;
+  document.getElementById('prod-descripcion').value = '';
+  document.getElementById('modal-producto').style.display = 'flex';
+}
+
+function cerrarModalProducto() {
+  document.getElementById('modal-producto').style.display = 'none';
 }
 
 function editarProducto(id) {
-  abrirModalProducto(id);
+  const p = allProductos.find(prod => prod.idProducto === id);
+  if (!p) return;
+  
+  document.getElementById('modal-producto-title').textContent = '✏️ Editar Producto';
+  document.getElementById('producto-id').value = p.idProducto;
+  document.getElementById('prod-nombre').value = p.nombre;
+  document.getElementById('prod-categoria').value = p.categoria;
+  document.getElementById('prod-precio').value = p.precio;
+  document.getElementById('prod-descripcion').value = p.descripcion;
+  document.getElementById('modal-producto').style.display = 'flex';
 }
 
-async function guardarProducto(e) {
-  e.preventDefault();
-  const id = document.getElementById('prod-id').value;
-  const payload = {
+async function guardarProducto() {
+  const id = document.getElementById('producto-id').value;
+  const data = {
     nombre: document.getElementById('prod-nombre').value,
     categoria: document.getElementById('prod-categoria').value,
-    precio: parseFloat(document.getElementById('prod-precio').value),
+    precio: parseFloat(document.getElementById('prod-precio').value) || 0,
     descripcion: document.getElementById('prod-descripcion').value
   };
 
-  try {
-    const url = id ? `${BASE_API}/productos/${id}/` : `${BASE_API}/productos/`;
-    const method = id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken')
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-      const prodGuardado = await res.json();
-      if (id) {
-        const idx = productosState.findIndex(p => p.id == id);
-        if (idx !== -1) productosState[idx] = prodGuardado;
-      } else {
-        productosState.push(prodGuardado);
-      }
-    } else {
-      throw new Error('Endpoint no disponible');
-    }
-  } catch (err) {
-    if (id) {
-      const idx = productosState.findIndex(p => p.id == id);
-      if (idx !== -1) productosState[idx] = { id: Number(id), ...payload };
-    } else {
-      const newId = productosState.length ? Math.max(...productosState.map(p => p.id)) + 1 : 1;
-      productosState.push({ id: newId, ...payload });
-    }
-  }
-
-  renderTablaProductos(productosState);
-  cargarKPIs();
-  cerrarModal('modal-producto');
-}
-
-function abrirModalOrden(id = null) {
-  const modal = document.getElementById('modal-orden');
-  const title = document.getElementById('modal-orden-titulo');
-  const form = document.getElementById('form-orden');
-  const selectProd = document.getElementById('ord-producto');
-  const containerEstado = document.getElementById('ord-estado-container');
-
-  if (!modal || !form || !selectProd) return;
-
-  form.reset();
-  document.getElementById('ord-id').value = '';
-
-  selectProd.innerHTML = productosState.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
-
-  if (id) {
-    const ord = ordenesState.find(o => o.id === id);
-    if (ord) {
-      title.textContent = 'Editar Orden de Producción';
-      document.getElementById('ord-id').value = ord.id;
-      selectProd.value = ord.producto;
-      document.getElementById('ord-cantidad').value = ord.cantidad;
-      document.getElementById('ord-inicio').value = ord.fecha_inicio;
-      document.getElementById('ord-fin').value = ord.fecha_fin;
-      document.getElementById('ord-descripcion').value = ord.descripcion || '';
-      if (containerEstado) containerEstado.style.display = 'block';
-      document.getElementById('ord-estado').value = ord.estado;
-    }
-  } else {
-    title.textContent = 'Nueva Orden de Producción';
-    if (containerEstado) containerEstado.style.display = 'none';
-  }
-
-  modal.style.display = 'flex';
-}
-
-function verDetalleOrden(id) {
-  abrirModalOrden(id);
-}
-
-async function guardarOrden(e) {
-  e.preventDefault();
-  const id = document.getElementById('ord-id').value;
-  const estadoElem = document.getElementById('ord-estado');
-
-  const payload = {
-    producto: document.getElementById('ord-producto').value,
-    cantidad: parseInt(document.getElementById('ord-cantidad').value),
-    fecha_inicio: document.getElementById('ord-inicio').value,
-    fecha_fin: document.getElementById('ord-fin').value,
-    descripcion: document.getElementById('ord-descripcion').value,
-    estado: id && estadoElem ? estadoElem.value : 'Pendiente'
-  };
-
-  try {
-    const url = id ? `${BASE_API}/ordenes/${id}/` : `${BASE_API}/ordenes/`;
-    const method = id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken')
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-      const ordGuardada = await res.json();
-      if (id) {
-        const idx = ordenesState.findIndex(o => o.id == id);
-        if (idx !== -1) ordenesState[idx] = ordGuardada;
-      } else {
-        ordenesState.push(ordGuardada);
-      }
-    } else {
-      throw new Error('Endpoint no disponible');
-    }
-  } catch (err) {
-    if (id) {
-      const idx = ordenesState.findIndex(o => o.id == id);
-      if (idx !== -1) ordenesState[idx] = { id: id, ...payload };
-    } else {
-      const newId = `ORD-00${ordenesState.length + 1}`;
-      ordenesState.push({ id: newId, ...payload });
-    }
-  }
-
-  renderTablaOrdenes(ordenesState);
-  renderGanttOrdenes(ordenesState);
-  cargarKPIs();
-  cerrarModal('modal-orden');
-}
-
-/* ── 9. EXPORTACIÓN A PDF ── */
-function exportarPDF() {
-  if (!window.jspdf) {
-    alert('La librería jsPDF aún no está cargada.');
+  if (!data.nombre || !data.categoria) {
+    showToast('Por favor, llena los campos obligatorios (*)', 'error');
     return;
   }
+
+  try {
+    const url = id ? `${BASE}/productos/${id}/` : `${BASE}/productos/`;
+    const method = id ? 'PUT' : 'POST';
+    
+    const r = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!r.ok) throw new Error('Error al guardar el producto');
+    
+    showToast(id ? 'Producto actualizado con éxito' : 'Producto creado con éxito', 'success');
+    cerrarModalProducto();
+    cargarProductos();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function eliminarProducto(id) {
+  if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+  try {
+    const r = await fetch(`${BASE}/productos/${id}/`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Error al eliminar');
+    showToast('Producto eliminado', 'success');
+    cargarProductos();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── ÓRDENES DE PRODUCCIÓN ─────────────────────────
+async function cargarOrdenes() {
+  try {
+    const r = await fetch(`${BASE}/ordenes/`);
+    const data = await r.json();
+    allOrdenes = Array.isArray(data) ? data : (data.ordenes || []);
+    renderOrdenes(allOrdenes);
+    renderGanttOrdenes(allOrdenes);
+  } catch (e) {
+    console.error('Error cargando órdenes:', e);
+  }
+}
+
+function renderOrdenes(lista) {
+  const tb = document.getElementById('tbody-ordenes');
+  if (!tb) return;
+
+  if (!lista.length) {
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px">No hay órdenes registradas</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = lista.map(o => {
+    const clsEst = 'estado-ord-' + (o.estado || 'Pendiente').replace(/\s+/g, '-');
+    return `
+      <tr>
+        <td><strong>${o.idProduccion}</strong></td>
+        <td>${o.producto || 'Sin producto'}</td>
+        <td>${o.descripcion || '—'}</td>
+        <td style="text-align:center">${o.cantidadRequerida}</td>
+        <td>${o.fechaInicio}</td>
+        <td>${o.fechaEstimadaFin}</td>
+        <td><span class="estado-badge ${clsEst}">${o.estado}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="action-btn edit" onclick="editarOrden(${o.idProduccion})">✏️</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function filtrarOrdenes() {
+  const q = document.getElementById('search-ordenes').value.toLowerCase();
+  const st = document.getElementById('filter-estado-ord').value;
+
+  const filtradas = allOrdenes.filter(o => {
+    const matchQ = (o.descripcion && o.descripcion.toLowerCase().includes(q)) || (o.producto && o.producto.toLowerCase().includes(q));
+    const matchSt = !st || o.estado === st;
+    return matchQ && matchSt;
+  });
+
+  renderOrdenes(filtradas);
+  renderGanttOrdenes(filtradas);
+}
+
+// ── CALENDARIO / LÍNEA DE TIEMPO DE ÓRDENES ───────
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function renderGanttOrdenes(lista) {
+  const cont = document.getElementById('gantt-ordenes');
+  if (!cont) return;
+
+  const validas = lista.filter(o => o.fechaInicio && o.fechaEstimadaFin);
+
+  if (!validas.length) {
+    cont.innerHTML = `<div class="empty-state"><p>No hay órdenes con fechas para mostrar en el calendario</p></div>`;
+    return;
+  }
+
+  const parseF = s => new Date(s + 'T00:00:00');
+  const finReal = o => o.fechaRealFin ? parseF(o.fechaRealFin) : parseF(o.fechaEstimadaFin);
+
+  let minFecha = validas.reduce((min, o) => { const d = parseF(o.fechaInicio); return d < min ? d : min; }, parseF(validas[0].fechaInicio));
+  let maxFecha = validas.reduce((max, o) => { const d = finReal(o); return d > max ? d : max; }, finReal(validas[0]));
+
+  // Margen de unos días a cada lado para que las barras no queden pegadas al borde
+  minFecha = new Date(minFecha.getTime() - 3 * 86400000);
+  maxFecha = new Date(maxFecha.getTime() + 3 * 86400000);
+
+  const totalMs = maxFecha.getTime() - minFecha.getTime();
+  const pctDe = fecha => ((fecha.getTime() - minFecha.getTime()) / totalMs) * 100;
+
+  // ── Encabezado de meses ──
+  const meses = [];
+  let cursor = new Date(minFecha.getFullYear(), minFecha.getMonth(), 1);
+  while (cursor <= maxFecha) {
+    const inicioMes = cursor < minFecha ? minFecha : cursor;
+    const finMesReal = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    meses.push({
+      label: `${MESES_CORTOS[cursor.getMonth()]} ${cursor.getFullYear()}`,
+      left: pctDe(inicioMes),
+    });
+    cursor = finMesReal;
+  }
+
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const hoyDentro = hoy >= minFecha && hoy <= maxFecha;
+  const hoyPct = pctDe(hoy);
+
+  const filasHtml = validas.map(o => {
+    const inicio = parseF(o.fechaInicio);
+    const fin = finReal(o);
+    const left = pctDe(inicio);
+    const width = Math.max(pctDe(fin) - left, 1.2);
+    const clsEst = 'estado-ord-' + (o.estado || 'Pendiente').replace(/\s+/g, '-');
+    const rango = `${formatoCorto(inicio)} → ${formatoCorto(fin)}`;
+
+    return `
+      <div class="gantt-row">
+        <div class="gantt-row-label" title="${o.producto || ''}">#${o.idProduccion} · ${o.producto || 'Sin producto'}</div>
+        <div class="gantt-track">
+          <div class="gantt-bar ${clsEst}" style="left:${left}%;width:${width}%"
+               title="${o.producto || ''} — ${rango} — ${o.estado}">
+            ${rango}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div class="gantt-inner">
+      <div class="gantt-months">
+        ${meses.map(m => `<div class="gantt-month-lbl" style="left:${m.left}%">${m.label}</div>`).join('')}
+      </div>
+      <div class="gantt-rows" style="position:relative">
+        ${hoyDentro ? `<div class="gantt-today" style="left:calc(200px + ${(hoyPct / 100).toFixed(4)} * (100% - 200px))"><span class="gantt-today-lbl">Hoy</span></div>` : ''}
+        ${filasHtml}
+      </div>
+    </div>`;
+}
+
+function formatoCorto(fecha) {
+  const dias = fecha.getDate().toString().padStart(2, '0');
+  return `${dias} ${MESES_CORTOS[fecha.getMonth()]}`;
+}
+
+// ── CONTROL DEL MODAL DE ÓRDENES ──────────────────
+function abrirModalOrden() {
+  document.getElementById('modal-orden-title').textContent = '🗒 Nueva Orden de Producción';
+  document.getElementById('orden-id').value = '';
+  document.getElementById('o-producto').value = '';
+  document.getElementById('o-cantidad').value = 1;
+  document.getElementById('o-descripcion').value = '';
+  document.getElementById('o-fecha-inicio').value = new Date().toISOString().split('T')[0];
+  document.getElementById('o-fecha-fin').value = '';
+  document.getElementById('o-costo-estimado').value = '';
+  document.getElementById('o-estado').value = 'Pendiente';
+  document.getElementById('modal-orden').style.display = 'flex';
+}
+
+function cerrarModalOrden() {
+  document.getElementById('modal-orden').style.display = 'none';
+}
+
+function editarOrden(id) {
+  const o = allOrdenes.find(ord => ord.idProduccion === id);
+  if (!o) return;
+
+  document.getElementById('modal-orden-title').textContent = '✏️ Editar Orden';
+  document.getElementById('orden-id').value = o.idProduccion;
+  document.getElementById('o-producto').value = o.idProducto;
+  document.getElementById('o-cantidad').value = o.cantidadRequerida;
+  document.getElementById('o-descripcion').value = o.descripcion;
+  document.getElementById('o-fecha-inicio').value = o.fechaInicio;
+  document.getElementById('o-fecha-fin').value = o.fechaEstimadaFin;
+  document.getElementById('o-costo-estimado').value = o.costoEstimado || '';
+  document.getElementById('o-estado').value = o.estado;
+  document.getElementById('modal-orden').style.display = 'flex';
+}
+
+async function guardarOrden() {
+  const id = document.getElementById('orden-id').value;
+  const data = {
+    idProducto: parseInt(document.getElementById('o-producto').value),
+    cantidadRequerida: parseInt(document.getElementById('o-cantidad').value),
+    descripcion: document.getElementById('o-descripcion').value,
+    fechaInicio: document.getElementById('o-fecha-inicio').value,
+    fechaEstimadaFin: document.getElementById('o-fecha-fin').value,
+    costoEstimado: document.getElementById('o-costo-estimado').value ? parseFloat(document.getElementById('o-costo-estimado').value) : null,
+    estado: document.getElementById('o-estado').value
+  };
+
+  if (!data.idProducto || !data.cantidadRequerida || !data.fechaInicio || !data.fechaEstimadaFin) {
+    showToast('Por favor, llena los campos obligatorios (*)', 'error');
+    return;
+  }
+
+  try {
+    const url = id ? `${BASE}/ordenes/${id}/` : `${BASE}/ordenes/`;
+    const method = id ? 'PUT' : 'POST';
+
+    const r = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!r.ok) throw new Error('Error al guardar la orden');
+
+    showToast(id ? 'Orden actualizada con éxito' : 'Orden creada con éxito', 'success');
+    cerrarModalOrden();
+    cargarOrdenes();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function eliminarOrden(id) {
+  if (!confirm('¿Estás seguro de eliminar esta orden?')) return;
+  try {
+    const r = await fetch(`${BASE}/ordenes/${id}/`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Error al eliminar');
+    showToast('Orden de producción eliminada', 'success');
+    cargarOrdenes();
+    cargarKPIs();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── AVANCE DE OPERARIOS (proceso de confección) ───
+async function cargarAvanceOperarios() {
+  const grid = document.getElementById('operarios-grid');
+  try {
+    const r = await fetch(`${BASE}/operarios-avance/`);
+    if (!r.ok) throw new Error('Error al cargar el avance de operarios');
+    const data = await r.json();
+    allOperariosAvance = data.operarios || [];
+    renderOperariosAvance(allOperariosAvance);
+  } catch (e) {
+    console.error('Error cargando avance de operarios:', e);
+    if (grid) {
+      grid.innerHTML = `<div class="empty-state"><p>No se pudo cargar el avance de operarios</p></div>`;
+    }
+  }
+}
+
+function renderOperariosAvance(lista) {
+  const grid = document.getElementById('operarios-grid');
+  if (!grid) return;
+
+  if (!lista.length) {
+    grid.innerHTML = `<div class="empty-state"><p>No hay operarios activos con tareas registradas</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = lista.map(op => {
+    const iniciales = (op.nombre || '?')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(n => n[0].toUpperCase())
+      .join('');
+
+    const c = op.contadores || {};
+    const totalTareas = op.tareas.length;
+
+    const filasTareas = totalTareas
+      ? op.tareas.map(t => {
+          const clsEst = 'estado-tarea-' + (t.estado || 'Pendiente').replace(/\s+/g, '-');
+          const prenda = t.tipoPrenda
+            ? `${t.tipoPrenda}${t.cantidadPrendas ? ' × ' + t.cantidadPrendas : ''}`
+            : (t.proceso || '—');
+          return `
+            <div class="tarea-item">
+              <div class="tarea-info">
+                <div class="tarea-nombre">${t.nombreTarea}</div>
+                <div class="tarea-sub">${prenda}</div>
+              </div>
+              <div class="tarea-badges">
+                <span class="estado-badge ${clsEst}">${t.estado}</span>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="operario-sin-tareas">Sin tareas asignadas</div>`;
+
+    return `
+      <div class="operario-card" data-nombre="${(op.nombre || '').toLowerCase()}">
+        <div class="operario-card-head">
+          <div class="operario-avatar">${iniciales || '—'}</div>
+          <div class="operario-info">
+            <div class="operario-nombre">${op.nombre}</div>
+            <div class="operario-especialidad">${op.especialidad || 'Sin especialidad'}</div>
+          </div>
+          <div class="operario-avance-pct">${op.avancePct}%</div>
+        </div>
+        <div class="operario-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${op.avancePct}%"></div></div>
+        </div>
+        <div class="operario-contadores">
+          <span class="mini-badge pendiente">⏳ ${c.pendiente || 0} pendiente</span>
+          <span class="mini-badge en-progreso">🧵 ${c.enProgreso || 0} en progreso</span>
+          <span class="mini-badge completada">✅ ${c.completada || 0} completada</span>
+          ${c.cancelada ? `<span class="mini-badge cancelada">✕ ${c.cancelada} cancelada</span>` : ''}
+        </div>
+        <div class="operario-tareas" data-tareas>${filasTareas}</div>
+      </div>`;
+  }).join('');
+}
+
+function filtrarOperarios() {
+  const q = (document.getElementById('search-operarios').value || '').toLowerCase();
+  const est = document.getElementById('filter-estado-tarea').value;
+
+  const filtrado = allOperariosAvance
+    .filter(op => (op.nombre || '').toLowerCase().includes(q))
+    .map(op => {
+      if (!est) return op;
+      return { ...op, tareas: op.tareas.filter(t => t.estado === est) };
+    })
+    .filter(op => !est || op.tareas.length > 0);
+
+  renderOperariosAvance(filtrado);
+}
+
+// ── UTILERÍAS / TOAST ─────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.classList.remove('show'); }, 3000);
+}
+
+// ── EXPORTAR A PDF ─────────────────────────────────
+function exportarCSV() {
+  exportarPDF();
+}
+
+function exportarPDF() {
+  if (!window.jspdf) {
+    showToast('No se pudo cargar la librería de PDF', 'error');
+    return;
+  }
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+  const activeContent = document.querySelector('.tab-content.active');
+  const activeTabLabel = document.querySelector('.tab.active');
+  const titulo = activeTabLabel ? activeTabLabel.textContent.trim() : 'Producción';
 
-  doc.setFontSize(16);
-  doc.text('Reporte General de Producción - HebraTech', 14, 20);
-  doc.setFontSize(10);
+  doc.setFontSize(15);
+  doc.text('HebraTech — Módulo de Producción', 14, 16);
+  doc.setFontSize(11);
   doc.setTextColor(100);
-  doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 28);
+  doc.text(titulo, 14, 23);
+  doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 29);
 
-  const tableData = ordenesState.map(o => [o.id, o.producto, o.cantidad, o.fecha_inicio, o.fecha_fin, o.estado]);
+  let head = [];
+  let body = [];
+  let archivo = 'produccion';
+
+  if (activeContent && activeContent.id === 'tab-general') {
+    head = [['Indicador', 'Valor']];
+    body = Array.from(document.querySelectorAll('#overview-kpi-grid .overview-kpi-card')).map(card => [
+      card.querySelector('.overview-kpi-lbl')?.textContent || '',
+      card.querySelector('.overview-kpi-val')?.textContent || ''
+    ]);
+    archivo = 'vista_general_sistema';
+  } else if (activeContent && activeContent.id === 'tab-productos') {
+    head = [['Nombre', 'Categoría', 'Precio', 'Descripción']];
+    body = allProductos.map(p => [
+      p.nombre,
+      p.categoria,
+      `$${Number(p.precio).toLocaleString('es-CO')}`,
+      p.descripcion || '—'
+    ]);
+    archivo = 'productos';
+  } else if (activeContent && activeContent.id === 'tab-ordenes') {
+    head = [['ID', 'Producto', 'Cantidad', 'Fecha Inicio', 'Fecha Est. Fin', 'Estado']];
+    body = allOrdenes.map(o => [
+      o.idProduccion,
+      o.producto || 'Sin producto',
+      o.cantidadRequerida,
+      o.fechaInicio,
+      o.fechaEstimadaFin,
+      o.estado
+    ]);
+    archivo = 'ordenes_produccion';
+  } else if (activeContent && activeContent.id === 'tab-operarios') {
+    head = [['Operario', 'Especialidad', 'Avance', 'Pendiente', 'En progreso', 'Completada']];
+    body = allOperariosAvance.map(op => {
+      const c = op.contadores || {};
+      return [
+        op.nombre,
+        op.especialidad || 'Sin especialidad',
+        `${op.avancePct}%`,
+        c.pendiente || 0,
+        c.enProgreso || 0,
+        c.completada || 0
+      ];
+    });
+    archivo = 'avance_operarios';
+  }
+
+  if (!body.length) {
+    showToast('No hay datos para exportar en esta pestaña', 'info');
+    return;
+  }
 
   doc.autoTable({
     startY: 35,
-    head: [['ID', 'Producto', 'Cantidad', 'Inicio', 'Est. Fin', 'Estado']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [44, 62, 80] }
+    head: head,
+    body: body,
+    headStyles: { fillColor: [57, 91, 100] },
+    styles: { fontSize: 9, cellPadding: 4 }
   });
 
-  doc.save(`Reporte_Produccion_${new Date().toISOString().slice(0, 10)}.pdf`);
+  const fecha = new Date().toISOString().split('T')[0];
+  doc.save(`${archivo}_${fecha}.pdf`);
+  showToast('PDF generado con éxito', 'success');
 }

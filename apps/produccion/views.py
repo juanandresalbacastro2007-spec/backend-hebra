@@ -1,17 +1,15 @@
-import json
-import unicodedata
-from datetime import date
-
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.shortcuts import render
+import json
+import unicodedata
+from .models import Producto, Produccion
+from datetime import date
 
+from apps.core.decorators import login_required_rol, login_required_api
 from apps.administrador.models import Usuario
-from apps.core.decorators import login_required_api, login_required_rol
-from apps.operarios.models import AsignacionTarea, Operario
-
-from .models import Produccion, Producto
+from apps.operarios.models import Operario, AsignacionTarea
 
 # ── Decoradores de protección (solo administrador) ──────────────────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
@@ -22,54 +20,46 @@ def _normalizar(texto):
     """
     Normaliza un texto para comparar nombres de forma robusta:
     quita espacios extra, pasa a minúsculas y elimina tildes/acentos.
+    Así "Camiseta Básica" y "camiseta basica" se detectan como el mismo nombre.
     """
     texto = (texto or '').strip().lower()
     texto = unicodedata.normalize('NFKD', texto)
-    return ''.join(c for c in texto if not unicodedata.combining(c))
+    texto = ''.join(c for c in texto if not unicodedata.combining(c))
+    return texto
 
 
 # ── PORTAL (Template HTML) ───────────────────────────
 @admin_required
 def produccion_portal(request):
-    try:
-        usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    except Usuario.DoesNotExist:
-        usuario = None
-
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     return render(request, 'produccion/produccion_portal.html', {
         'usuario': usuario,
         'seccion_activa': 'produccion',
     })
 
 
-# ── UTILIDADES DE SERIALIZACIÓN ─────────────────────
+# ── UTILIDADES ───────────────────────────────────────
 def producto_to_dict(p):
     return {
-        'idProducto': p.idProducto,
-        'id': p.idProducto,  # Alias para compatibilidad frontend
-        'nombre': p.nombre,
-        'descripcion': p.descripcion or '',
-        'precio': float(p.precio) if p.precio is not None else 0.0,
-        'categoria': p.categoria or '',
+        'idProducto':  p.idProducto,
+        'nombre':      p.nombre,
+        'descripcion': p.descripcion,
+        'precio':      float(p.precio),
+        'categoria':   p.categoria,
     }
-
 
 def produccion_to_dict(o):
     return {
-        'idProduccion': o.idProduccion,
-        'id': o.idOrden or f"ORD-{o.idProduccion}",  # Fallback si idOrden es nulo
-        'idOrden': o.idOrden,
-        'idProducto': o.idProducto_id,
-        'producto': o.idProducto.nombre if o.idProducto else 'Sin Producto',
-        'descripcion': o.descripcion or '',
+        'idProduccion':      o.idProduccion,
+        'idOrden':           o.idOrden,
+        'idProducto':        o.idProducto_id,
+        'producto':          o.idProducto.nombre,
+        'descripcion':       o.descripcion,
         'cantidadRequerida': o.cantidadRequerida,
-        'cantidad': o.cantidadRequerida,  # Alias para compatibilidad
-        'fechaInicio': str(o.fechaInicio) if o.fechaInicio else '',
-        'fecha_inicio': str(o.fechaInicio) if o.fechaInicio else '',
-        'fechaEstimadaFin': str(o.fechaEstimadaFin) if o.fechaEstimadaFin else '',
-        'fecha_fin': str(o.fechaEstimadaFin) if o.fechaEstimadaFin else '',
-        'fechaRealFin': str(o.fechaRealFin) if o.fechaRealFin else None,
-        'estado': o.estado,
+        'fechaInicio':       str(o.fechaInicio),
+        'fechaEstimadaFin':  str(o.fechaEstimadaFin),
+        'fechaRealFin':      str(o.fechaRealFin) if o.fechaRealFin else None,
+        'estado':            o.estado,
     }
 
 
@@ -79,29 +69,20 @@ def produccion_to_dict(o):
 @require_http_methods(['GET', 'POST'])
 def productos(request):
     if request.method == 'GET':
-        lista = Producto.objects.all().order_by('nombre')
+        lista = list(Producto.objects.all())
         return JsonResponse([producto_to_dict(p) for p in lista], safe=False)
 
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, TypeError):
-        return JsonResponse({'error': 'Cuerpo de la petición JSON inválido.'}, status=400)
-
+    data = json.loads(request.body)
     nombre = (data.get('nombre') or '').strip()
-    categoria = (data.get('categoria') or '').strip()
 
     if not nombre:
         return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
-
-    if not categoria:
-        return JsonResponse({'error': 'La categoría del producto es obligatoria.'}, status=400)
 
     nombre_normalizado = _normalizar(nombre)
     duplicado = any(
         _normalizar(p_nombre) == nombre_normalizado
         for p_nombre in Producto.objects.values_list('nombre', flat=True)
     )
-
     if duplicado:
         return JsonResponse(
             {'error': f'Ya existe un producto llamado "{nombre}". Usa otro nombre.'},
@@ -109,10 +90,10 @@ def productos(request):
         )
 
     p = Producto.objects.create(
-        nombre=nombre,
-        descripcion=data.get('descripcion', ''),
-        precio=data.get('precio', 0),
-        categoria=categoria,
+        nombre      = nombre,
+        descripcion = data.get('descripcion', ''),
+        precio      = data.get('precio', 0),
+        categoria   = data['categoria'],
     )
     return JsonResponse(producto_to_dict(p), status=201)
 
@@ -130,16 +111,12 @@ def producto_detalle(request, id):
         return JsonResponse(producto_to_dict(p))
 
     if request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, TypeError):
-            return JsonResponse({'error': 'Cuerpo JSON inválido.'}, status=400)
+        data = json.loads(request.body)
 
         if 'nombre' in data:
             nuevo_nombre = (data['nombre'] or '').strip()
             if not nuevo_nombre:
                 return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
-
             nuevo_normalizado = _normalizar(nuevo_nombre)
             duplicado = any(
                 _normalizar(otro_nombre) == nuevo_normalizado
@@ -150,72 +127,51 @@ def producto_detalle(request, id):
                     {'error': f'Ya existe un producto llamado "{nuevo_nombre}". Usa otro nombre.'},
                     status=400
                 )
-            p.nombre = nuevo_nombre
+            data['nombre'] = nuevo_nombre
 
-        for campo in ['descripcion', 'precio', 'categoria']:
+        for campo in ['nombre', 'descripcion', 'precio', 'categoria']:
             if campo in data:
                 setattr(p, campo, data[campo])
-
         p.save()
         return JsonResponse(producto_to_dict(p))
 
     p.delete()
-    return JsonResponse({'mensaje': 'Producto eliminado correctamente'})
+    return JsonResponse({'mensaje': 'Producto eliminado'})
 
 
-# ── PRODUCCIÓN / ÓRDENES ─────────────────────────────
+# ── PRODUCCIÓN ────────────────────────────────────────
 @admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def ordenes(request):
     if request.method == 'GET':
-        lista = Produccion.objects.select_related('idProducto').all().order_by('-idProduccion')
+        lista = Produccion.objects.select_related('idProducto').all()
         return JsonResponse([produccion_to_dict(o) for o in lista], safe=False)
 
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, TypeError):
-        return JsonResponse({'error': 'Cuerpo de la petición JSON inválido.'}, status=400)
-
-    # Resolución flexible de idProducto por ID o por Nombre del producto
-    id_producto = data.get('idProducto')
-    if not id_producto:
-        nombre_prod = data.get('producto')
-        if nombre_prod:
-            prod_obj = Producto.objects.filter(nombre__iexact=nombre_prod).first()
-            if prod_obj:
-                id_producto = prod_obj.idProducto
-
-    if not id_producto:
-        return JsonResponse({'error': 'Debe seleccionar un producto válido para la orden.'}, status=400)
+    data = json.loads(request.body)
 
     activo = Produccion.objects.filter(
-        idProducto_id=id_producto,
+        idProducto_id=data['idProducto'],
         estado__in=['Pendiente', 'En Progreso']
     ).exists()
-
     if activo:
         try:
-            nombre_p = Producto.objects.get(pk=id_producto).nombre
+            nombre_prod = Producto.objects.get(pk=data['idProducto']).nombre
         except Producto.DoesNotExist:
-            nombre_p = 'Este producto'
+            nombre_prod = 'Este producto'
         return JsonResponse(
-            {'error': f'"{nombre_p}" ya tiene otra tarea/orden activa. No se puede asignar otra hasta completarla.'},
+            {'error': f'"{nombre_prod}" ya tiene otra tarea/orden activa. No se puede asignar otra hasta completarla.'},
             status=400
         )
 
-    cantidad = data.get('cantidadRequerida') or data.get('cantidad') or 0
-    fecha_inicio = data.get('fechaInicio') or data.get('fecha_inicio') or date.today().isoformat()
-    fecha_fin = data.get('fechaEstimadaFin') or data.get('fecha_fin') or date.today().isoformat()
-
     o = Produccion.objects.create(
-        idOrden=data.get('idOrden') or data.get('id'),
-        idProducto_id=id_producto,
-        descripcion=data.get('descripcion', ''),
-        cantidadRequerida=cantidad,
-        fechaInicio=fecha_inicio,
-        fechaEstimadaFin=fecha_fin,
-        estado=data.get('estado', 'Pendiente'),
+        idOrden           = data.get('idOrden'),
+        idProducto_id     = data['idProducto'],
+        descripcion       = data['descripcion'],
+        cantidadRequerida = data['cantidadRequerida'],
+        fechaInicio       = data['fechaInicio'],
+        fechaEstimadaFin  = data['fechaEstimadaFin'],
+        estado            = data.get('estado', 'Pendiente'),
     )
     return JsonResponse(produccion_to_dict(o), status=201)
 
@@ -225,22 +181,15 @@ def ordenes(request):
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def orden_detalle(request, id):
     try:
-        # Búsqueda por ID numérico o por código 'idOrden'
-        if str(id).isdigit():
-            o = Produccion.objects.select_related('idProducto').get(pk=id)
-        else:
-            o = Produccion.objects.select_related('idProducto').get(idOrden=id)
+        o = Produccion.objects.select_related('idProducto').get(pk=id)
     except Produccion.DoesNotExist:
-        return JsonResponse({'error': 'Registro de producción no encontrado'}, status=404)
+        return JsonResponse({'error': 'Producción no encontrada'}, status=404)
 
     if request.method == 'GET':
         return JsonResponse(produccion_to_dict(o))
 
     if request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, TypeError):
-            return JsonResponse({'error': 'Cuerpo JSON inválido.'}, status=400)
+        data = json.loads(request.body)
 
         nuevo_estado = data.get('estado', o.estado)
         if nuevo_estado in ['Pendiente', 'En Progreso'] and o.estado not in ['Pendiente', 'En Progreso']:
@@ -248,40 +197,32 @@ def orden_detalle(request, id):
                 idProducto=o.idProducto,
                 estado__in=['Pendiente', 'En Progreso']
             ).exclude(pk=o.pk).exists()
-
             if otro_activo:
                 return JsonResponse(
                     {'error': f'"{o.idProducto.nombre}" ya tiene otro proceso activo.'},
                     status=400
                 )
 
-        # Mapeo adaptable de campos entre Backend y Frontend
-        if 'idOrden' in data or 'id' in data:
-            o.idOrden = data.get('idOrden') or data.get('id')
-        if 'descripcion' in data:
-            o.descripcion = data['descripcion']
-        if 'cantidadRequerida' in data or 'cantidad' in data:
-            o.cantidadRequerida = data.get('cantidadRequerida') or data.get('cantidad')
-        if 'fechaInicio' in data or 'fecha_inicio' in data:
-            o.fechaInicio = data.get('fechaInicio') or data.get('fecha_inicio')
-        if 'fechaEstimadaFin' in data or 'fecha_fin' in data:
-            o.fechaEstimadaFin = data.get('fechaEstimadaFin') or data.get('fecha_fin')
-        if 'fechaRealFin' in data:
-            o.fechaRealFin = data['fechaRealFin']
-        if 'estado' in data:
-            o.estado = data['estado']
-
+        for campo in ['idOrden', 'descripcion', 'cantidadRequerida',
+                      'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin', 'estado']:
+            if campo in data:
+                setattr(o, campo, data[campo])
         o.save()
         return JsonResponse(produccion_to_dict(o))
 
     o.delete()
-    return JsonResponse({'mensaje': 'Registro de producción eliminado correctamente'})
+    return JsonResponse({'mensaje': 'Registro eliminado'})
 
 
-# ── AVANCE DE OPERARIOS ───────────────────────────────
+# ── AVANCE DE OPERARIOS (proceso de confección) ───────
 @admin_required_api
-@require_http_methods(['GET'])
 def avance_operarios(request):
+    """
+    GET /produccion/operarios-avance/
+    Devuelve, por cada operario activo, el estado de sus tareas de
+    confección (asignaciones) para que Producción vea el proceso
+    completo de forma organizada.
+    """
     operarios = (
         Operario.objects
         .select_related('idUsuario')
@@ -303,98 +244,188 @@ def avance_operarios(request):
     for op in operarios:
         tareas = tareas_por_operario.get(op.idOperario, [])
 
-        pendientes = sum(1 for t in tareas if t.estado == 'Pendiente')
+        pendientes  = sum(1 for t in tareas if t.estado == 'Pendiente')
         en_progreso = sum(1 for t in tareas if t.estado == 'En Progreso')
         completadas = sum(1 for t in tareas if t.estado == 'Completada')
-        canceladas = sum(1 for t in tareas if t.estado == 'Cancelada')
+        canceladas  = sum(1 for t in tareas if t.estado == 'Cancelada')
         total_activas = len(tareas) - canceladas
         avance_pct = round((completadas / total_activas) * 100) if total_activas > 0 else 0
 
-        nombre_completo = f"{op.idUsuario.nombre} {op.idUsuario.apellido}".strip() if op.idUsuario else "Operario sin nombre"
-
         resultado.append({
-            'idOperario': op.idOperario,
-            'nombre': nombre_completo,
-            'especialidad': op.especialidad or 'General',
-            'estado': op.estado,
+            'idOperario':   op.idOperario,
+            'nombre':       f'{op.idUsuario.nombre} {op.idUsuario.apellido}'.strip(),
+            'especialidad': op.especialidad,
+            'estado':       op.estado,
             'contadores': {
-                'pendiente': pendientes,
-                'enProgreso': en_progreso,
-                'completada': completadas,
-                'cancelada': canceladas,
+                'pendiente':   pendientes,
+                'enProgreso':  en_progreso,
+                'completada':  completadas,
+                'cancelada':   canceladas,
             },
             'avancePct': avance_pct,
             'tareas': [
                 {
-                    'idAsignacion': t.idAsignacion,
-                    'nombreTarea': t.idTarea.nombreTarea if t.idTarea else 'Tarea Sin Nombre',
-                    'proceso': t.idTarea.proceso if t.idTarea else 'General',
-                    'tipoPrenda': t.tipoPrenda,
-                    'cantidadPrendas': t.cantidadPrendas,
-                    'estado': t.estado,
-                    'prioridad': t.prioridad,
-                    'fechaInicio': str(t.fechaInicio) if t.fechaInicio else '',
+                    'idAsignacion':      t.idAsignacion,
+                    'nombreTarea':       t.idTarea.nombreTarea,
+                    'proceso':           t.idTarea.proceso,
+                    'tipoPrenda':        t.tipoPrenda,
+                    'cantidadPrendas':   t.cantidadPrendas,
+                    'estado':            t.estado,
+                    'prioridad':         t.prioridad,
+                    'fechaInicio':       str(t.fechaInicio),
                     'fechaFinalizacion': str(t.fechaFinalizacion) if t.fechaFinalizacion else None,
-                    'horasEstimadas': float(t.horasEstimadas) if t.horasEstimadas is not None else None,
-                    'horasReales': float(t.horasReales) if t.horasReales is not None else None,
+                    'horasEstimadas':    float(t.horasEstimadas) if t.horasEstimadas is not None else None,
+                    'horasReales':       float(t.horasReales) if t.horasReales is not None else None,
                 }
-                for t in sorted(tareas, key=lambda x: str(x.fechaInicio))
+                for t in sorted(tareas, key=lambda t: t.fechaInicio)
             ],
         })
 
     return JsonResponse({'operarios': resultado})
 
 
-# ── ACTIVIDAD RECIENTE ────────────────────────────────
+# ── KPIs ─────────────────────────────────────────────
 @admin_required_api
-@require_http_methods(['GET'])
-def actividad_reciente(request):
-    """
-    Endpoint para alimentar el feed de actividad reciente del Dashboard JavaScript.
-    """
-    actividades = []
-    ordenes_recientes = Produccion.objects.select_related('idProducto').order_by('-idProduccion')[:5]
-
-    for ord_obj in ordenes_recientes:
-        prod_nombre = ord_obj.idProducto.nombre if ord_obj.idProducto else 'Producto'
-        if ord_obj.estado == 'Completado':
-            icono = '✅'
-            titulo = f"Orden #{ord_obj.idOrden or ord_obj.idProduccion} Finalizada"
-        elif ord_obj.estado == 'En Progreso':
-            icono = '⚙️'
-            titulo = f"Orden #{ord_obj.idOrden or ord_obj.idProduccion} en Confección"
-        else:
-            icono = '📋'
-            titulo = f"Nueva Orden #{ord_obj.idOrden or ord_obj.idProduccion}"
-
-        actividades.append({
-            'id': f"ord-{ord_obj.idProduccion}",
-            'titulo': titulo,
-            'descripcion': f"{prod_nombre} - {ord_obj.cantidadRequerida} pcs",
-            'fecha': str(ord_obj.fechaInicio),
-            'icono': icono
-        })
-
-    return JsonResponse(actividades, safe=False)
-
-
-# ── KPIS ─────────────────────────────────────────────
-@admin_required_api
-@require_http_methods(['GET'])
 def kpis(request):
     total_productos = Producto.objects.count()
-    en_progreso = Produccion.objects.filter(estado='En Progreso').count()
-    pendientes = Produccion.objects.filter(estado='Pendiente').count()
-    completados = Produccion.objects.filter(estado='Completado').count()
-    detenidos = Produccion.objects.filter(estado='Detenido').count()
-
+    en_progreso     = Produccion.objects.filter(estado='En Progreso').count()
+    pendientes      = Produccion.objects.filter(estado='Pendiente').count()
+    completados     = Produccion.objects.filter(estado='Completado').count()
     return JsonResponse({
-        'totalProductos': total_productos,
-        'ordenesEnProceso': en_progreso,
+        'totalProductos':    total_productos,
+        'ordenesEnProceso':  en_progreso,
         'ordenesPendientes': pendientes,
         'ordenesCompletadas': completados,
-        'ordenesDetenidas': detenidos,
-        'saludScore': 94,
-        'incidenciasAbiertas': 0,
-        'stockStatus': 'Normal',
+    })
+
+
+# ── VISTA GENERAL DEL SISTEMA (panorama cross-módulo) ─
+@admin_required_api
+def vista_general(request):
+    """
+    GET /produccion/vista-general/
+    Panorama consolidado de TODO el sistema HebraTech: usuarios, clientes,
+    órdenes comerciales, producción, operarios/tareas, incidencias,
+    inventario y proveedores. Pensado para que el administrador vea de
+    un vistazo qué está pasando en cada módulo sin tener que entrar
+    a cada uno por separado.
+    """
+    from apps.administrador.models import Orden, Incidencia
+
+    def _count(modelo, **filtros):
+        try:
+            return modelo.objects.filter(**filtros).count() if filtros else modelo.objects.count()
+        except Exception:
+            return 0
+
+    def _safe_import(ruta_modulo, nombre_modelo):
+        try:
+            modulo = __import__(ruta_modulo, fromlist=[nombre_modelo])
+            return getattr(modulo, nombre_modelo)
+        except Exception:
+            return None
+
+    Cliente = _safe_import('apps.clientes.models', 'Cliente')
+    Proveedor = _safe_import('apps.proveedores.models', 'Proveedor')
+
+    # ── KPIs globales por módulo ──
+    kpis_globales = {
+        'usuarios':          _count(Usuario),
+        'usuariosPendientes': _count(Usuario, estado='pendiente'),
+        'clientes':          _count(Cliente) if Cliente else None,
+        'operariosActivos':  _count(Operario, estado='activo'),
+        'ordenesTotales':    _count(Orden),
+        'ordenesPendientes': _count(Orden, estado='Pendiente'),
+        'ordenesUrgentes':   _count(Orden, prioridad='Urgente'),
+        'tareasPendientes':  _count(AsignacionTarea, estado='Pendiente'),
+        'tareasEnProgreso':  _count(AsignacionTarea, estado='En Progreso'),
+        'incidenciasAbiertas': _count(Incidencia, estado='Pendiente') + _count(Incidencia, estado='En Progreso'),
+        'productos':         _count(Producto),
+        'produccionActiva':  _count(Produccion, estado='En Progreso') + _count(Produccion, estado='Pendiente'),
+        'proveedores':       _count(Proveedor) if Proveedor else None,
+    }
+
+    # ── Actividad reciente (feed unificado, últimos eventos por módulo) ──
+    actividad = []
+
+    for o in Orden.objects.select_related('idCliente').order_by('-fechaCreacion')[:5]:
+        cliente_nombre = '—'
+        try:
+            cliente_nombre = o.idCliente.empresa or o.idCliente.nombre or '—'
+        except Exception:
+            pass
+        actividad.append({
+            'modulo': 'ordenes', 'icono': '🧾',
+            'titulo': f'Orden #{o.idOrden} · {cliente_nombre}',
+            'detalle': f'Estado: {o.estado} · Prioridad: {o.prioridad}',
+            'fecha': str(o.fechaCreacion) if o.fechaCreacion else None,
+            'estado': o.estado,
+        })
+
+    for p in Produccion.objects.select_related('idProducto').order_by('-fechaInicio')[:5]:
+        actividad.append({
+            'modulo': 'produccion', 'icono': '🧵',
+            'titulo': f'Producción: {p.idProducto.nombre}',
+            'detalle': f'{p.cantidadRequerida} unidades · {p.descripcion or "Sin descripción"}',
+            'fecha': str(p.fechaInicio),
+            'estado': p.estado,
+        })
+
+    try:
+        for i in Incidencia.objects.order_by('-idIncidencia')[:5]:
+            actividad.append({
+                'modulo': 'incidencias', 'icono': '⚠️',
+                'titulo': getattr(i, 'titulo', None) or getattr(i, 'descripcion', 'Incidencia')[:60],
+                'detalle': f'Estado: {getattr(i, "estado", "—")}',
+                'fecha': str(getattr(i, 'fechaReporte', '') or ''),
+                'estado': getattr(i, 'estado', None),
+            })
+    except Exception:
+        pass
+
+    # Ordenar todo el feed por fecha descendente y quedarnos con los 10 más recientes
+    actividad = [a for a in actividad if a['fecha']]
+    actividad.sort(key=lambda a: a['fecha'], reverse=True)
+    actividad = actividad[:10]
+
+    # ── Alertas operativas (lo que necesita atención YA) ──
+    alertas = []
+    hoy = date.today()
+
+    ordenes_retrasadas = Orden.objects.filter(
+        fechaEntregaEstimada__lt=hoy
+    ).exclude(estado='Completada').count()
+    if ordenes_retrasadas:
+        alertas.append({
+            'tipo': 'danger', 'icono': '⏰',
+            'texto': f'{ordenes_retrasadas} orden(es) con entrega vencida',
+            'modulo': 'ordenes',
+        })
+
+    if kpis_globales['ordenesUrgentes']:
+        alertas.append({
+            'tipo': 'warning', 'icono': '🔥',
+            'texto': f'{kpis_globales["ordenesUrgentes"]} orden(es) marcadas como urgentes',
+            'modulo': 'ordenes',
+        })
+
+    if kpis_globales['usuariosPendientes']:
+        alertas.append({
+            'tipo': 'info', 'icono': '👤',
+            'texto': f'{kpis_globales["usuariosPendientes"]} usuario(s) esperando aprobación de rol',
+            'modulo': 'usuarios',
+        })
+
+    if kpis_globales['incidenciasAbiertas']:
+        alertas.append({
+            'tipo': 'warning', 'icono': '⚠️',
+            'texto': f'{kpis_globales["incidenciasAbiertas"]} incidencia(s) sin resolver',
+            'modulo': 'incidencias',
+        })
+
+    return JsonResponse({
+        'kpis': kpis_globales,
+        'actividad': actividad,
+        'alertas': alertas,
+        'generadoEn': str(hoy),
     })

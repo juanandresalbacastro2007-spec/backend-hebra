@@ -7,8 +7,8 @@
 
 {% block topbar_extra %}
 <div class="ms-auto d-flex gap-2">
-  <button class="btn btn-outline-danger btn-sm" onclick="exportarPDF()">
-    <i class="bi bi-file-earmark-pdf-fill me-1"></i>Exportar PDF
+  <button class="btn btn-outline-danger btn-sm" onclick="exportarCSV()">
+    <i class="bi bi-file-earmark-pdf-fill me-1"></i>Exportar a pdf
   </button>
   <button class="btn btn-dark btn-sm" onclick="abrirModalProducto()">
     <i class="bi bi-plus-lg me-1"></i>Nuevo Producto
@@ -23,90 +23,46 @@
 {% block contenido %}
 <div class="produccion-page">
 
-  <!-- Banner de alertas del sistema -->
   <div id="alertas-banner" class="alertas-banner"></div>
 
-  <!-- PANEL SUPERIOR: GRÁFICO + KPIS DINÁMICOS -->
-  <div class="dashboard-top-panel">
-    
-    <!-- Gráfico de Estado de Órdenes -->
-    <div class="top-card chart-card">
-      <div class="card-header-clean">
-        <div>
-          <span class="card-title-sm">Distribución de Órdenes</span>
-          <p class="card-sub-sm">Estado actual del flujo de confección</p>
-        </div>
-        <span class="badge-live">● En vivo</span>
+  <div class="kpi-grid" id="kpi-grid-clickable">
+    <div class="kpi-card kpi-clickable" onclick="irAProductos()">
+      <div class="kpi-icon teal">👕</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-productos">—</div>
+        <div class="kpi-lbl">Tipos de Producto</div>
       </div>
-      <div class="chart-container-wrap">
-        <div class="chart-box">
-          <canvas id="chartOrdenesEstado"></canvas>
-        </div>
-        <div class="chart-legend-custom" id="chart-legend">
-          <!-- Leyenda inyectada por JS -->
-        </div>
-      </div>
+      <div class="kpi-arrow">→</div>
     </div>
-
-    <!-- Indicador de Salud Operativa -->
-    <div class="top-card health-card">
-      <div class="card-header-clean">
-        <span class="card-title-sm">Salud Operativa del Taller</span>
-        <span class="health-status-tag ok" id="health-tag">Óptima</span>
+    <div class="kpi-card kpi-clickable" onclick="irAOrdenesFiltradas('Completado')">
+      <div class="kpi-icon green">✅</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-completadas">—</div>
+        <div class="kpi-lbl">Órdenes Completadas</div>
+        <div class="kpi-progress"><div class="kpi-progress-fill green" id="kpi-bar-completadas" style="width:0%"></div></div>
       </div>
-      <div class="health-gauge-body">
-        <div class="health-score" id="health-score-val">94%</div>
-        <div class="health-progress-bar">
-          <div class="health-progress-fill" id="health-bar-fill" style="width: 94%;"></div>
-        </div>
-        <div class="health-metrics-grid">
-          <div class="health-mini-metric">
-            <span class="lbl">Materia Prima</span>
-            <span class="val text-success" id="val-stock-health">Normal</span>
-          </div>
-          <div class="health-mini-metric">
-            <span class="lbl">Incidencias</span>
-            <span class="val text-warning" id="val-incidencias-health">2 abiertas</span>
-          </div>
-        </div>
-      </div>
+      <div class="kpi-arrow">→</div>
     </div>
-
-    <!-- KPIs de Métricas Clave -->
-    <div class="top-kpis-column">
-      
-      <div class="metric-tile primary-tile">
-        <div class="tile-icon">👕</div>
-        <div class="tile-content">
-          <div class="tile-val" id="kpi-productos">0</div>
-          <div class="tile-lbl">Catálogo de Productos</div>
-        </div>
+    <div class="kpi-card kpi-clickable" onclick="irAOrdenesFiltradas('En Progreso')">
+      <div class="kpi-icon orange">⏳</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-proceso">—</div>
+        <div class="kpi-lbl">En Progreso</div>
+        <div class="kpi-progress"><div class="kpi-progress-fill orange" id="kpi-bar-proceso" style="width:0%"></div></div>
       </div>
-
-      <div class="metric-tile success-tile">
-        <div class="tile-icon">✅</div>
-        <div class="tile-content">
-          <div class="tile-val" id="kpi-completadas">0</div>
-          <div class="tile-lbl">Órdenes Completadas</div>
-        </div>
-        <div class="tile-spark">
-          <span class="spark-label text-success">100% efectivas</span>
-        </div>
-      </div>
-
-      <div class="metric-tile warning-tile">
-        <div class="tile-icon">🧵</div>
-        <div class="tile-content">
-          <div class="tile-val" id="kpi-proceso">0</div>
-          <div class="tile-lbl">En Confección</div>
-        </div>
-      </div>
-
+      <div class="kpi-arrow">→</div>
     </div>
-
+    <div class="kpi-card kpi-clickable" onclick="irAOrdenesFiltradas('Pendiente')">
+      <div class="kpi-icon red">🔖</div>
+      <div class="kpi-body">
+        <div class="kpi-val" id="kpi-pendientes">—</div>
+        <div class="kpi-lbl">Pendientes</div>
+        <div class="kpi-progress"><div class="kpi-progress-fill red" id="kpi-bar-pendientes" style="width:0%"></div></div>
+      </div>
+      <div class="kpi-arrow">→</div>
+    </div>
   </div>
 
-  <!-- Pestañas de Navegación -->
   <div class="tabs">
     <div class="tab active" onclick="switchTab('general', this)">🧭 Vista General</div>
     <div class="tab" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
@@ -114,10 +70,10 @@
     <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance de Operarios</div>
   </div>
 
-  <!-- Pestaña: Vista General -->
   <div id="tab-general" class="tab-content active">
 
     <div class="overview-kpi-grid" id="overview-kpi-grid">
+      <!-- Se rellena dinámicamente desde vista-general/ -->
       <div class="empty-state" style="grid-column:1/-1"><span class="spinner"></span></div>
     </div>
 
@@ -133,7 +89,7 @@
 
       <div class="table-card">
         <div class="table-toolbar">
-          <h3>🧭 Accesos Rápidos por Módulo</h3>
+          <h3>🧭 Accesos Rápidos</h3>
         </div>
         <div class="quick-nav-grid" id="overview-quicknav">
           <a class="quick-nav-card" href="/administrador/portal/">
@@ -164,7 +120,7 @@
           <a class="quick-nav-card" href="/administrador/inventario/">
             <div class="quick-nav-icon">📦</div>
             <div class="quick-nav-label">Inventario</div>
-            <div class="quick-nav-sub">Stock y Telas</div>
+            <div class="quick-nav-sub">Ver stock</div>
           </a>
           <a class="quick-nav-card" href="/proveedores/">
             <div class="quick-nav-icon">🚚</div>
@@ -177,7 +133,6 @@
 
   </div>
 
-  <!-- Pestaña: Productos -->
   <div id="tab-productos" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
@@ -185,9 +140,11 @@
         <div class="toolbar-right">
           <div class="search-wrap">
             <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input id="search-productos" type="text" placeholder="Buscar producto..." oninput="filtrarProductos()" />
+            <input id="search-productos" type="text" placeholder="Buscar producto..."
+              oninput="filtrarProductos()" />
           </div>
           <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
             <option value="">Todas las categorías</option>
@@ -200,36 +157,37 @@
         </div>
       </div>
       <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Descripción</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-productos">
-            <tr><td colspan="5" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
-          </tbody>
-        </table>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Descripción</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-productos">
+          <tr>
+            <td colspan="5" style="text-align:center;padding:30px">
+              <span class="spinner"></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
       </div>
     </div>
   </div>
 
-  <!-- Pestaña: Órdenes -->
   <div id="tab-ordenes" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
         <h3>Órdenes de Producción</h3>
         <div class="toolbar-right">
-          <button class="btn btn-dark btn-sm me-2" onclick="abrirModalOrden()">
-            <i class="bi bi-plus-lg me-1"></i>Nueva Orden
-          </button>
           <div class="search-wrap">
             <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
           </div>
@@ -243,29 +201,39 @@
         </div>
       </div>
       <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Producto</th>
-              <th>Descripción</th>
-              <th>Cantidad</th>
-              <th>Fecha Inicio</th>
-              <th>Fecha Est. Fin</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-ordenes">
-            <tr><td colspan="8" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
-          </tbody>
-        </table>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Est. Fin</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-ordenes">
+          <tr>
+            <td colspan="8" style="text-align:center;padding:30px">
+              <span class="spinner"></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
       </div>
     </div>
 
     <div class="table-card gantt-card">
       <div class="table-toolbar">
         <h3>📅 Calendario de Producción</h3>
+        <div class="gantt-legend">
+          <span class="legend-item"><span class="legend-dot estado-ord-Pendiente"></span>Pendiente</span>
+          <span class="legend-item"><span class="legend-dot estado-ord-En-Progreso"></span>En Progreso</span>
+          <span class="legend-item"><span class="legend-dot estado-ord-Completado"></span>Completado</span>
+          <span class="legend-item"><span class="legend-dot estado-ord-Detenido"></span>Detenido</span>
+        </div>
       </div>
       <div id="gantt-ordenes" class="gantt-wrap">
         <div class="empty-state"><span class="spinner"></span></div>
@@ -273,11 +241,26 @@
     </div>
   </div>
 
-  <!-- Pestaña: Operarios -->
   <div id="tab-operarios" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
         <h3>Proceso de Confección por Operario</h3>
+        <div class="toolbar-right">
+          <div class="search-wrap">
+            <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input id="search-operarios" type="text" placeholder="Buscar operario..." oninput="filtrarOperarios()" />
+          </div>
+          <select id="filter-estado-tarea" class="filter-select" onchange="filtrarOperarios()">
+            <option value="">Todos los estados</option>
+            <option>Pendiente</option>
+            <option>En Progreso</option>
+            <option>Completada</option>
+            <option>Cancelada</option>
+          </select>
+        </div>
       </div>
       <div id="operarios-grid" class="operarios-grid">
         <div class="empty-state"><span class="spinner"></span></div>
@@ -285,106 +268,114 @@
     </div>
   </div>
 
-  <!-- ================= MODALES DEL SISTEMA ================= -->
-
-  <!-- Modal: Crear/Editar Producto -->
-  <div id="modal-producto" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; justify-content: center; align-items: center;">
-    <div class="modal-dialog-content" style="background: #fff; border-radius: 8px; width: 90%; max-width: 500px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 id="modal-producto-titulo" class="m-0">Nuevo Producto</h4>
-        <button type="button" class="btn-close" onclick="cerrarModal('modal-producto')"></button>
+  <!-- MODAL: Nuevo/Editar producto -->
+  <div class="prod-modal-backdrop" id="modal-producto">
+    <div class="prod-modal">
+      <div class="prod-modal-header">
+        <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
+        <button class="prod-modal-close" onclick="cerrarModalProducto()">×</button>
       </div>
-      <form id="form-producto" onsubmit="guardarProducto(event)">
-        <input type="hidden" id="prod-id">
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Nombre del Producto</label>
-          <input type="text" id="prod-nombre" class="form-control" placeholder="Ej. Camisa Polo" required>
+      <div class="prod-modal-body">
+        <input type="hidden" id="producto-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
+          </div>
+          <div class="form-group">
+            <label>Categoría *</label>
+            <select id="prod-categoria">
+              <option value="">Seleccionar...</option>
+              <option>Camisa</option>
+              <option>Pantalón</option>
+              <option>Uniforme</option>
+              <option>Chaqueta</option>
+              <option>Accesorio</option>
+            </select>
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Categoría</label>
-          <select id="prod-categoria" class="form-select" required>
-            <option value="Camisa">Camisa</option>
-            <option value="Pantalón">Pantalón</option>
-            <option value="Uniforme">Uniforme</option>
-            <option value="Chaqueta">Chaqueta</option>
-            <option value="Accesorio">Accesorio</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Precio</label>
+            <input id="prod-precio" type="number" value="0" min="0" step="0.01" />
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Precio ($)</label>
-          <input type="number" step="0.01" id="prod-precio" class="form-control" placeholder="0.00" required>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Descripción *</label>
+            <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Descripción</label>
-          <textarea id="prod-descripcion" class="form-control" rows="3" placeholder="Detalles del producto..."></textarea>
-        </div>
-        <div class="d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-producto')">Cancelar</button>
-          <button type="submit" class="btn btn-dark">Guardar Producto</button>
-        </div>
-      </form>
+      </div>
+      <div class="prod-modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+      </div>
     </div>
   </div>
 
-  <!-- Modal: Crear/Editar Orden de Producción -->
-  <div id="modal-orden" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; justify-content: center; align-items: center;">
-    <div class="modal-dialog-content" style="background: #fff; border-radius: 8px; width: 90%; max-width: 550px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 id="modal-orden-titulo" class="m-0">Nueva Orden de Producción</h4>
-        <button type="button" class="btn-close" onclick="cerrarModal('modal-orden')"></button>
-      </div>
-      <form id="form-orden" onsubmit="guardarOrden(event)">
-        <input type="hidden" id="ord-id">
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Producto</label>
-          <select id="ord-producto" class="form-select" required>
-            <!-- Opciones cargadas dinámicamente -->
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Cantidad Requerida</label>
-          <input type="number" id="ord-cantidad" class="form-control" min="1" required>
-        </div>
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="form-label font-weight-bold">Fecha Inicio</label>
-            <input type="date" id="ord-inicio" class="form-control" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label class="form-label font-weight-bold">Fecha Est. Fin</label>
-            <input type="date" id="ord-fin" class="form-control" required>
-          </div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label font-weight-bold">Descripción / Especificaciones</label>
-          <textarea id="ord-descripcion" class="form-control" rows="2" required></textarea>
-        </div>
-        <div class="mb-3" id="ord-estado-container" style="display: none;">
-          <label class="form-label font-weight-bold">Estado</label>
-          <select id="ord-estado" class="form-select">
-            <option value="Pendiente">Pendiente</option>
-            <option value="En Progreso">En Progreso</option>
-            <option value="Completado">Completado</option>
-            <option value="Detenido">Detenido</option>
-          </select>
-        </div>
-        <div class="d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-secondary" onclick="cerrarModal('modal-orden')">Cancelar</button>
-          <button type="submit" class="btn btn-dark">Guardar Orden</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <div class="toast" id="toast"></div>
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- CDNs para Gráficas y PDFs -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-
-<!-- Script principal del módulo -->
 <script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
+<script>
+  // Sobrescribimos guardarProducto() con la ruta corregida (/produccion/productos/)
+  async function guardarProducto() {
+      const idProducto = document.getElementById('producto-id').value;
+      const nombre = document.getElementById('prod-nombre').value.trim();
+      const categoria = document.getElementById('prod-categoria').value;
+      const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+      const descripcion = document.getElementById('prod-descripcion').value.trim();
+
+      if (!nombre || !categoria || !descripcion) {
+          mostrarAlertaToast("Por favor, completa todos los campos obligatorios (*).", "error");
+          return;
+      }
+
+      const datosProducto = { nombre, categoria, precio, descripcion };
+      const url = idProducto ? `/produccion/productos/${idProducto}/` : '/produccion/productos/';
+      const metodo = idProducto ? 'PUT' : 'POST';
+
+      try {
+          const response = await fetch(url, {
+              method: metodo,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(datosProducto)
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+              throw new Error(data.error || 'Ocurrió un error al procesar la solicitud.');
+          }
+
+          mostrarAlertaToast(idProducto ? '¡Producto actualizado con éxito!' : '¡Producto creado con éxito!', 'success');
+
+          if (typeof cerrarModalProducto === 'function') {
+              cerrarModalProducto();
+          }
+
+          setTimeout(() => { location.reload(); }, 1500);
+
+      } catch (error) {
+          mostrarAlertaToast(error.message, 'error');
+      }
+  }
+
+  function mostrarAlertaToast(mensaje, tipo = 'success') {
+      const toast = document.getElementById('toast');
+      if (!toast) {
+          alert(mensaje);
+          return;
+      }
+      toast.textContent = mensaje;
+      toast.className = `toast show ${tipo}`;
+      setTimeout(() => { toast.className = 'toast'; }, 4000);
+  }
+</script>
 {% endblock %}

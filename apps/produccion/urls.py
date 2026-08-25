@@ -5,6 +5,9 @@ urlpatterns = [
     # ── Portal HTML ──────────────────────────────────
     path('', views.produccion_portal, name='produccion_portal'),
 
+    # ── API Vista General del Sistema ────────────────
+    path('vista-general/', views.vista_general, name='vista-general'),
+
     # ── API Productos ────────────────────────────────
     path('productos/',          views.productos,        name='productos'),
     path('productos/<int:id>/', views.producto_detalle, name='producto-detalle'),

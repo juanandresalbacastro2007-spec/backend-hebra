@@ -1447,3 +1447,55 @@ textarea {
     border-color: var(--primary-deep);
     box-shadow: 0 4px 12px rgba(44, 51, 51, 0.25);
 }
+
+/* ═══════════════════════════════════════════════════
+   MEJORAS DE USABILIDAD (nuevo)
+   ═══════════════════════════════════════════════════ */
+
+/* Botón de guardar en estado "cargando" */
+.btn.btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+    opacity: .85;
+}
+
+.btn.btn-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 15px;
+    height: 15px;
+    margin: -7.5px 0 0 -7.5px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+}
+
+.produccion-page .btn-outline.btn-loading::after {
+    border: 2px solid rgba(57, 91, 100, 0.3);
+    border-top-color: var(--primary);
+}
+
+/* Contador de caracteres bajo textareas (inyectado por JS) */
+.campo-contador {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    margin-top: 1px;
+}
+
+.campo-contador.campo-contador-limite {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+/* Resaltado suave al abrir un modal (foco de atención) */
+.prod-modal { animation: modal-in .15s ease-out; }
+
+@keyframes modal-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

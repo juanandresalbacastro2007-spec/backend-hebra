@@ -4,6 +4,10 @@ let allProductos = [];
 let allOrdenes = [];
 let allOperariosAvance = [];
 
+// Estado "sucio" de cada modal (para confirmar antes de cerrar si hay cambios)
+let modalProductoDirty = false;
+let modalOrdenDirty = false;
+
 // ── INIT / EVENT LISTENERS ────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   actualizarFechaHora();
@@ -30,13 +34,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Quitar el error de un campo apenas el usuario empieza a corregirlo
+  // + marcar el modal como "con cambios sin guardar" + validar en vivo al salir del campo (blur)
   document.querySelectorAll('.prod-modal input, .prod-modal select, .prod-modal textarea').forEach(el => {
     const evento = (el.tagName === 'SELECT') ? 'change' : 'input';
+
     el.addEventListener(evento, () => {
       el.classList.remove('campo-invalido');
       const err = document.getElementById('err-' + el.id);
       if (err) err.classList.remove('show');
+      marcarModalSucio(el);
     });
+
+    // Validación en tiempo real al salir del campo (blur), no solo al hacer clic en Guardar
+    el.addEventListener('blur', () => validarCampoEnVivo(el));
+  });
+
+  // Contador de caracteres en las descripciones (se inyecta solo, sin tocar el HTML)
+  agregarContadorCaracteres('prod-descripcion', 250);
+  agregarContadorCaracteres('o-descripcion', 250);
+
+  // Cerrar el modal abierto con la tecla Esc
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const modalProductoEl = document.getElementById('modal-producto');
+    const modalOrdenEl = document.getElementById('modal-orden');
+    if (modalProductoEl && modalProductoEl.classList.contains('open')) cerrarModalProducto();
+    else if (modalOrdenEl && modalOrdenEl.classList.contains('open')) cerrarModalOrden();
   });
 });
 
@@ -77,6 +100,7 @@ function validarCampo(inputId, esValido) {
   if (!esValido) {
     input.classList.add('campo-invalido');
     if (err) err.classList.add('show');
+    if (err) err.setAttribute('aria-live', 'polite'); // accesibilidad: se anuncia al aparecer
   } else {
     input.classList.remove('campo-invalido');
     if (err) err.classList.remove('show');
@@ -91,6 +115,78 @@ function limpiarValidacion(ids) {
     if (input) input.classList.remove('campo-invalido');
     if (err) err.classList.remove('show');
   });
+}
+
+// ── VALIDACIÓN EN VIVO (al salir del campo, sin esperar a "Guardar") ──
+// Reutiliza las mismas reglas obligatorias que guardarProducto()/guardarOrden(),
+// pero solo sobre el campo que el usuario acaba de tocar.
+const REGLAS_CAMPOS_OBLIGATORIOS = {
+  'prod-nombre':     v => !!v.trim(),
+  'prod-categoria':  v => !!v,
+  'prod-descripcion': v => !!v.trim(),
+  'o-producto':      v => !!v,
+  'o-cantidad':      v => parseInt(v) > 0,
+  'o-fecha-inicio':  v => !!v,
+  'o-fecha-fin':     v => !!v,
+  'o-estado':        v => !!v,
+};
+
+function validarCampoEnVivo(el) {
+  const regla = REGLAS_CAMPOS_OBLIGATORIOS[el.id];
+  if (!regla) return;
+  validarCampo(el.id, regla(el.value));
+
+  // Además, si es la fecha de inicio, actualiza el mínimo permitido en fecha fin
+  if (el.id === 'o-fecha-inicio') actualizarMinFechaFin();
+}
+
+// La fecha de fin de una orden no puede ser anterior a la fecha de inicio:
+// en vez de solo avisar después de guardar, se restringe directamente en el input.
+function actualizarMinFechaFin() {
+  const inicio = document.getElementById('o-fecha-inicio');
+  const fin = document.getElementById('o-fecha-fin');
+  if (!inicio || !fin) return;
+  if (inicio.value) fin.min = inicio.value;
+}
+
+// ── Contador de caracteres (se inyecta debajo del textarea, no requiere tocar el HTML) ──
+function agregarContadorCaracteres(textareaId, limite) {
+  const textarea = document.getElementById(textareaId);
+  if (!textarea || textarea.dataset.contadorListo) return;
+  textarea.dataset.contadorListo = '1';
+
+  const contador = document.createElement('div');
+  contador.className = 'campo-contador';
+  contador.id = 'contador-' + textareaId;
+  textarea.insertAdjacentElement('afterend', contador);
+
+  const actualizar = () => {
+    const len = textarea.value.length;
+    contador.textContent = `${len} / ${limite}`;
+    contador.classList.toggle('campo-contador-limite', len > limite);
+  };
+
+  textarea.addEventListener('input', actualizar);
+  actualizar();
+}
+
+// ── Marcar modal como "con cambios sin guardar" ───
+function marcarModalSucio(el) {
+  if (el.closest('#modal-producto')) modalProductoDirty = true;
+  if (el.closest('#modal-orden')) modalOrdenDirty = true;
+}
+
+// Pide confirmación solo si el usuario alcanzó a escribir algo; si no hay cambios, cierra directo.
+function confirmarCierre(dirty) {
+  if (!dirty) return true;
+  return confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?');
+}
+
+// Pone/quita el estado visual de "guardando..." en un botón sin cambiar su HTML
+function setBotonCargando(boton, cargando) {
+  if (!boton) return;
+  boton.classList.toggle('btn-loading', cargando);
+  boton.disabled = cargando;
 }
 
 // ── KPIs ──────────────────────────────────────────
@@ -324,11 +420,15 @@ function abrirModalProducto() {
   document.getElementById('prod-descripcion').value = '';
   document.getElementById('modal-producto').classList.add('open');
   document.getElementById('modal-producto').style.display = 'flex';
+  modalProductoDirty = false;
+  enfocarPrimerCampo('prod-nombre');
 }
 
 function cerrarModalProducto() {
+  if (!confirmarCierre(modalProductoDirty)) return;
   document.getElementById('modal-producto').classList.remove('open');
   document.getElementById('modal-producto').style.display = 'none';
+  modalProductoDirty = false;
 }
 
 function editarProducto(id) {
@@ -344,6 +444,8 @@ function editarProducto(id) {
   document.getElementById('prod-descripcion').value = p.descripcion;
   document.getElementById('modal-producto').classList.add('open');
   document.getElementById('modal-producto').style.display = 'flex';
+  modalProductoDirty = false;
+  enfocarPrimerCampo('prod-nombre');
 }
 
 async function guardarProducto() {
@@ -367,7 +469,11 @@ async function guardarProducto() {
     return;
   }
 
+  const btnGuardar = document.querySelector('#modal-producto .prod-modal-footer .btn-primary, #modal-producto .prod-modal-footer .btn-dark');
+
   try {
+    setBotonCargando(btnGuardar, true);
+
     const url = id ? `${BASE}/productos/${id}/` : `${BASE}/productos/`;
     const method = id ? 'PUT' : 'POST';
 
@@ -380,11 +486,14 @@ async function guardarProducto() {
     if (!r.ok) throw new Error('Error al guardar el producto');
 
     showToast(id ? 'Producto actualizado con éxito' : 'Producto creado con éxito', 'success');
+    modalProductoDirty = false;
     cerrarModalProducto();
     cargarProductos();
     cargarKPIs();
   } catch (e) {
     showToast(e.message, 'error');
+  } finally {
+    setBotonCargando(btnGuardar, false);
   }
 }
 
@@ -550,11 +659,16 @@ function abrirModalOrden() {
   document.getElementById('o-estado').value = 'Pendiente';
   document.getElementById('modal-orden').classList.add('open');
   document.getElementById('modal-orden').style.display = 'flex';
+  modalOrdenDirty = false;
+  actualizarMinFechaFin();
+  enfocarPrimerCampo('o-producto');
 }
 
 function cerrarModalOrden() {
+  if (!confirmarCierre(modalOrdenDirty)) return;
   document.getElementById('modal-orden').classList.remove('open');
   document.getElementById('modal-orden').style.display = 'none';
+  modalOrdenDirty = false;
 }
 
 function editarOrden(id) {
@@ -573,6 +687,9 @@ function editarOrden(id) {
   document.getElementById('o-estado').value = o.estado;
   document.getElementById('modal-orden').classList.add('open');
   document.getElementById('modal-orden').style.display = 'flex';
+  modalOrdenDirty = false;
+  actualizarMinFechaFin();
+  enfocarPrimerCampo('o-producto');
 }
 
 async function guardarOrden() {
@@ -615,7 +732,11 @@ async function guardarOrden() {
     return;
   }
 
+  const btnGuardar = document.querySelector('#modal-orden .prod-modal-footer .btn-primary, #modal-orden .prod-modal-footer .btn-dark');
+
   try {
+    setBotonCargando(btnGuardar, true);
+
     const url = id ? `${BASE}/ordenes/${id}/` : `${BASE}/ordenes/`;
     const method = id ? 'PUT' : 'POST';
 
@@ -628,11 +749,14 @@ async function guardarOrden() {
     if (!r.ok) throw new Error('Error al guardar la orden');
 
     showToast(id ? 'Orden actualizada con éxito' : 'Orden creada con éxito', 'success');
+    modalOrdenDirty = false;
     cerrarModalOrden();
     cargarOrdenes();
     cargarKPIs();
   } catch (e) {
     showToast(e.message, 'error');
+  } finally {
+    setBotonCargando(btnGuardar, false);
   }
 }
 
@@ -751,6 +875,14 @@ function showToast(msg, type = 'success') {
   t.textContent = msg;
   t.className = `toast show ${type}`;
   setTimeout(() => { t.classList.remove('show'); }, 3000);
+}
+
+// Enfoca el primer campo del modal apenas se abre (mejor accesibilidad/velocidad de tecleo)
+function enfocarPrimerCampo(inputId) {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(inputId);
+    if (el) el.focus();
+  });
 }
 
 // ── EXPORTAR A PDF ─────────────────────────────────

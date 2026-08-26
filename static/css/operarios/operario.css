@@ -123,17 +123,23 @@ html, body {
   border: 1px solid var(--border-md);
   color: var(--text);
   border-radius: var(--radius-xs);
-  padding: 7px 14px;
+  padding: 10px 20px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: .85rem;
-  font-weight: 500;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all .15s ease;
   position: relative;
   font-family: 'Roboto', sans-serif;
   text-decoration: none;
+}
+
+
+.ht-nav-btn i.bi-clipboard-check,
+.ht-nav-btn i.bi-exclamation-triangle-fill {
+  font-size: 1.25rem;
 }
 
 .ht-nav-btn:hover {
@@ -155,28 +161,30 @@ html, body {
 .ht-badge-count {
   background: var(--primary);
   color: #ffffff;
-  font-size: .72rem;
+  font-size: 0.85rem;
   font-weight: 700;
   min-width: 19px;
   height: 19px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 5px;
+  padding: 3px 8px;
 }
 
-/* Botón del perfil */
+
+/* Botón de perfil estilo Píldora Compacta */
 .ht-profile-btn {
   background: var(--surface2);
   border: 1px solid var(--border-md);
   color: var(--text);
-  border-radius: 20px;
-  padding: 4px 12px 4px 4px;
+  border-radius: 50px;              /* Hace que siempre mantenga la curva de píldora exacta */
+  padding: 4px 14px 4px 4px;        /* Padding contenido para no crecer en altura */
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: .85rem;
+  gap: 8px;                         /* Espacio equilibrado entre avatar, texto y flecha */
+  font-size: .9rem;                 /* Tamaño de letra intermedio y legible */
+  font-weight: 500;
   cursor: pointer;
   transition: all .15s ease;
   font-family: 'Roboto', sans-serif;
@@ -187,38 +195,48 @@ html, body {
   border-color: var(--primary);
 }
 
+/* Avatar proporcional al botón */
 .ht-avatar {
-  width: 30px; 
+  width: 30px;                      /* Tamaño compacto perfecto */
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--accent2));
-  color: #ffffff;
-  font-size: .75rem;
-  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
 }
 
-.ht-chevron { 
-  font-size: .72rem; 
-  color: var(--text-muted); 
-  transition: transform .2s ease;
+/* Flecha pequeña para no recargar */
+.ht-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted, #777);
 }
 
 .dropdown.show .ht-chevron {
   transform: rotate(180deg);
 }
 
-.ht-dropdown-panel .dropdown-item {
-  font-size: .85rem;
-  color: var(--text);
-  transition: background .12s ease;
+/* Ancho del panel de incidencias */
+.ht-dropdown-panel--wide {
+  min-width: 340px;
 }
 
-.ht-dropdown-panel .dropdown-item:hover {
-  background: var(--surface2);
+/* Encabezado e ítems más grandes y espaciosos */
+/* Ancho del panel */
+.ht-dropdown-panel--wide { min-width: 540px; }
+
+/* Ancho base para todos los paneles desplegables de la barra */
+.ht-dropdown-panel {
+  min-width: 320px; /* Aumenta el ancho (por defecto suele venir en 160px - 200px) */
+}
+
+/* Tamaño de texto y relleno unificados */
+.ht-dropdown-panel :is(.ht-dropdown-header, .dropdown-item, .ht-empty-state) {
+  font-size: 0.95rem;
+  padding: 12px 16px;
 }
 
 .ht-empty-state {

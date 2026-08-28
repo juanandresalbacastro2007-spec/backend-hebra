@@ -18,9 +18,8 @@ function actualizarReloj() {
   if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
 
   if (dateEl) {
-    const dias   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const meses  = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    dateEl.textContent = `${dias[ahora.getDay()]} ${ahora.getDate()} ${meses[ahora.getMonth()]} ${ahora.getFullYear()}`;
+    const opcionesFecha = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+    dateEl.textContent = ahora.toLocaleDateString('es-CO', opcionesFecha).toUpperCase();
   }
 }
 actualizarReloj();
@@ -55,10 +54,10 @@ const formatterCOP = new Intl.NumberFormat('es-CO', {
 });
 
 function calcularCotizacion() {
-  const prendaEl    = document.getElementById('quotePrenda');
-  const cantidadEl  = document.getElementById('quoteCantidad');
-  const precioEl    = document.getElementById('quotePrecioUnitario');
-  const subtotalEl  = document.getElementById('quoteSubtotalDisplay');
+  const prendaEl   = document.getElementById('quotePrenda');
+  const cantidadEl = document.getElementById('quoteCantidad');
+  const precioEl   = document.getElementById('quotePrecioUnitario');
+  const subtotalEl = document.getElementById('quoteSubtotalDisplay');
   if (!prendaEl || !cantidadEl) return;
 
   const precio   = parseFloat(prendaEl.value) || 0;
@@ -72,8 +71,8 @@ function calcularCotizacion() {
   }
 }
 
-document.getElementById('quotePrenda')   ?.addEventListener('change', calcularCotizacion);
-document.getElementById('quoteCantidad') ?.addEventListener('input',  calcularCotizacion);
+document.getElementById('quotePrenda')?.addEventListener('change', calcularCotizacion);
+document.getElementById('quoteCantidad')?.addEventListener('input', calcularCotizacion);
 
 const formCotizacion = document.getElementById('formCotizacion');
 if (formCotizacion) {
@@ -102,7 +101,7 @@ if (formCotizacion) {
 
 
 /* ══════════════════════════════════════════════════════════════
-   4. MODAL NUEVA ORDEN — precio y subtotal (si aplica)
+   4. MODAL NUEVA ORDEN — precio y subtotal
 ══════════════════════════════════════════════════════════════ */
 let precioModalOrden = 0;
 
@@ -125,7 +124,7 @@ function actualizarSubtotalOrden() {
   const cant = parseInt(document.getElementById('modalCantidad')?.value) || 0;
   const el   = document.getElementById('modalSubtotalDisplay');
   if (el) {
-    el.innerText = cant > 0 && precioModalOrden > 0
+    el.textContent = cant > 0 && precioModalOrden > 0
       ? '$' + (cant * precioModalOrden).toLocaleString('es-CO', { minimumFractionDigits: 0 })
       : '$0';
   }
@@ -241,8 +240,7 @@ function handleUpload(input) {
 
 
 /* ══════════════════════════════════════════════════════════════
-   7. NOTIFICACIONES EN TIEMPO REAL — polling al backend Django
-   (reemplaza la lista simulada de listaNotificaciones)
+   7. NOTIFICACIONES EN TIEMPO REAL — Polling a Django
 ══════════════════════════════════════════════════════════════ */
 (function () {
   const POLL_MS        = 30_000;
@@ -254,7 +252,6 @@ function handleUpload(input) {
   const listaDropdown      = document.getElementById('notifDropdownList');
   const contenedorTracker  = document.getElementById('orderTrackerContainer');
 
-  /* Consultar notificaciones al backend */
   async function consultarNotificaciones() {
     try {
       const resp = await fetch(URL_NOTIF, {
@@ -270,14 +267,12 @@ function handleUpload(input) {
     }
   }
 
-  /* Badge del campanita */
   function actualizarBadge(cantidad) {
     if (!badgeContador) return;
     badgeContador.textContent     = cantidad > 9 ? '9+' : cantidad;
     badgeContador.style.display   = cantidad > 0 ? 'inline-flex' : 'none';
   }
 
-  /* Lista en el dropdown */
   function actualizarDropdown(notificaciones) {
     if (!listaDropdown) return;
 
@@ -321,7 +316,6 @@ function handleUpload(input) {
     `).join('<li><hr class="dropdown-divider my-1"></li>');
   }
 
-  /* Marcar una como leída */
   window.htMarcarLeida = async function (id, elemento) {
     try {
       await fetch(URL_LEER(id), {
@@ -335,7 +329,6 @@ function handleUpload(input) {
     }
   };
 
-  /* Marcar todas como leídas */
   window.htMarcarTodasLeidas = async function () {
     try {
       await fetch(URL_LEER(0), {
@@ -348,7 +341,6 @@ function handleUpload(input) {
     }
   };
 
-  /* Refrescar el tracker de órdenes */
   async function refrescarTracker() {
     if (!contenedorTracker) return;
     try {
@@ -363,13 +355,11 @@ function handleUpload(input) {
     }
   }
 
-  /* Cookie CSRF */
   function getCsrf() {
     const c = document.cookie.split(';').find(x => x.trim().startsWith('csrftoken='));
     return c ? c.split('=')[1] : '';
   }
 
-  /* Arranque */
   document.addEventListener('DOMContentLoaded', function () {
     consultarNotificaciones();
     setInterval(consultarNotificaciones, POLL_MS);
@@ -479,8 +469,80 @@ function deleteSede(id) {
 
 
 /* ══════════════════════════════════════════════════════════════
-   9. INICIALIZACIÓN GENERAL
+   9. CALENDARIO AUTOMATIZADO (DateRangePicker)
 ══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function () {
   renderSedesTable();
+
+  if (window.jQuery && jQuery.fn.daterangepicker) {
+    moment.locale('es');
+    const pickerInput = $('#o-fecha-rango');
+
+    pickerInput.daterangepicker({
+      autoUpdateInput: false,
+      minDate: moment().startOf('day'), // 👈 AQUÍ BLOQUEAS LAS FECHAS ANTERIORES A HOY
+      locale: {
+        format: 'YYYY-MM-DD',
+        applyLabel: 'Aplicar',
+        cancelLabel: 'Limpiar',
+        fromLabel: 'Desde',
+        toLabel: 'Hasta',
+        daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'],
+        monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        firstDay: 1
+      },
+      isCustomDate: function(date) {
+        const drp = pickerInput.data('daterangepicker');
+        if (!drp || !drp.startDate || !drp.endDate) return '';
+
+        const start = drp.startDate;
+        const end = drp.endDate;
+
+        if (start.isSame(end, 'day')) return '';
+        if (date.isSame(start, 'day') || date.isSame(end, 'day')) return '';
+
+        const totalDays = end.diff(start, 'days') + 1;
+        const chunk = Math.floor(totalDays / 3);
+        const remainder = totalDays % 3;
+        const duracion1 = chunk + (remainder > 0 ? 1 : 0);
+        const duracion2 = chunk + (remainder > 1 ? 1 : 0);
+
+        const e1End = start.clone().add(duracion1 - 1, 'days');
+        const e2Start = e1End.clone().add(1, 'days');
+        const e2End = e2Start.clone().add(duracion2 - 1, 'days');
+        const e3Start = e2End.clone().add(1, 'days');
+
+        if (date.isBetween(start, e1End, 'day', '[]')) return 'etapa-1-bg';
+        if (date.isBetween(e2Start, e2End, 'day', '[]')) return 'etapa-2-bg';
+        if (date.isBetween(e3Start, end, 'day', '[]')) return 'etapa-3-bg';
+
+        return '';
+      }
+    });
+
+    const drp = pickerInput.data('daterangepicker');
+
+    function actualizarLeyendasFooter() {
+      const footer = drp.container.find('.drp-buttons');
+      footer.find('.etapas-legend-container').remove();
+      const legendHTML = `
+        <div class="etapas-legend-container">
+          <span class="etapa-badge etapa-1">Etapa 1</span>
+          <span class="etapa-badge etapa-2">Etapa 2</span>
+          <span class="etapa-badge etapa-3">Etapa 3</span>
+        </div>
+      `;
+      footer.prepend(legendHTML);
+    }
+
+    pickerInput.on('show.daterangepicker', actualizarLeyendasFooter);
+    pickerInput.on('apply.daterangepicker', function(ev, picker) {
+      $(this).val(picker.startDate.format('YYYY-MM-DD') + ' hasta ' + picker.endDate.format('YYYY-MM-DD'));
+      actualizarLeyendasFooter();
+    });
+    pickerInput.on('cancel.daterangepicker', function() {
+      $(this).val('');
+      drp.container.find('.etapas-legend-container').remove();
+    });
+  }
 });

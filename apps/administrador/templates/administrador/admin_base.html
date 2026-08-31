@@ -19,9 +19,9 @@
 </head>
 <body>
 
-  <!-- ══ SIDEBAR ══ -->
+   <!-- ══ SIDEBAR ══ -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
+    <a href="{% url 'admin_portal' %}" class="sidebar-brand" style="text-decoration:none; color:inherit;">
       <div class="brand-icon">
         <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;">
       </div>
@@ -29,7 +29,7 @@
         <div class="brand-title">HebraTech</div>
         <div class="brand-sub">Administración</div>
       </div>
-    </div>
+    </a>
 
       <nav class="sidebar-nav">
         <div class="nav-section-label">Principal</div>
@@ -84,7 +84,6 @@
         </div>
       </nav>
   </aside>
-
   <!-- ══ MAIN ══ -->
   <div class="main-content">
 

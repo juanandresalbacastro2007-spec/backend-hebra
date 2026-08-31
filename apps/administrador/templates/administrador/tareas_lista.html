@@ -169,7 +169,7 @@
           </td>
         </tr>
 
-        <!-- 3. MODAL EDITAR CON AVISOS Y VALIDACIONES -->
+        <!-- 3. MODAL EDITAR CON FECHAS BLOQUEADAS A HOY -->
         <div class="modal fade" id="modalEditarTarea{{ asig.idAsignacion }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
@@ -194,17 +194,28 @@
                     <div class="invalid-feedback small">Ingresa una descripción para la asignación.</div>
                   </div>
 
+                  <!-- INPUT FECHA INICIO BLOQUEADO A HOY O POSTERIOR -->
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Fecha de Inicio</label>
-                    <input type="date" name="fecha_inicio" class="form-control fecha-inicio-input"
-                      value="{{ asig.fechaInicio|date:'Y-m-d' }}" required>
-                    <div class="invalid-feedback small">Selecciona una fecha válida.</div>
+                    <input type="date" 
+                           name="fecha_inicio" 
+                           class="form-control fecha-inicio-input"
+                           value="{{ asig.fechaInicio|date:'Y-m-d' }}" 
+                           min="{% now 'Y-m-d' %}" 
+                           onclick="this.showPicker && this.showPicker()" 
+                           required>
+                    <div class="invalid-feedback small">Selecciona una fecha válida (hoy o posterior).</div>
                   </div>
 
+                  <!-- INPUT FECHA LÍMITE BLOQUEADO A HOY O POSTERIOR -->
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Fecha Límite</label>
-                    <input type="date" name="fecha_limite" class="form-control fecha-limite-input"
-                      value="{{ asig.fechaLimite|date:'Y-m-d' }}">
+                    <input type="date" 
+                           name="fecha_limite" 
+                           class="form-control fecha-limite-input"
+                           value="{{ asig.fechaLimite|date:'Y-m-d' }}" 
+                           min="{% now 'Y-m-d' %}" 
+                           onclick="this.showPicker && this.showPicker()">
                     <div class="invalid-feedback small">La fecha límite no puede ser anterior a la fecha de inicio.</div>
                     <small class="text-muted fs-7">Si se supera, la asignación se marca automáticamente como retrasada.</small>
                   </div>
@@ -309,20 +320,19 @@
       });
     }
 
-    // Validaciones Bootstrap 5 para los formularios en modales
+    // Validaciones Bootstrap 5 y sincronización de fechas
     const todayStr = new Date().toISOString().split('T')[0];
     const forms = document.querySelectorAll('.needs-validation');
+
     Array.prototype.slice.call(forms).forEach(function (form) {
       const fechaInicioInput = form.querySelector('.fecha-inicio-input');
       const fechaLimiteInput = form.querySelector('.fecha-limite-input');
 
-      // Fecha mínima seleccionable: hoy. No tocamos el value existente
-      // (puede ser legítimamente pasado si la tarea ya empezó), solo
-      // evitamos que elijan una fecha nueva anterior a hoy.
+      // Aplicar dinámicamente el min a hoy
       if (fechaInicioInput) fechaInicioInput.min = todayStr;
       if (fechaLimiteInput) fechaLimiteInput.min = todayStr;
 
-      // Sincronizar el mínimo permitido de fecha límite con la fecha de inicio
+      // Sincronizar el mínimo de la fecha límite para que coincida con la fecha de inicio seleccionada
       if (fechaInicioInput && fechaLimiteInput) {
         function sincronizarMin() {
           if (fechaInicioInput.value) {

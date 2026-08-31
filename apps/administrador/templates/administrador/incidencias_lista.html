@@ -113,7 +113,6 @@
             {{ inc.descripcion }}
           </td>
           <td class="text-center">{{ inc.periodoEvaluado|default:"—" }}</td>
-          <!-- Línea 116 -->
           <td class="text-center">{{ inc.fechaGeneracion|date:"d/m/Y"|default:"—" }}</td>
           <td class="text-center">{{ inc.fechaRevision|date:"d/m/Y"|default:"—" }}</td>
           <td class="text-center">
@@ -156,7 +155,7 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                   </div>
-                  <form method="POST" action="{% url 'admin_editar_incidencia' inc.idIncidencia %}">
+                  <form method="POST" action="{% url 'admin_editar_incidencia' inc.idIncidencia %}" class="needs-validation" novalidate>
                     {% csrf_token %}
                     <div class="modal-body p-4">
                       <div class="row g-3">
@@ -164,11 +163,13 @@
                           <label class="form-label fw-medium small">Tipo de incidencia <span class="text-danger">*</span></label>
                           <input type="text" name="tipoIncidencia" class="form-control form-control-sm"
                             value="{{ inc.tipoIncidencia }}" required placeholder="Ej. Falla de equipo, Ausencia, Material defectuoso">
+                          <div class="invalid-feedback small">El tipo de incidencia es obligatorio.</div>
                         </div>
                         <div class="col-12">
                           <label class="form-label fw-medium small">Descripción <span class="text-danger">*</span></label>
                           <textarea name="descripcion" class="form-control form-control-sm" rows="3" required
                             placeholder="Detalle de la incidencia...">{{ inc.descripcion }}</textarea>
+                          <div class="invalid-feedback small">Ingresa la descripción de la incidencia.</div>
                         </div>
                         <div class="col-md-6">
                           <label class="form-label fw-medium small">Período evaluado</label>
@@ -183,11 +184,20 @@
                             <option value="Pendiente" {% if inc.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
                           </select>
                         </div>
+
+                        <!-- INPUT FECHA DE REVISIÓN CON RESTRICCIÓN Y PICKER DIRECTO -->
                         <div class="col-12">
                           <label class="form-label fw-medium small">Fecha de revisión</label>
-                          <input type="date" name="fechaRevision" class="form-control form-control-sm"
-                            value="{{ inc.fechaRevision|date:'Y-m-d' }}">
+                          <input type="date" 
+                                 name="fechaRevision" 
+                                 class="form-control form-control-sm fecha-revision-input"
+                                 data-fecha-generacion="{{ inc.fechaGeneracion|date:'Y-m-d' }}"
+                                 value="{{ inc.fechaRevision|date:'Y-m-d' }}"
+                                 min="{% now 'Y-m-d' %}"
+                                 onclick="this.showPicker && this.showPicker()">
+                          <div class="invalid-feedback small">La fecha de revisión no puede ser anterior a la de generación.</div>
                         </div>
+
                         <div class="col-12">
                           <hr class="my-1">
                           <label class="form-label fw-medium small">
@@ -201,7 +211,7 @@
                             {% endif %}
                           </label>
                           <textarea name="respuesta" class="form-control form-control-sm" rows="3"
-                            placeholder="Explicale al operario qué procede hacer o cómo se resolvió...">{{ inc.respuesta|default:'' }}</textarea>
+                            placeholder="Explícale al operario qué procede hacer o cómo se resolvió...">{{ inc.respuesta|default:'' }}</textarea>
                           <div class="form-text small">Al guardar un cambio acá, el operario recibe una notificación en su portal.</div>
                         </div>
                       </div>
@@ -243,7 +253,16 @@
         <tr>
           <td colspan="9" class="text-center text-muted py-5">
             <i class="bi bi-clipboard-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
-            <p class="mb-0 fw-medium">No se encontraron incidencias registradas.</p>
+            {% if buscar_filtro or estado_filtro %}
+              <p class="mb-1 fw-medium">No se encontraron incidencias que coincidan con la búsqueda o filtro.</p>
+              <div class="mt-3">
+                <a href="{% url 'admin_incidencias' %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i> Restablecer filtros
+                </a>
+              </div>
+            {% else %}
+              <p class="mb-0 fw-medium">No se encontraron incidencias registradas.</p>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -256,6 +275,7 @@
 {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    // Auto-envío en búsqueda
     const buscarInput = document.getElementById('buscarInput');
     const filterForm = document.getElementById('filterForm');
 
@@ -266,6 +286,44 @@
         }
       });
     }
+
+    // Validaciones de formularios e integración de fechas
+    const todayStr = new Date().toISOString().split('T')[0];
+    const forms = document.querySelectorAll('.needs-validation');
+
+    Array.prototype.slice.call(forms).forEach(function (form) {
+      const fechaRevInput = form.querySelector('.fecha-revision-input');
+
+      if (fechaRevInput) {
+        const fechaGen = fechaRevInput.getAttribute('data-fecha-generacion');
+        // El min debe ser como mínimo hoy o la fecha de generación si fuera posterior
+        if (fechaGen && fechaGen > todayStr) {
+          fechaRevInput.min = fechaGen;
+        } else {
+          fechaRevInput.min = todayStr;
+        }
+      }
+
+      form.addEventListener('submit', function (event) {
+        let valido = form.checkValidity();
+
+        if (fechaRevInput && fechaRevInput.value) {
+          const fechaGen = fechaRevInput.getAttribute('data-fecha-generacion');
+          if (fechaGen && fechaRevInput.value < fechaGen) {
+            fechaRevInput.setCustomValidity('La fecha de revisión no puede ser anterior a la de generación.');
+            valido = false;
+          } else {
+            fechaRevInput.setCustomValidity('');
+          }
+        }
+
+        if (!valido) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
   });
 </script>
 {% endblock %}

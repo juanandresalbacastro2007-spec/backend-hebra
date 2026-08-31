@@ -512,6 +512,24 @@
         }
       });
     }
+
+    // Bloquear fechas anteriores a hoy en todos los inputs type="date"
+    function bloquearFechasPasadas() {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const fechaHoy = `${yyyy}-${mm}-${dd}`;
+
+      document.querySelectorAll('input[type="date"]').forEach(function (input) {
+        input.setAttribute('min', fechaHoy);
+      });
+    }
+
+    bloquearFechasPasadas();
+
+    // Por si los modales se cargan/renderizan dinámicamente después
+    document.body.addEventListener('shown.bs.modal', bloquearFechasPasadas);
   });
 </script>
 {% endblock %}

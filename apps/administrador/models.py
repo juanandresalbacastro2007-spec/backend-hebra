@@ -191,12 +191,54 @@ class Incidencia(models.Model):
     fechaGeneracion = models.DateField(auto_now_add=True)
     fechaRevision = models.DateField(null=True, blank=True)
 
+    # ⚠️ Ya se usaba en el template y en incidencia_editar pero no existía
+    # en el modelo, así que nunca se guardaba en la base de datos.
+    periodoEvaluado = models.CharField(max_length=50, null=True, blank=True)
+
+    # ✅ NUEVO: respuesta del administrador, visible para el operario
+    respuesta = models.TextField(null=True, blank=True)
+    # ✅ NUEVO: se pone en False al guardar una respuesta nueva/editada;
+    # el operario la marca leída al abrir el detalle en su portal.
+    respuestaLeida = models.BooleanField(default=True)
+
     class Meta:
         db_table = 'incidencias'
         managed = False
 
     def __str__(self):
         return f'Incidencia #{self.idIncidencia} — {self.tipoIncidencia}'
+
+class Factura(models.Model):
+    ESTADO_CHOICES = [
+        ('Pendiente de pago', 'Pendiente de pago'),
+        ('Pagada', 'Pagada'),
+    ]
+
+    idFactura = models.AutoField(primary_key=True)
+    idOrden = models.ForeignKey(
+        Orden,
+        on_delete=models.CASCADE,
+        db_column='idOrden'
+    )
+    idCliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='idCliente'
+    )
+    numeroFactura = models.CharField(max_length=30, unique=True)
+    fechaEmision = models.DateTimeField(auto_now_add=True)
+    fechaPago = models.DateTimeField(null=True, blank=True)
+    rutaPDF = models.CharField(max_length=255)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente de pago')
+
+    class Meta:
+        db_table = 'facturas'
+        managed = False
+
+    def __str__(self):
+        return f'Factura {self.numeroFactura}'
+
 
 class Producto(models.Model):
     idProducto = models.AutoField(primary_key=True)

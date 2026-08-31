@@ -32,10 +32,12 @@
       {% endif %}
     </div>
 
+    <!-- ✅ Las etiquetas visibles ahora coinciden 1:1 con el stepper que ve
+         el cliente en su portal (mismo VALUE guardado, solo cambia el texto) -->
     <select name="estado" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
       <option value="">Todos los estados</option>
       <option value="Pendiente" {% if estado_filtro == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-      <option value="Procesando" {% if estado_filtro == 'Procesando' %}selected{% endif %}>Procesando</option>
+      <option value="Procesando" {% if estado_filtro == 'Procesando' %}selected{% endif %}>En producción</option>
       <option value="Enviado" {% if estado_filtro == 'Enviado' %}selected{% endif %}>Enviado</option>
       <option value="Entregado" {% if estado_filtro == 'Entregado' %}selected{% endif %}>Entregado</option>
       <option value="Cancelado" {% if estado_filtro == 'Cancelado' %}selected{% endif %}>Cancelado</option>
@@ -71,7 +73,7 @@
 
 <div class="section-card">
   <div class="section-card-header">
-    <h6><i class="bi bi-bag me-2"></i> {% if estado_filtro %}Órdenes — {{ estado_filtro }}{% else %}Todas las órdenes{% endif %} ({{ ordenes|length }}) </h6>
+    <h6><i class="bi bi-bag me-2"></i> {% if estado_filtro %}Órdenes — {% if estado_filtro == 'Procesando' %}En producción{% else %}{{ estado_filtro }}{% endif %}{% else %}Todas las órdenes{% endif %} ({{ ordenes|length }}) </h6>
   </div>
   <div class="section-card-body p-0">
     <table class="ht-table">
@@ -112,8 +114,10 @@
           <td>
             {% if orden.estado == 'Entregado' %}
             <span class="badge-ht badge-success"><i class="bi bi-check-lg me-1"></i>{{ orden.estado }}</span>
-            {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' %}
-            <span class="badge-ht badge-info"><i class="bi bi-gear-wide-connected me-1"></i>{{ orden.estado }}</span>
+            {% elif orden.estado == 'Procesando' %}
+            <span class="badge-ht badge-info"><i class="bi bi-gear-wide-connected me-1"></i>En producción</span>
+            {% elif orden.estado == 'Enviado' %}
+            <span class="badge-ht badge-info"><i class="bi bi-truck me-1"></i>{{ orden.estado }}</span>
             {% elif orden.estado == 'Cancelado' %}
             <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>{{ orden.estado }}</span>
             {% else %}
@@ -174,11 +178,12 @@
                     <label class="form-label fw-medium small">Estado actual</label>
                     <select name="estado" class="form-select">
                       <option value="Pendiente" {% if orden.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                      <option value="Procesando" {% if orden.estado == 'Procesando' %}selected{% endif %}>Procesando</option>
+                      <option value="Procesando" {% if orden.estado == 'Procesando' %}selected{% endif %}>En producción</option>
                       <option value="Enviado" {% if orden.estado == 'Enviado' %}selected{% endif %}>Enviado</option>
                       <option value="Entregado" {% if orden.estado == 'Entregado' %}selected{% endif %}>Entregado</option>
                       <option value="Cancelado" {% if orden.estado == 'Cancelado' %}selected{% endif %}>Cancelado</option>
                     </select>
+                    <div class="form-text small">Estas etiquetas son exactamente las que ve el cliente en el seguimiento de su orden.</div>
                   </div>
                 </div>
                 <div class="modal-footer bg-light">

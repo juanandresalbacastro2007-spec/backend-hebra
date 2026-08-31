@@ -44,7 +44,7 @@ def _generar_factura_pdf(orden):
         numeroFactura=numero_factura,
         rutaPDF=f'facturas/{nombre_archivo}',
         total=subtotal,
-        estado='Emitida'
+        estado='Pendiente de pago'
     )
     return factura
 

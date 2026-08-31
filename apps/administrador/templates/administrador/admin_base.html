@@ -47,6 +47,9 @@
         <a href="{% url 'admin_ordenes' %}" class="nav-item {% if seccion_activa == 'ordenes' %}active{% endif %}">
           <i class="bi bi-bag-fill"></i> Órdenes
         </a>
+        <a href="{% url 'admin_facturas' %}" class="nav-item {% if seccion_activa == 'facturas' %}active{% endif %}">
+          <i class="bi bi-receipt"></i> Facturas
+        </a>
         <a href="{% url 'admin_tareas' %}" class="nav-item {% if seccion_activa == 'tareas' %}active{% endif %}">
           <i class="bi bi-clipboard2-check-fill"></i> Tareas
         </a>

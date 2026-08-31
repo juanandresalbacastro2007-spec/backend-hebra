@@ -70,6 +70,16 @@ urlpatterns = [
         views.api_editar_reporte,
         name='api_editar_reporte'
     ),
+
+    # ------------------------------------------------------------------
+    # API — Marcar la respuesta del admin como leída
+    # POST /operarios/api/reporte/<id>/leer/
+    # ------------------------------------------------------------------
+    path(
+        'api/reporte/<int:id_incidencia>/leer/',
+        views.api_marcar_respuesta_leida,
+        name='api_marcar_respuesta_leida'
+    ),
  
     # ------------------------------------------------------------------
     # API — Eliminar un reporte (solo si estado = 'Generado')

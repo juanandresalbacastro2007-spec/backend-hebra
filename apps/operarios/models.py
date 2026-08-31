@@ -111,6 +111,12 @@ class Incidencia(models.Model):
     fechaGeneracion = models.DateField()
     fechaRevision = models.DateField(null=True, blank=True)
 
+    # ✅ NUEVO: respuesta del administrador visible para el operario
+    respuesta = models.TextField(null=True, blank=True)
+    # ✅ NUEVO: se pone en False cuando el admin responde; el operario la
+    # "lee" al abrir el detalle, lo que la vuelve a poner en True.
+    respuestaLeida = models.BooleanField(default=True)
+
     class Meta:
         db_table = 'incidencias'
         managed = False

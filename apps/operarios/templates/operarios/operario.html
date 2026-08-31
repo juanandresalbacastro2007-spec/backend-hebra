@@ -60,27 +60,29 @@
           <span class="d-none d-sm-inline">Generar Incidencia</span>
         </button>
 
-        <!-- Campana de incidencias recientes -->
+        <!-- Ver incidencias generadas (texto, sin campana) -->
+        <button class="ht-nav-btn" type="button" id="btnVerIncidenciasGeneradas" title="Ver incidencias generadas">
+          <i class="bi bi-journal-text"></i>
+          <span class="d-none d-md-inline">Ver incidencias generadas</span>
+        </button>
+
+        <!-- Campana de NOTIFICACIONES (respuestas del admin) -->
         <div class="dropdown">
           <button class="ht-nav-btn position-relative" type="button"
                   data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                  title="Incidencias recientes">
+                  title="Notificaciones">
             <i class="bi bi-bell-fill"></i>
-            <span class="ht-badge-count" id="navIncidenceBadge">0</span>
+            <span class="ht-badge-count" id="navNotifBadge">0</span>
           </button>
           <div class="dropdown-menu dropdown-menu-end ht-dropdown-panel ht-dropdown-panel--wide">
             <div class="ht-dropdown-header">
-              <i class="bi bi-journal-text me-2"></i>
-              <span>Mis Incidencias</span>
-              <button class="btn btn-sm btn-link p-0 ms-auto text-decoration-none"
-                      style="color:var(--primary);" id="btnOpenIncidenceModule">
-                Ver todas
-              </button>
+              <i class="bi bi-bell me-2"></i>
+              <span>Notificaciones</span>
             </div>
-            <div id="navReportesContainer">
+            <div id="navNotifContainer">
               <div class="ht-empty-state">
-                <i class="bi bi-file-earmark-text"></i>
-                <span>Sin incidencias registradas</span>
+                <i class="bi bi-bell-slash"></i>
+                <span>Sin notificaciones nuevas</span>
               </div>
             </div>
           </div>
@@ -394,17 +396,22 @@
             <input type="number" id="finishQtyBad" class="ht-input" min="0" value="0">
           </div>
 
-          <div class="ht-form-group">
-            <label class="ht-label" for="finishNotes">Observaciones (opcional)</label>
-            <textarea id="finishNotes" class="ht-input ht-textarea" rows="2"
-                      placeholder="Notas sobre el lote o novedades…"></textarea>
-          </div>
-
-          <div class="form-check form-switch mb-1">
+          <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="finishHasIncidence">
             <label class="form-check-label" for="finishHasIncidence" style="color:var(--warn);font-weight:600;">
               ¿Hubo inconvenientes durante la ejecución?
             </label>
+          </div>
+
+          <div class="ht-form-group" id="finishNotesGroup" style="display:none;">
+            <label class="ht-label" for="finishNotes">
+              Describe el inconveniente <span class="ht-required">*</span>
+            </label>
+            <textarea id="finishNotes" class="ht-input ht-textarea" rows="2"
+                      placeholder="Notas sobre el lote o novedades…"></textarea>
+            <div class="ht-field-hint" style="color:var(--text-muted);font-size:.75rem;margin-top:2px;">
+              Esto se registrará como una incidencia visible para el administrador.
+            </div>
           </div>
 
         </div>
@@ -578,6 +585,43 @@
     </div>
   </div>
 
+  <!-- MODAL: DETALLE DE INCIDENCIA (con respuesta del admin) -->
+  <div class="modal fade" id="modalDetalleIncidencia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content ht-modal-content">
+        <div class="modal-header ht-modal-header">
+          <div class="ht-modal-title-wrap">
+            <span class="ht-modal-eyebrow">Detalle</span>
+            <h5 class="modal-title ht-modal-title" id="detalleIncTipo">—</h5>
+          </div>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body ht-modal-body">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span id="detalleIncEstado"></span>
+            <small style="color:var(--text-muted);"><i class="bi bi-calendar-event me-1"></i><span id="detalleIncFecha"></span></small>
+          </div>
+
+          <div class="ht-form-group">
+            <label class="ht-label">Tu descripción</label>
+            <p id="detalleIncDescripcion" class="mb-0" style="white-space:pre-wrap;"></p>
+          </div>
+
+          <div id="detalleIncRespuestaWrap" class="mt-3 p-3 rounded-3"
+               style="background:rgba(57,91,100,0.08);border:1px dashed var(--primary);display:none;">
+            <div class="fw-bold text-uppercase mb-1" style="font-size:.75rem;color:var(--primary-dark);">
+              <i class="bi bi-reply-fill me-1"></i>Respuesta del administrador
+            </div>
+            <p id="detalleIncRespuesta" class="mb-0" style="white-space:pre-wrap;"></p>
+          </div>
+        </div>
+        <div class="modal-footer ht-modal-footer">
+          <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: HISTORIAL DE TAREAS COMPLETADAS -->
   <div class="modal fade" id="modalHistorialTareas" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -603,6 +647,7 @@
                   <th>Cantidad</th>
                   <th>Fecha finalización</th>
                   <th>Horas reales</th>
+                  <th class="text-end">Ver</th>
                 </tr>
               </thead>
               <tbody id="tableHistorialBody"></tbody>

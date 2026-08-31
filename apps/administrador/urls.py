@@ -31,6 +31,11 @@ urlpatterns = [
     path('incidencias/<int:idIncidencia>/editar/', views.incidencia_editar, name='admin_editar_incidencia'),
     path('incidencias/<int:idIncidencia>/eliminar/', views.incidencia_eliminar, name='admin_eliminar_incidencia'),
 
+    # Facturas
+    path('facturas/', views.facturas_lista, name='admin_facturas'),
+    path('facturas/<int:idFactura>/marcar-pagada/', views.factura_marcar_pagada, name='admin_factura_marcar_pagada'),
+    path('facturas/<int:idFactura>/descargar/', views.factura_descargar, name='admin_factura_descargar'),
+
     # Inventario & Materiales
     path('inventario/', views.inventario_lista, name='admin_inventario'),
 

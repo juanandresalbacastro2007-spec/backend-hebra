@@ -290,9 +290,15 @@
                     <td>{{ factura.fechaEmision|date:"d/m/Y H:i" }}</td>
                     <td>${{ factura.total|floatformat:0 }}</td>
                     <td>
-                      <span class="badge px-3 py-1 rounded-pill" style="background-color:#A5C9CA;color:#2C3333;">
-                        {{ factura.estado }}
+                      {% if factura.estado == 'Pagada' %}
+                      <span class="badge px-3 py-1 rounded-pill" style="background-color:#c9e8c9;color:#1e5b1e;">
+                        <i class="bi bi-check-circle me-1"></i>{{ factura.estado }}
                       </span>
+                      {% else %}
+                      <span class="badge px-3 py-1 rounded-pill" style="background-color:#A5C9CA;color:#2C3333;">
+                        <i class="bi bi-clock me-1"></i>{{ factura.estado }}
+                      </span>
+                      {% endif %}
                     </td>
                     <td class="text-end">
                       <a href="{% url 'descargar_factura' factura.idFactura %}" class="btn btn-sm btn-outline-primary">

@@ -16,12 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
         eliminarReporte:   (id) => `/operarios/api/reporte/${id}/eliminar/`,
         historialReportes: '/operarios/api/reportes/',
         pdfReporte:        (id) => `/operarios/api/reporte/${id}/pdf/`,
+        marcarRespuestaLeida: (id) => `/operarios/api/reporte/${id}/leer/`,
     };
 
     // ─── ESTADO LOCAL ────────────────────────────────────────────
     const cacheTareas       = {};   // { idAsignacion: tareaObj }
     const cacheIncidencias  = {};   // { idIncidencia: incObj }
     const timerIntervals    = {};   // { idAsignacion: intervalId }
+    const alertedTasks      = new Set();   // idAsignacion ya alertados por <1h restante
 
     let pendingDeleteId        = null;
     let activeStartTaskId      = null;
@@ -205,28 +207,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = tarea.idAsignacion;
         // Usar el timestamp del backend si existe, si no usar Date.now() como referencia parcial
         const inicioMs = tarea.fechaInicioTs || Date.now();
+        const limitMs  = (tarea.horasEstimadas || 1) * 3600 * 1000;
 
         timerIntervals[id] = setInterval(() => {
             const el = document.getElementById(`timer-${id}`);
             if (!el) { clearInterval(timerIntervals[id]); return; }
 
-            const diffSec = Math.floor((Date.now() - inicioMs) / 1000);
-            const h = String(Math.floor(diffSec / 3600)).padStart(2, '0');
-            const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
-            const s = String(diffSec % 60).padStart(2, '0');
-            el.textContent = `${h}:${m}:${s}`;
+            const elapsedMs   = Date.now() - inicioMs;
+            const remainingMs = limitMs - elapsedMs;
+            const excessEl    = document.getElementById(`excess-${id}`);
 
-            // Alerta de exceso de tiempo
-            const limitMs  = (tarea.horasEstimadas || 1) * 3600 * 1000;
-            const excessEl = document.getElementById(`excess-${id}`);
-            if (excessEl) {
-                const elapsed = Date.now() - inicioMs;
-                if (elapsed > limitMs) {
-                    const minEx = Math.floor((elapsed - limitMs) / 60000);
+            if (remainingMs > 3600000) {
+                // Más de 1 hora restante: se muestra en horas
+                const horasRest = remainingMs / 3600000;
+                el.textContent = `${horasRest.toFixed(1)}h restantes`;
+                el.classList.remove('ht-timer-critico');
+                if (excessEl) excessEl.classList.add('d-none');
+
+            } else if (remainingMs > 0) {
+                // Bajo 1 hora: cuenta regresiva minuto a minuto (59, 58, 57…)
+                const minRest = Math.floor(remainingMs / 60000);
+                const segRest = Math.floor((remainingMs % 60000) / 1000);
+                el.textContent = `${minRest}:${String(segRest).padStart(2, '0')} min`;
+                el.classList.add('ht-timer-critico');
+                if (excessEl) excessEl.classList.add('d-none');
+
+                // Alertar una sola vez al cruzar el umbral de 1 hora restante
+                if (!alertedTasks.has(id)) {
+                    alertedTasks.add(id);
+                    mostrarToast(`⏰ Falta 1 hora para completar "${tarea.nombreTarea}"`, 'err');
+                }
+
+            } else {
+                // Tiempo excedido
+                el.textContent = 'Tiempo excedido';
+                el.classList.add('ht-timer-critico');
+                if (excessEl) {
+                    const minEx = Math.floor(-remainingMs / 60000);
                     excessEl.textContent = `⚠ +${minEx}m`;
                     excessEl.classList.remove('d-none');
-                } else {
-                    excessEl.classList.add('d-none');
                 }
             }
         }, 1000);
@@ -266,20 +285,39 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('finishQtyBad').value         = 0;
         document.getElementById('finishNotes').value          = '';
         document.getElementById('finishHasIncidence').checked = false;
+        document.getElementById('finishNotesGroup').style.display = 'none';
+        document.getElementById('finishNotes').classList.remove('is-invalid');
         bootstrap.Modal.getOrCreateInstance(
             document.getElementById('modalFinalizarTarea')
         ).show();
     }
 
+    // Mostrar/ocultar Observaciones según el switch de inconvenientes
+    document.getElementById('finishHasIncidence')?.addEventListener('change', function () {
+        const grupo = document.getElementById('finishNotesGroup');
+        grupo.style.display = this.checked ? '' : 'none';
+        if (!this.checked) document.getElementById('finishNotes').classList.remove('is-invalid');
+    });
+
     // Listener del botón de confirmar finalización
     document.getElementById('btnConfirmFinishTask').addEventListener('click', async () => {
         if (!activeFinishTaskId) return;
-        const hasIncidence = document.getElementById('finishHasIncidence').checked;
+        const hasIncidence  = document.getElementById('finishHasIncidence').checked;
+        const notesEl       = document.getElementById('finishNotes');
+        const observaciones = notesEl.value.trim();
+
+        // Si marcó que hubo inconvenientes, la descripción es obligatoria
+        if (hasIncidence && observaciones.length < 5) {
+            notesEl.classList.add('is-invalid');
+            mostrarToast('Describe el inconveniente antes de continuar', 'err');
+            return;
+        }
+
         await cambiarEstado(activeFinishTaskId, 'Completada');
         bootstrap.Modal.getInstance(document.getElementById('modalFinalizarTarea')).hide();
         if (hasIncidence) {
             const tarea = cacheTareas[activeFinishTaskId];
-            if (tarea) abrirModalIncidencia(null, tarea);
+            if (tarea) abrirModalIncidencia(null, tarea, observaciones);
         }
     });
 
@@ -425,80 +463,91 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error('Error cargando reportes');
             const data = await res.json();
             const reportes = data.reportes || [];
-            renderizarDropdownIncidencias(reportes);
+            reportes.forEach(rep => { cacheIncidencias[rep.idIncidencia] = rep; });
+            actualizarKpiIncidencias(reportes);
+            renderizarNotificaciones(reportes);
             renderizarTablaIncidencias(reportes);
         } catch (err) {
             console.error(err);
         }
     }
 
-    // ─── Dropdown campana ────────────────────────────────────────
-    function renderizarDropdownIncidencias(reportes) {
-        const badge   = document.getElementById('navIncidenceBadge');
-        const kpiEl   = document.getElementById('kpiCountIncidence');
-        const container = document.getElementById('navReportesContainer');
+    function actualizarKpiIncidencias(reportes) {
+        const kpiEl = document.getElementById('kpiCountIncidence');
+        if (kpiEl) kpiEl.textContent = reportes.length;
+    }
 
-        if (badge)  badge.textContent  = reportes.length;
-        if (kpiEl)  kpiEl.textContent  = reportes.length;
-
+    // ─── Campana de NOTIFICACIONES (respuestas del admin sin leer) ─
+    function renderizarNotificaciones(reportes) {
+        const badge     = document.getElementById('navNotifBadge');
+        const container = document.getElementById('navNotifContainer');
         if (!container) return;
 
-        if (reportes.length === 0) {
+        const noLeidas = reportes.filter(r => r.respuesta && !r.respuestaLeida);
+
+        if (badge) badge.textContent = noLeidas.length;
+
+        if (noLeidas.length === 0) {
             container.innerHTML = `<div class="ht-empty-state">
-                <i class="bi bi-file-earmark-text"></i>
-                <span>Sin incidencias registradas</span>
+                <i class="bi bi-bell-slash"></i>
+                <span>Sin notificaciones nuevas</span>
             </div>`;
             return;
         }
 
-        container.innerHTML = reportes.slice(0, 5).map(rep => {
-            cacheIncidencias[rep.idIncidencia] = rep;
-            return `
-            <div class="ht-report-card">
-                <div class="ht-report-card-header">
-                    <span class="ht-report-card-tipo">${rep.tipoIncidencia}</span>
-                    <div class="ht-report-card-actions">
-                        <button class="ht-report-action-btn ht-report-action-btn--edit"
-                                data-id="${rep.idIncidencia}" title="Editar">
-                            <i class="bi bi-pencil"></i> Editar
-                        </button>
-                        <button class="ht-report-action-btn ht-report-action-btn--delete"
-                                data-id="${rep.idIncidencia}" title="Eliminar">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        <button class="ht-report-action-btn ht-report-action-btn--pdf"
-                                data-id="${rep.idIncidencia}" title="Descargar PDF">
-                            <i class="bi bi-file-earmark-pdf-fill"></i>
-                        </button>
-                    </div>
+        container.innerHTML = noLeidas.map(rep => `
+            <button type="button" class="ht-notif-item" data-id="${rep.idIncidencia}"
+                    style="all:unset;display:block;width:100%;cursor:pointer;padding:.6rem .8rem;border-bottom:1px solid var(--border, #eee);">
+                <div style="font-weight:600;font-size:.85rem;color:var(--primary-dark, #1A2F3B);">
+                    <i class="bi bi-reply-fill me-1"></i>El administrador respondió tu incidencia
                 </div>
-                <p class="ht-report-card-desc">${rep.descripcion}</p>
-                <div class="ht-report-card-meta">
-                    <span class="ht-badge-status-${rep.estado}">${rep.estado}</span>
-                    <span><i class="bi bi-calendar-event me-1"></i>${rep.fechaGeneracion || 'Hoy'}</span>
+                <div style="font-size:.78rem;color:var(--text-muted,#888);margin-top:2px;">
+                    "${rep.tipoIncidencia}" · #${String(rep.idIncidencia).padStart(4, '0')}
                 </div>
-            </div>`;
-        }).join('');
+            </button>`).join('');
 
-        // Eventos de los botones del dropdown
-        container.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
-            btn.addEventListener('click', e => {
-                e.stopPropagation();
-                const inc = cacheIncidencias[btn.dataset.id];
-                if (inc) { document.activeElement?.blur(); setTimeout(() => abrirModalIncidencia(inc), 150); }
-            });
-        });
-        container.querySelectorAll('.ht-report-action-btn--delete').forEach(btn => {
-            btn.addEventListener('click', e => {
-                e.stopPropagation();
-                pendingDeleteId = btn.dataset.id;
+        container.querySelectorAll('.ht-notif-item').forEach(btn => {
+            btn.addEventListener('click', () => {
                 document.activeElement?.blur();
-                setTimeout(() => bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show(), 150);
+                abrirDetalleIncidencia(btn.dataset.id);
             });
         });
-        container.querySelectorAll('.ht-report-action-btn--pdf').forEach(btn => {
-            btn.addEventListener('click', e => { e.stopPropagation(); descargarPDF(btn.dataset.id); });
-        });
+    }
+
+    // ─── Modal de detalle de incidencia (con respuesta del admin) ──
+    async function abrirDetalleIncidencia(idIncidencia) {
+        const rep = cacheIncidencias[idIncidencia];
+        if (!rep) return;
+
+        document.getElementById('detalleIncTipo').textContent = rep.tipoIncidencia;
+        document.getElementById('detalleIncEstado').innerHTML =
+            `<span class="ht-badge-status-${rep.estado}">${rep.estado}</span>`;
+        document.getElementById('detalleIncFecha').textContent = rep.fechaGeneracion || rep.fechaReporte || '—';
+        document.getElementById('detalleIncDescripcion').textContent = rep.descripcion;
+
+        const respuestaWrap = document.getElementById('detalleIncRespuestaWrap');
+        if (rep.respuesta) {
+            respuestaWrap.style.display = '';
+            document.getElementById('detalleIncRespuesta').textContent = rep.respuesta;
+        } else {
+            respuestaWrap.style.display = 'none';
+        }
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalleIncidencia')).show();
+
+        // Marcar como leída (si no lo estaba) y refrescar el badge/lista
+        if (rep.respuesta && !rep.respuestaLeida) {
+            try {
+                await fetch(ENDPOINTS.marcarRespuestaLeida(idIncidencia), {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken() },
+                });
+                rep.respuestaLeida = true;
+                await cargarHistorialReportes();
+            } catch (err) {
+                console.error(err);
+            }
+        }
     }
 
     // ─── Tabla en modal gestión ──────────────────────────────────
@@ -526,6 +575,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><span class="ht-badge-status-${rep.estado}">${rep.estado}</span></td>
                 <td><small style="color:var(--text-muted);">${rep.fechaGeneracion || 'Reciente'}</small></td>
                 <td class="text-end">
+                    <button class="ht-report-action-btn ht-report-action-btn--ver me-1"
+                            data-id="${rep.idIncidencia}" title="Ver detalle completo">
+                        <i class="bi bi-eye"></i>
+                    </button>
                     <button class="ht-report-action-btn ht-report-action-btn--pdf me-1"
                             data-id="${rep.idIncidencia}" title="Descargar PDF">
                         <i class="bi bi-file-earmark-pdf-fill"></i>
@@ -540,6 +593,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </td>
             </tr>`).join('');
+
+        tbody.querySelectorAll('.ht-report-action-btn--ver').forEach(btn => {
+            btn.addEventListener('click', () => {
+                bootstrap.Modal.getInstance(document.getElementById('modalGestionIncidencias'))?.hide();
+                setTimeout(() => abrirDetalleIncidencia(btn.dataset.id), 200);
+            });
+        });
 
         tbody.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -562,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ─── Abrir modal crear/editar incidencia ─────────────────────
-    function abrirModalIncidencia(incidencia = null, tareaAsociada = null) {
+    function abrirModalIncidencia(incidencia = null, tareaAsociada = null, textoBase = null) {
         const eyebrow    = document.getElementById('reportModalEyebrow');
         const titulo     = document.getElementById('reportModalLabel');
         const editIdEl   = document.getElementById('reportEditId');
@@ -588,9 +648,11 @@ document.addEventListener('DOMContentLoaded', () => {
             btnLabel.textContent = 'Enviar reporte';
             editIdEl.value       = '';
             tipoEl.value         = '';
-            descEl.value         = tareaAsociada
-                ? `Incidencia durante la tarea: ${tareaAsociada.nombreTarea}. `
-                : '';
+            descEl.value         = textoBase
+                ? `${textoBase} (durante la tarea: ${tareaAsociada?.nombreTarea || ''})`
+                : tareaAsociada
+                    ? `Incidencia durante la tarea: ${tareaAsociada.nombreTarea}. `
+                    : '';
             if (tareaAsociada) {
                 refEl.style.display = '';
                 refName.textContent = tareaAsociada.nombreTarea;
@@ -721,8 +783,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btnGenerateReport')
             ?.addEventListener('click', () => abrirModalIncidencia());
 
-        // Abrir modal gestión desde campana
-        document.getElementById('btnOpenIncidenceModule')
+        // Ver incidencias generadas (botón de texto en el topbar)
+        document.getElementById('btnVerIncidenciasGeneradas')
             ?.addEventListener('click', () => {
                 document.activeElement?.blur();
                 setTimeout(() => {
@@ -812,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .sort((a, b) => (b.fechaFinalizacion || '').localeCompare(a.fechaFinalizacion || ''));
 
         if (completadas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4" style="color:var(--text-muted);">
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
                 Todavía no completaste ninguna tarea.</td></tr>`;
         } else {
             tbody.innerHTML = completadas.map(t => `
@@ -822,8 +884,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${t.tipoPrenda && t.cantidadPrendas ? `${t.cantidadPrendas} ${t.tipoPrenda}` : '—'}</td>
                     <td>${t.fechaFinalizacion || '—'}</td>
                     <td>${t.horasReales != null ? `${t.horasReales} h` : '—'}</td>
+                    <td class="text-end">
+                        <button type="button" class="ht-report-action-btn ht-historial-ver-btn"
+                                data-id="${t.idAsignacion}" title="Ver tarea completada">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
                 </tr>`).join('');
         }
+
+        tbody.querySelectorAll('.ht-historial-ver-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const t = cacheTareas[btn.dataset.id];
+                if (!t) return;
+                bootstrap.Modal.getInstance(document.getElementById('modalHistorialTareas'))?.hide();
+                setTimeout(() => abrirDetalleTarea(t), 200);
+            });
+        });
 
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalHistorialTareas')).show();
     }

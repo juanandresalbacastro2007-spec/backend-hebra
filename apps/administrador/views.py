@@ -8,12 +8,14 @@ from django.db.models import Q
 from django.utils import timezone
 from .models import (
     Usuario, Operario, Tarea,
-    AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto,
+    AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto, Factura,
     TIEMPOS_ESTANDAR_MINUTOS,
 )
 import openpyxl
 from datetime import datetime, date
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, Http404
+from django.conf import settings
+import os
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
 from xhtml2pdf import pisa
@@ -439,13 +441,13 @@ def tarea_editar(request, idAsignacion):
 
     if request.method == 'POST':
         descripcion = request.POST.get('descripcion')
-        fecha_inicio = request.POST.get('fechaInicio')
-        fecha_limite = request.POST.get('fechaLimite')
-        fecha_finalizacion = request.POST.get('fechaFinalizacion')
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_limite = request.POST.get('fecha_limite')
         estado = request.POST.get('estado')
         prioridad = request.POST.get('prioridad')
-        horas_estimadas = request.POST.get('horasEstimadas')
-        horas_reales = request.POST.get('horasReales')
+        tipo_prenda = request.POST.get('tipoPrenda')
+        cantidad_prendas = request.POST.get('cantidadPrendas')
+        horas_estimadas = request.POST.get('horas_estimadas')
 
         try:
             if descripcion is not None:
@@ -453,20 +455,23 @@ def tarea_editar(request, idAsignacion):
 
             fecha_inicio_dt = _parsear_fecha(fecha_inicio)
             fecha_limite_dt = _parsear_fecha(fecha_limite)
-            fecha_finalizacion_dt = _parsear_fecha(fecha_finalizacion)
 
             if fecha_inicio_dt:
                 asignacion.fechaInicio = fecha_inicio_dt
+            # fecha_limite sí puede vaciarse intencionalmente desde el form
             asignacion.fechaLimite = fecha_limite_dt
-            asignacion.fechaFinalizacion = fecha_finalizacion_dt
 
             if estado:
                 asignacion.estado = estado
             if prioridad:
                 asignacion.prioridad = prioridad
 
-            asignacion.horasEstimadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else asignacion.horasEstimadas
-            asignacion.horasReales = float(horas_reales) if horas_reales and horas_reales.strip() else None
+            asignacion.tipoPrenda = tipo_prenda or None
+            asignacion.cantidadPrendas = int(cantidad_prendas) if cantidad_prendas and cantidad_prendas.strip() else None
+
+            if horas_estimadas and horas_estimadas.strip():
+                asignacion.horasEstimadas = float(horas_estimadas)
+            # fechaFinalizacion y horasReales no vienen en este modal: no se tocan.
 
             asignacion.save()
             messages.success(request, f'Asignación #{idAsignacion} actualizada correctamente.')
@@ -524,6 +529,14 @@ def incidencia_editar(request, idIncidencia):
         incidencia.estado = request.POST.get('estado')
         fecha_revision = request.POST.get('fechaRevision')
         incidencia.fechaRevision = fecha_revision if fecha_revision and fecha_revision.strip() else None
+
+        # ✅ Respuesta al operario: si el texto cambió, se marca como
+        # no leída para que le dispare la notificación en su portal.
+        nueva_respuesta = (request.POST.get('respuesta') or '').strip() or None
+        if nueva_respuesta != incidencia.respuesta:
+            incidencia.respuestaLeida = False
+        incidencia.respuesta = nueva_respuesta
+
         incidencia.save()
         messages.success(request, f'Incidencia #{idIncidencia} actualizada correctamente.')
     return redirect('admin_incidencias')
@@ -539,6 +552,65 @@ def incidencia_eliminar(request, idIncidencia):
         except Exception as e:
             messages.error(request, f'Error al eliminar la incidencia: {str(e)}')
     return redirect('admin_incidencias')
+
+
+# ── Facturas ─────────────────────────────────────────────────
+@admin_required
+def facturas_lista(request):
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+    facturas = Factura.objects.select_related('idCliente', 'idOrden').order_by('-fechaEmision')
+
+    buscar_filtro = request.GET.get('buscar', '')
+    if buscar_filtro:
+        facturas = facturas.filter(
+            Q(numeroFactura__icontains=buscar_filtro) |
+            Q(idCliente__nombre__icontains=buscar_filtro) |
+            Q(idCliente__empresa__icontains=buscar_filtro) |
+            Q(idOrden__idOrden__icontains=buscar_filtro)
+        )
+
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro:
+        facturas = facturas.filter(estado=estado_filtro)
+
+    return render(request, 'administrador/facturas_lista.html', {
+        'usuario': usuario,
+        'facturas': facturas,
+        'buscar_filtro': buscar_filtro,
+        'estado_filtro': estado_filtro,
+        'seccion_activa': 'facturas',
+    })
+
+
+@admin_required
+def factura_marcar_pagada(request, idFactura):
+    if request.method == 'POST':
+        try:
+            factura = get_object_or_404(Factura, pk=idFactura)
+            if factura.estado == 'Pagada':
+                messages.warning(request, f'La factura {factura.numeroFactura} ya estaba marcada como pagada.')
+            else:
+                factura.estado = 'Pagada'
+                factura.fechaPago = timezone.now()
+                factura.save()
+                messages.success(request, f'Factura {factura.numeroFactura} marcada como pagada.')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar la factura: {str(e)}')
+    return redirect('admin_facturas')
+
+
+@admin_required
+def factura_descargar(request, idFactura):
+    """Descarga de PDF para admin — sin el filtro de 'factura propia del cliente'."""
+    factura = get_object_or_404(Factura, pk=idFactura)
+    ruta = os.path.join(settings.MEDIA_ROOT, factura.rutaPDF)
+    if not os.path.exists(ruta):
+        raise Http404('El archivo de la factura no fue encontrado.')
+    return FileResponse(
+        open(ruta, 'rb'),
+        as_attachment=True,
+        filename=os.path.basename(ruta)
+    )
 
 
 # ── Módulos / Placeholders externos ──────────────────────────

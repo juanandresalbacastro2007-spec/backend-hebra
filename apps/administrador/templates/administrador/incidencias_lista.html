@@ -124,6 +124,13 @@
             {% else %}
               <span class="badge-ht badge-info"><i class="bi bi-asterisk me-1"></i>Generado</span>
             {% endif %}
+            {% if inc.respuesta %}
+              <br>
+              <span class="badge-ht {% if inc.respuestaLeida %}badge-success{% else %}badge-warning{% endif %} mt-1"
+                    title="{{ inc.respuesta }}">
+                <i class="bi bi-reply-fill me-1"></i>{% if inc.respuestaLeida %}Respondida{% else %}Sin leer{% endif %}
+              </span>
+            {% endif %}
           </td>
           <td class="text-center">
             <div class="btn-group btn-group-sm" role="group">
@@ -180,6 +187,22 @@
                           <label class="form-label fw-medium small">Fecha de revisión</label>
                           <input type="date" name="fechaRevision" class="form-control form-control-sm"
                             value="{{ inc.fechaRevision|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-12">
+                          <hr class="my-1">
+                          <label class="form-label fw-medium small">
+                            Respuesta al operario
+                            {% if inc.respuesta %}
+                              {% if inc.respuestaLeida %}
+                                <span class="badge-ht badge-success ms-1"><i class="bi bi-eye me-1"></i>Leída</span>
+                              {% else %}
+                                <span class="badge-ht badge-warning ms-1"><i class="bi bi-envelope me-1"></i>Sin leer</span>
+                              {% endif %}
+                            {% endif %}
+                          </label>
+                          <textarea name="respuesta" class="form-control form-control-sm" rows="3"
+                            placeholder="Explicale al operario qué procede hacer o cómo se resolvió...">{{ inc.respuesta|default:'' }}</textarea>
+                          <div class="form-text small">Al guardar un cambio acá, el operario recibe una notificación en su portal.</div>
                         </div>
                       </div>
                     </div>

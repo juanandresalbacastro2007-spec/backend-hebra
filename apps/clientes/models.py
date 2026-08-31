@@ -131,6 +131,11 @@ class Orden(models.Model):
 
 
 class Factura(models.Model):
+    ESTADO_CHOICES = [
+        ('Pendiente de pago', 'Pendiente de pago'),
+        ('Pagada', 'Pagada'),
+    ]
+
     idFactura = models.AutoField(primary_key=True)
     idOrden = models.ForeignKey(
         Orden,
@@ -144,9 +149,10 @@ class Factura(models.Model):
     )
     numeroFactura = models.CharField(max_length=30, unique=True)
     fechaEmision = models.DateTimeField(auto_now_add=True)
+    fechaPago = models.DateTimeField(null=True, blank=True)
     rutaPDF = models.CharField(max_length=255)
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=20, default='Emitida')
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente de pago')
 
     class Meta:
         db_table = 'facturas'

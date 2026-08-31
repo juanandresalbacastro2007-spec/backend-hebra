@@ -342,11 +342,35 @@ def api_historial_reportes(request):
             'fechaReporte':  str(inc.fechaGeneracion) if inc.fechaGeneracion else '',
             # Alias que usan ambas versiones del JS
             'fechaGeneracion': str(inc.fechaGeneracion) if inc.fechaGeneracion else '',
+            'respuesta':       inc.respuesta,
+            'respuestaLeida':  inc.respuestaLeida,
         }
         for inc in incidencias
     ]
 
     return JsonResponse({'reportes': reportes})
+
+
+# ─────────────────────────────────────────────────────────────────
+# 8b. API — Marcar la respuesta de una incidencia como leída
+# POST /operarios/api/reporte/<id>/leer/
+# ─────────────────────────────────────────────────────────────────
+
+@require_http_methods(['POST'])
+def api_marcar_respuesta_leida(request, id_incidencia):
+    """Marca la respuesta del admin como leída (se llama al abrir el detalle)."""
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
+
+    incidencia = get_object_or_404(
+        Incidencia, idIncidencia=id_incidencia, idUsuario=operario,
+    )
+    if not incidencia.respuestaLeida:
+        incidencia.respuestaLeida = True
+        incidencia.save(update_fields=['respuestaLeida'])
+
+    return JsonResponse({'ok': True})
 
 
 # ─────────────────────────────────────────────────────────────────

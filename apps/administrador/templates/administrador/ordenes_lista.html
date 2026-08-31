@@ -81,6 +81,7 @@
         <tr>
           <th># Orden</th>
           <th>Cliente</th>
+          <th>producto</th>
           <th>Fecha</th>
           <th>Cantidad</th>
           <th>Subtotal</th>
@@ -95,6 +96,7 @@
         <tr>
           <td><strong>#{{ orden.idOrden }}</strong></td>
           <td>{{ orden.idCliente.empresa|default:orden.idCliente.nombre|default:"—" }}</td>
+         <td>{{ orden.nombreProducto|default:"—" }}</td>
           <td>{{ orden.fechaCreacion }}</td>
           <td>{{ orden.cantidad|default:"—" }}</td>
           <td>
@@ -206,7 +208,7 @@
         <!-- ESTADO VACÍO CON NOTIFICACIÓN DE BÚSQUEDA -->
         {% empty %}
         <tr>
-          <td colspan="9" class="text-center text-muted py-5">
+          <td colspan="10" class="text-center text-muted py-5">
             <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
             {% if buscar_filtro or estado_filtro %}
               <p class="mb-1 fw-medium">No se encontraron órdenes con los filtros actuales.</p>

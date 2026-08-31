@@ -140,6 +140,7 @@ class Orden(models.Model):
         on_delete=models.CASCADE,
         db_column='idCliente'
     )
+    nombreProducto = models.CharField(max_length=150, null=True, blank=True, db_column='nombreProducto')
     fechaCreacion = models.DateField(auto_now_add=True)
     fechaEntregaEstimada = models.DateField(null=True, blank=True)
     instrucciones = models.CharField(max_length=1000)
@@ -151,7 +152,6 @@ class Orden(models.Model):
     class Meta:
         db_table = 'ordenes'
         managed = False
-
 
 class Cliente(models.Model):
     idCliente = models.AutoField(primary_key=True)

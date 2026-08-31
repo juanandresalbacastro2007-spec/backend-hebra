@@ -6,17 +6,20 @@
 {% block topbar_sub %}Panorama completo de HebraTech: usuarios, órdenes, tareas, incidencias e inventario en tiempo real{% endblock %}
 
 {% block topbar_extra %}
-<div class="ms-auto d-flex gap-2 topbar-btn-group" style="flex-shrink:0;">
-  <button class="btn btn-outline-danger btn-sm btn-pill" onclick="exportarCSV()">
-    <i class="bi bi-file-earmark-pdf-fill me-1"></i>Exportar PDF
-  </button>
-  <button class="boton_produccion btn-sm btn-pill" onclick="abrirModalProducto()">
-    <i class="bi bi-plus-lg me-1"></i>Nuevo Producto
-  </button>
-  <button class="boton_produccion btn-sm btn-pill" onclick="abrirModalOrden()">
-    <i class="bi bi-plus-lg me-1"></i>Nueva Orden
-  </button>
-
+<div class="ms-auto">
+  <div class="dropdown">
+    <button class="btn-notif-ht" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Notificaciones">
+      <i class="bi bi-bell-fill"></i>
+      <span class="notif-badge-ht" id="notifBadge" style="display:none;">0</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end p-2 notif-dropdown-ht" aria-labelledby="notifDropdownBtn">
+      <li class="dropdown-header">Notificaciones</li>
+      <li><hr class="dropdown-divider"></li>
+      <div id="notifListContainer">
+        <li class="px-2 py-3 text-center text-muted small">Sin notificaciones nuevas</li>
+      </div>
+    </ul>
+  </div>
 </div>
 {% endblock %}
 
@@ -27,7 +30,7 @@
 {% block contenido %}
 <div class="produccion-page">
 
-  <div id="alertas-banner" class="alertas-banner"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
   <div class="kpi-grid" id="kpi-grid-clickable">
     <div class="kpi-card kpi-clickable" onclick="irAProductos()">
@@ -391,7 +394,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

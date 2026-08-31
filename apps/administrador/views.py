@@ -63,7 +63,7 @@ def admin_portal(request):
 @admin_required
 def usuarios_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    usuarios = Usuario.objects.all().order_by('rol', 'nombre')
+    usuarios = Usuario.objects.all().order_by('-idUsuario')
 
     estado_filtro = request.GET.get('estado', '')
     if estado_filtro:
@@ -511,11 +511,21 @@ def incidencias_lista(request):
     if estado_filtro:
         incidencias = incidencias.filter(estado=estado_filtro)
 
+    # Período actual (ej: "Agosto 2026") para autocompletar "Período evaluado"
+    # en el modal de edición, así el admin ya no tiene que escribirlo a mano.
+    MESES_ES = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
+        7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
+    }
+    hoy = date.today()
+    periodo_actual = f'{MESES_ES[hoy.month]} {hoy.year}'
+
     return render(request, 'administrador/incidencias_lista.html', {
         'usuario': usuario,
         'incidencias': incidencias,
         'buscar_filtro': buscar_filtro,
         'estado_filtro': estado_filtro,
+        'periodo_actual': periodo_actual,
     })
 
 
@@ -525,7 +535,15 @@ def incidencia_editar(request, idIncidencia):
         incidencia = get_object_or_404(Incidencia, pk=idIncidencia)
         incidencia.tipoIncidencia = request.POST.get('tipoIncidencia')
         incidencia.descripcion = request.POST.get('descripcion')
-        incidencia.periodoEvaluado = request.POST.get('periodoEvaluado') or None
+        periodo_evaluado = (request.POST.get('periodoEvaluado') or '').strip()
+        if not periodo_evaluado:
+            MESES_ES = {
+                1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
+                7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
+            }
+            hoy = date.today()
+            periodo_evaluado = f'{MESES_ES[hoy.month]} {hoy.year}'
+        incidencia.periodoEvaluado = periodo_evaluado
         incidencia.estado = request.POST.get('estado')
         fecha_revision = request.POST.get('fechaRevision')
         incidencia.fechaRevision = fecha_revision if fecha_revision and fecha_revision.strip() else None

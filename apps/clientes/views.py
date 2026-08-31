@@ -1,42 +1,91 @@
-# clientes/views.py
-
 import os
-from .models import Notificacion 
+
 from datetime import datetime
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
 from django.conf import settings
+from django.contrib import messages
+from django.http import FileResponse, Http404, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-from django.http import FileResponse, Http404
+
 from xhtml2pdf import pisa
 
-from .models import Orden, Cliente, Producto, Usuario, Factura, Cotizacion
+from .models import (
+    Orden,
+    Cliente,
+    Producto,
+    Usuario,
+    Factura,
+    Cotizacion,
+    Notificacion,
+)
+
 from apps.core.decorators import login_required_rol
 
-# ── Decorador de protección por rol ─────────────────────────
-cliente_required = login_required_rol(rol_esperado='cliente', session_key='usuario_id')
+
+# ============================================================
+# PROTECCIÓN POR ROL
+# ============================================================
+
+cliente_required = login_required_rol(
+    rol_esperado='cliente',
+    session_key='usuario_id'
+)
 
 
-# ── FASE 4: Helper para generar la factura en PDF ────────────
+# ============================================================
+# GENERAR FACTURA PDF
+# ============================================================
+
 def _generar_factura_pdf(orden):
-    """Genera el PDF de la orden, lo guarda en media/facturas/ y crea el registro en BD."""
-    subtotal = (orden.precioUnitario or 0) * (orden.cantidad or 0)
-    numero_factura = f'F-{datetime.now().strftime("%Y%m%d")}-{orden.idOrden:04d}'
+    """
+    Genera el PDF de la orden, lo guarda en media/facturas/
+    y crea el registro de factura en la base de datos.
+    """
 
-    html = render_to_string('clientes/factura_pdf.html', {
-        'orden': orden,
-        'subtotal': subtotal,
-        'factura': {'numeroFactura': numero_factura, 'fechaEmision': datetime.now()},
-    })
+    subtotal = (
+        (orden.precioUnitario or 0)
+        * (orden.cantidad or 0)
+    )
 
-    carpeta = os.path.join(settings.MEDIA_ROOT, 'facturas')
-    os.makedirs(carpeta, exist_ok=True)
+    numero_factura = (
+        f'F-{datetime.now().strftime("%Y%m%d")}-{orden.idOrden:04d}'
+    )
+
+    html = render_to_string(
+        'clientes/factura_pdf.html',
+        {
+            'orden': orden,
+            'subtotal': subtotal,
+            'factura': {
+                'numeroFactura': numero_factura,
+                'fechaEmision': datetime.now(),
+            },
+        }
+    )
+
+    carpeta = os.path.join(
+        settings.MEDIA_ROOT,
+        'facturas'
+    )
+
+    os.makedirs(
+        carpeta,
+        exist_ok=True
+    )
+
     nombre_archivo = f'{numero_factura}.pdf'
-    ruta_absoluta = os.path.join(carpeta, nombre_archivo)
+
+    ruta_absoluta = os.path.join(
+        carpeta,
+        nombre_archivo
+    )
 
     with open(ruta_absoluta, 'wb') as f:
-        pisa.CreatePDF(html, dest=f)
+        pisa.CreatePDF(
+            html,
+            dest=f
+        )
 
     factura = Factura.objects.create(
         idOrden=orden,
@@ -46,332 +95,840 @@ def _generar_factura_pdf(orden):
         total=subtotal,
         estado='Pendiente de pago'
     )
+
     return factura
 
 
+# ============================================================
+# PORTAL DEL CLIENTE
+# ============================================================
+
 @cliente_required
 def cliente_portal(request):
+
     usuario_id = request.session['usuario_id']
 
     try:
-        cliente = Cliente.objects.get(idUsuario=usuario_id)
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
     except Cliente.DoesNotExist:
-        messages.error(request, 'Tu usuario no tiene un perfil de cliente asociado.')
+
+        messages.error(
+            request,
+            'Tu usuario no tiene un perfil de cliente asociado.'
+        )
+
         return redirect('login')
 
-    usuario = Usuario.objects.get(idUsuario=usuario_id)
+    try:
+        usuario = Usuario.objects.get(
+            idUsuario=usuario_id
+        )
+    except Usuario.DoesNotExist:
 
-    ordenes = Orden.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
+        messages.error(
+            request,
+            'No se encontró el usuario.'
+        )
+
+        return redirect('login')
+
+    # --------------------------------------------------------
+    # TODAS LAS ÓRDENES DEL CLIENTE
+    # --------------------------------------------------------
+
+    ordenes = Orden.objects.filter(
+        idCliente=cliente
+    ).order_by('-fechaCreacion')
+
+    # --------------------------------------------------------
+    # PRODUCTOS DISPONIBLES
+    # --------------------------------------------------------
+
     productos = Producto.objects.all()
 
-    # Contadores para el resumen
-    ordenes_activas = ordenes.filter(estado__in=['Procesando', 'Enviado']).count()
-    ordenes_completadas = ordenes.filter(estado='Entregado').count()
-    ordenes_pendientes = ordenes.filter(estado='Pendiente').count()
+    # --------------------------------------------------------
+    # CONTADORES
+    # --------------------------------------------------------
 
-    # ✅ FASE 3: Traer la orden activa concreta (si existe) para el template
+    ordenes_activas = ordenes.filter(
+        estado__in=[
+            'Procesando',
+            'Enviado'
+        ]
+    ).count()
+
+    ordenes_completadas = ordenes.filter(
+        estado='Entregado'
+    ).count()
+
+    ordenes_pendientes = ordenes.filter(
+        estado='Pendiente'
+    ).count()
+
+    # --------------------------------------------------------
+    # ORDEN ACTIVA
+    # --------------------------------------------------------
+
     orden_activa = ordenes.filter(
-        estado__in=['Pendiente', 'Procesando', 'Enviado']
+        estado__in=[
+            'Pendiente',
+            'Procesando',
+            'Enviado'
+        ]
     ).first()
 
-    # Próxima entrega (la más cercana que no esté entregada/cancelada)
-    proxima_entrega = ordenes.exclude(
-        estado__in=['Entregado', 'Cancelado']
-    ).exclude(
-        fechaEntregaEstimada__isnull=True
-    ).order_by('fechaEntregaEstimada').first()
+    # --------------------------------------------------------
+    # PRÓXIMA ENTREGA
+    # --------------------------------------------------------
 
-    # Últimas 3 órdenes para notificaciones
+    proxima_entrega = (
+        ordenes
+        .exclude(
+            estado__in=[
+                'Entregado',
+                'Cancelado'
+            ]
+        )
+        .exclude(
+            fechaEntregaEstimada__isnull=True
+        )
+        .order_by(
+            'fechaEntregaEstimada'
+        )
+        .first()
+    )
+
+    # --------------------------------------------------------
+    # ÓRDENES RECIENTES
+    # --------------------------------------------------------
+
     ordenes_recientes = ordenes[:3]
 
-    # ✅ FASE 4: Facturas del cliente, para el apartado de facturas
-    facturas = Factura.objects.filter(idCliente=cliente).order_by('-fechaEmision')
+    # --------------------------------------------------------
+    # FACTURAS
+    # --------------------------------------------------------
 
-    # ✅ NUEVO: Cotizaciones del cliente
-    cotizaciones = Cotizacion.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
+    facturas = Factura.objects.filter(
+        idCliente=cliente
+    ).order_by(
+        '-fechaEmision'
+    )
 
-    return render(request, 'clientes/cliente_portal.html', {
+    # --------------------------------------------------------
+    # COTIZACIONES
+    # --------------------------------------------------------
+
+    cotizaciones = Cotizacion.objects.filter(
+        idCliente=cliente
+    ).order_by(
+        '-fechaCreacion'
+    )
+
+    # --------------------------------------------------------
+    # CONTEXTO
+    # --------------------------------------------------------
+
+    contexto = {
         'cliente': cliente,
         'usuario': usuario,
         'ordenes': ordenes,
         'productos': productos,
+
         'ordenes_activas': ordenes_activas,
         'ordenes_completadas': ordenes_completadas,
         'ordenes_pendientes': ordenes_pendientes,
+
         'proxima_entrega': proxima_entrega,
         'ordenes_recientes': ordenes_recientes,
         'orden_activa': orden_activa,
+
         'facturas': facturas,
         'cotizaciones': cotizaciones,
-    })
+    }
+
+    return render(
+        request,
+        'clientes/cliente_portal.html',
+        contexto
+    )
 
 
-# ── FASE 1: Editar Perfil del Cliente ────────────────────────
+# ============================================================
+# EDITAR PERFIL DEL CLIENTE
+# ============================================================
+
 @cliente_required
 def editar_perfil_cliente(request):
-    """
-    Vista para editar el perfil del cliente.
-    Actualiza: nombre, empresa, teléfono, ciudad, dirección
-    Todos estos campos están en la tabla `clientes`, no en `usuarios`
-    """
+
     usuario_id = request.session['usuario_id']
 
     try:
-        cliente = Cliente.objects.get(idUsuario=usuario_id)
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
     except Cliente.DoesNotExist:
-        messages.error(request, 'Tu usuario no tiene un perfil de cliente asociado.')
+
+        messages.error(
+            request,
+            'Tu usuario no tiene un perfil de cliente asociado.'
+        )
+
         return redirect('login')
 
     if request.method == 'POST':
+
         try:
-            # Obtener datos del formulario
-            nombre = request.POST.get('nombre', '').strip()
-            empresa = request.POST.get('empresa', '').strip()
-            telefono = request.POST.get('telefono', '').strip()
-            ciudad = request.POST.get('ciudad', '').strip()
-            direccion = request.POST.get('direccion', '').strip()
 
-            # Validaciones básicas
+            nombre = request.POST.get(
+                'nombre',
+                ''
+            ).strip()
+
+            empresa = request.POST.get(
+                'empresa',
+                ''
+            ).strip()
+
+            telefono = request.POST.get(
+                'telefono',
+                ''
+            ).strip()
+
+            ciudad = request.POST.get(
+                'ciudad',
+                ''
+            ).strip()
+
+            direccion = request.POST.get(
+                'direccion',
+                ''
+            ).strip()
+
             if not nombre:
-                messages.error(request, 'El nombre es requerido.')
-                return redirect('editar_perfil_cliente')
 
-            # Actualizar campos del cliente
+                messages.error(
+                    request,
+                    'El nombre es requerido.'
+                )
+
+                return redirect(
+                    'editar_perfil_cliente'
+                )
+
             cliente.nombre = nombre
             cliente.empresa = empresa or None
             cliente.telefono = telefono or None
             cliente.ciudad = ciudad or None
             cliente.direccion = direccion or None
+
             cliente.save()
 
-            messages.success(request, '✅ Tu perfil ha sido actualizado correctamente.')
-            return redirect('cliente_portal')
+            messages.success(
+                request,
+                'Tu perfil ha sido actualizado correctamente.'
+            )
+
+            return redirect(
+                'cliente_portal'
+            )
 
         except Exception as e:
-            messages.error(request, f'❌ Error al actualizar perfil: {str(e)}')
-            return redirect('editar_perfil_cliente')
 
-    return render(request, 'clientes/editar_perfil_cliente.html', {
-        'cliente': cliente,
-    })
+            messages.error(
+                request,
+                f'Error al actualizar perfil: {str(e)}'
+            )
 
+            return redirect(
+                'editar_perfil_cliente'
+            )
+
+    return render(
+        request,
+        'clientes/editar_perfil_cliente.html',
+        {
+            'cliente': cliente
+        }
+    )
+
+
+# ============================================================
+# REGISTRAR NUEVA ORDEN
+# ============================================================
 
 @cliente_required
 def registrar_orden(request):
+
+    # --------------------------------------------------------
+    # SOLO ACEPTAMOS POST
+    # --------------------------------------------------------
+
+    if request.method != 'POST':
+
+        return redirect(
+            'cliente_portal'
+        )
+
     usuario_id = request.session['usuario_id']
 
-    if request.method == 'POST':
-        try:
-            cliente = Cliente.objects.get(idUsuario=usuario_id)
-        except Cliente.DoesNotExist:
-            messages.error(request, 'Tu usuario no tiene un perfil de cliente asociado.')
-            return redirect('login')
+    # --------------------------------------------------------
+    # BUSCAR CLIENTE
+    # --------------------------------------------------------
 
-        # ✅ FASE 3: Validar que no haya ya una orden activa
-        orden_activa = Orden.objects.filter(
+    try:
+
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
+
+    except Cliente.DoesNotExist:
+
+        messages.error(
+            request,
+            'Tu usuario no tiene un perfil de cliente asociado.'
+        )
+
+        return redirect('login')
+
+    # --------------------------------------------------------
+    # COMPROBAR ORDEN ACTIVA
+    # --------------------------------------------------------
+
+    orden_activa = Orden.objects.filter(
+        idCliente=cliente,
+        estado__in=[
+            'Pendiente',
+            'Procesando',
+            'Enviado'
+        ]
+    ).first()
+
+    if orden_activa:
+
+        messages.error(
+            request,
+            f'Ya tienes una orden activa '
+            f'(#{orden_activa.idOrden}). '
+            f'Espera a que se complete antes '
+            f'de registrar otra.'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
+
+    # --------------------------------------------------------
+    # RECIBIR DATOS DEL FORMULARIO
+    # --------------------------------------------------------
+
+    producto_id = request.POST.get(
+        'producto'
+    )
+
+    cantidad = request.POST.get(
+        'cantidad'
+    )
+
+    prioridad = request.POST.get(
+        'prioridad',
+        'Normal'
+    )
+
+    instrucciones = request.POST.get(
+        'instrucciones',
+        ''
+    ).strip()
+
+    fecha_rango = request.POST.get(
+        'fecha_rango',
+        ''
+    ).strip()
+
+    # --------------------------------------------------------
+    # VALIDAR PRODUCTO
+    # --------------------------------------------------------
+
+    if not producto_id:
+
+        messages.error(
+            request,
+            'Debes seleccionar un producto.'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
+
+    try:
+
+        producto = Producto.objects.get(
+            idProducto=producto_id
+        )
+
+    except Producto.DoesNotExist:
+
+        messages.error(
+            request,
+            'El producto seleccionado no existe.'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
+
+    # --------------------------------------------------------
+    # VALIDAR CANTIDAD
+    # --------------------------------------------------------
+
+    try:
+
+        cantidad = int(cantidad)
+
+        if cantidad <= 0:
+            raise ValueError
+
+    except (ValueError, TypeError):
+
+        messages.error(
+            request,
+            'La cantidad debe ser un número mayor a 0.'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
+
+    # --------------------------------------------------------
+    # VALIDAR PRIORIDAD
+    # --------------------------------------------------------
+
+    prioridades_validas = [
+        'Normal',
+        'Urgente'
+    ]
+
+    if prioridad not in prioridades_validas:
+
+        prioridad = 'Normal'
+
+    # --------------------------------------------------------
+    # VALIDAR FECHA (Opcional)
+    # --------------------------------------------------------
+
+    if not fecha_rango:
+        fecha_rango = "Sin definir"
+
+    # --------------------------------------------------------
+    # CREAR ORDEN
+    # --------------------------------------------------------
+
+    try:
+
+        orden = Orden.objects.create(
+
             idCliente=cliente,
-            estado__in=['Pendiente', 'Procesando', 'Enviado']
-        ).first()
 
-        if orden_activa:
-            messages.error(
-                request,
-                f'⚠️ Ya tienes una orden activa (#{orden_activa.idOrden}). '
-                f'Espera a que se complete antes de registrar otra.'
-            )
-            return redirect('cliente_portal')
+            idProducto=producto,
 
-        producto_id = request.POST.get('producto')
-        cantidad = request.POST.get('cantidad')
-        instrucciones = request.POST.get('instrucciones', '')
-        prioridad = request.POST.get('prioridad', 'Normal')
+            cantidad=cantidad,
 
-        try:
-            producto = Producto.objects.get(idProducto=producto_id)
-            orden = Orden(
-                idCliente=cliente,
-                idProducto=producto,
-                cantidad=int(cantidad),
-                precioUnitario=producto.precio,
-                fechaEntregaEstimada=None,  # lo define producción/administración
-                instrucciones=instrucciones or 'Sin instrucciones',
-                prioridad=prioridad,
-                estado='Pendiente'
-            )
-            orden.save()
+            precioUnitario=producto.precio,
 
-            # ✅ FASE 4: Generar factura PDF automáticamente
-            try:
-                _generar_factura_pdf(orden)
-            except Exception as e:
-                messages.warning(
-                    request,
-                    f'La orden se registró, pero hubo un problema generando la factura: {str(e)}'
-                )
+            # Producción/administración define
+            # posteriormente esta fecha.
+            fechaEntregaEstimada=None,
 
-            messages.success(request, f'¡Orden #{orden.idOrden} registrada exitosamente!')
-            return redirect('orden_exitosa', idOrden=orden.idOrden)
+            instrucciones=(
+                instrucciones
+                if instrucciones
+                else 'Sin instrucciones'
+            ),
 
-        except Exception as e:
-            messages.error(request, f'Error al registrar la orden: {str(e)}')
-            return redirect('cliente_portal')
+            prioridad=prioridad,
 
-    return redirect('cliente_portal')
+            estado='Pendiente'
+        )
 
+    except Exception as e:
+
+        messages.error(
+            request,
+            f'Error al crear la orden: {str(e)}'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
+
+    # --------------------------------------------------------
+    # GENERAR FACTURA
+    # --------------------------------------------------------
+
+    try:
+
+        _generar_factura_pdf(
+            orden
+        )
+
+    except Exception as e:
+
+        messages.warning(
+            request,
+            f'La orden #{orden.idOrden} '
+            f'se registró correctamente, '
+            f'pero ocurrió un problema al generar '
+            f'la factura: {str(e)}'
+        )
+
+    # --------------------------------------------------------
+    # MENSAJE DE ÉXITO
+    # --------------------------------------------------------
+
+    messages.success(
+        request,
+        f'¡Orden #{orden.idOrden} '
+        f'registrada exitosamente!'
+    )
+
+    return redirect(
+        'cliente_portal'
+    )
+
+
+# ============================================================
+# GENERAR COTIZACIÓN
+# ============================================================
 
 @cliente_required
 def generar_cotizacion(request):
-    """
-    Recibe el POST del modal 'Generar cotización' (AJAX, no redirige).
-    A diferencia de registrar_orden, NO valida orden_activa: una
-    cotización es solo una estimación, no reserva producción.
 
-    POST /clientes/cotizaciones/generar/
-    """
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+        return JsonResponse(
+            {
+                'error': 'Método no permitido'
+            },
+            status=405
+        )
 
     usuario_id = request.session['usuario_id']
 
     try:
-        cliente = Cliente.objects.get(idUsuario=usuario_id)
-    except Cliente.DoesNotExist:
-        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
 
-    producto_id = request.POST.get('producto')
-    cantidad = request.POST.get('cantidad')
-    notas = request.POST.get('notas', '').strip()
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
+
+    except Cliente.DoesNotExist:
+
+        return JsonResponse(
+            {
+                'error': 'Cliente no encontrado'
+            },
+            status=404
+        )
+
+    producto_id = request.POST.get(
+        'producto'
+    )
+
+    cantidad = request.POST.get(
+        'cantidad'
+    )
+
+    notas = request.POST.get(
+        'notas',
+        ''
+    ).strip()
 
     if not producto_id or not cantidad:
-        return JsonResponse({'error': 'Selecciona un producto y una cantidad.'}, status=400)
+
+        return JsonResponse(
+            {
+                'error':
+                    'Selecciona un producto '
+                    'y una cantidad.'
+            },
+            status=400
+        )
 
     try:
-        producto = Producto.objects.get(idProducto=producto_id)
+
+        producto = Producto.objects.get(
+            idProducto=producto_id
+        )
+
     except Producto.DoesNotExist:
-        return JsonResponse({'error': 'El producto seleccionado no existe.'}, status=400)
+
+        return JsonResponse(
+            {
+                'error':
+                    'El producto seleccionado '
+                    'no existe.'
+            },
+            status=400
+        )
 
     try:
-        cantidad_int = int(cantidad)
+
+        cantidad_int = int(
+            cantidad
+        )
+
         if cantidad_int <= 0:
             raise ValueError
-    except (ValueError, TypeError):
-        return JsonResponse({'error': 'La cantidad debe ser un número mayor a 0.'}, status=400)
 
-    subtotal = producto.precio * cantidad_int
+    except (ValueError, TypeError):
+
+        return JsonResponse(
+            {
+                'error':
+                    'La cantidad debe ser '
+                    'un número mayor a 0.'
+            },
+            status=400
+        )
+
+    subtotal = (
+        producto.precio
+        * cantidad_int
+    )
 
     cotizacion = Cotizacion.objects.create(
+
         idCliente=cliente,
+
         idProducto=producto,
+
         cantidad=cantidad_int,
+
         precioUnitario=producto.precio,
+
         subtotalEstimado=subtotal,
+
         notas=notas or None,
+
         estado='Pendiente'
     )
 
-    return JsonResponse({
-        'ok': True,
-        'idCotizacion': cotizacion.idCotizacion,
-        'mensaje': 'La solicitud se registró. Evaluaremos costos según tus especificaciones.',
-    })
+    return JsonResponse(
+        {
+            'ok': True,
 
+            'idCotizacion':
+                cotizacion.idCotizacion,
+
+            'mensaje':
+                'La solicitud se registró. '
+                'Evaluaremos costos según tus '
+                'especificaciones.'
+        }
+    )
+
+
+# ============================================================
+# ORDEN EXITOSA
+# ============================================================
 
 @cliente_required
 def orden_exitosa(request, idOrden):
+
     usuario_id = request.session['usuario_id']
 
-    # ✅ Se filtra por idCliente__idUsuario para evitar que un cliente vea
-    # el detalle de una orden ajena cambiando el número en la URL (IDOR).
     orden = get_object_or_404(
-        Orden, idOrden=idOrden, idCliente__idUsuario=usuario_id
+        Orden,
+        idOrden=idOrden,
+        idCliente__idUsuario=usuario_id
     )
 
-    # ✅ FASE 4: Traer la factura asociada, si ya se generó
-    factura = Factura.objects.filter(idOrden=orden).first()
+    factura = Factura.objects.filter(
+        idOrden=orden
+    ).first()
 
-    return render(request, 'clientes/orden_exitosa.html', {
-        'orden': orden,
-        'factura': factura,
-    })
+    return render(
+        request,
+        'clientes/orden_exitosa.html',
+        {
+            'orden': orden,
+            'factura': factura,
+        }
+    )
 
+
+# ============================================================
+# EDITAR ORDEN
+# ============================================================
 
 @cliente_required
 def editar_orden(request, idOrden):
+
     usuario_id = request.session['usuario_id']
 
-    # ✅ Misma corrección: solo puede editar órdenes propias.
     orden = get_object_or_404(
-        Orden, idOrden=idOrden, idCliente__idUsuario=usuario_id
+        Orden,
+        idOrden=idOrden,
+        idCliente__idUsuario=usuario_id
     )
 
-    # Solo se puede editar si está Pendiente
     if orden.estado != 'Pendiente':
-        messages.error(request, 'Solo puedes editar órdenes en estado Pendiente.')
-        return redirect('cliente_portal')
+
+        messages.error(
+            request,
+            'Solo puedes editar órdenes '
+            'en estado Pendiente.'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
 
     productos = Producto.objects.all()
 
     if request.method == 'POST':
-        producto_id = request.POST.get('producto')
-        cantidad = request.POST.get('cantidad')
-        prioridad = request.POST.get('prioridad', 'Normal')
-        instrucciones = request.POST.get('instrucciones', '')
+
+        producto_id = request.POST.get(
+            'producto'
+        )
+
+        cantidad = request.POST.get(
+            'cantidad'
+        )
+
+        prioridad = request.POST.get(
+            'prioridad',
+            'Normal'
+        )
+
+        instrucciones = request.POST.get(
+            'instrucciones',
+            ''
+        ).strip()
 
         try:
-            producto = Producto.objects.get(idProducto=producto_id)
+
+            producto = Producto.objects.get(
+                idProducto=producto_id
+            )
+
+            cantidad = int(
+                cantidad
+            )
+
+            if cantidad <= 0:
+                raise ValueError
+
             orden.idProducto = producto
-            orden.cantidad = int(cantidad)
+            orden.cantidad = cantidad
             orden.precioUnitario = producto.precio
             orden.prioridad = prioridad
-            orden.instrucciones = instrucciones or 'Sin instrucciones'
+            orden.instrucciones = (
+                instrucciones
+                or 'Sin instrucciones'
+            )
+
             orden.save()
 
-            messages.success(request, f'Orden #{orden.idOrden} actualizada correctamente.')
-            return redirect('cliente_portal')
+            messages.success(
+                request,
+                f'Orden #{orden.idOrden} '
+                f'actualizada correctamente.'
+            )
+
+            return redirect(
+                'cliente_portal'
+            )
 
         except Exception as e:
-            messages.error(request, f'Error al actualizar la orden: {str(e)}')
 
-    return render(request, 'clientes/editar_orden.html', {
-        'orden': orden,
-        'productos': productos,
-    })
+            messages.error(
+                request,
+                f'Error al actualizar la orden: {str(e)}'
+            )
 
+    return render(
+        request,
+        'clientes/editar_orden.html',
+        {
+            'orden': orden,
+            'productos': productos,
+        }
+    )
+
+
+# ============================================================
+# ELIMINAR ORDEN
+# ============================================================
 
 @cliente_required
 def eliminar_orden(request, idOrden):
+
     usuario_id = request.session['usuario_id']
 
-    # ✅ Misma corrección: solo puede eliminar órdenes propias.
     orden = get_object_or_404(
-        Orden, idOrden=idOrden, idCliente__idUsuario=usuario_id
+        Orden,
+        idOrden=idOrden,
+        idCliente__idUsuario=usuario_id
     )
 
     if orden.estado != 'Pendiente':
-        messages.error(request, 'Solo puedes eliminar órdenes en estado Pendiente.')
-        return redirect('cliente_portal')
+
+        messages.error(
+            request,
+            'Solo puedes eliminar órdenes '
+            'en estado Pendiente.'
+        )
+
+        return redirect(
+            'cliente_portal'
+        )
 
     if request.method == 'POST':
+
         orden.delete()
-        messages.success(request, f'Orden #{idOrden} eliminada correctamente.')
-        return redirect('cliente_portal')
 
-    return redirect('cliente_portal')
+        messages.success(
+            request,
+            f'Orden #{idOrden} '
+            f'eliminada correctamente.'
+        )
 
+        return redirect(
+            'cliente_portal'
+        )
 
-# ── FASE 4: Descargar factura en PDF ─────────────────────────
-@cliente_required
-def descargar_factura(request, idFactura):
-    usuario_id = request.session['usuario_id']
-
-    # ✅ Solo puede descargar facturas propias (mismo criterio IDOR que en órdenes).
-    factura = get_object_or_404(
-        Factura, idFactura=idFactura, idCliente__idUsuario=usuario_id
+    return redirect(
+        'cliente_portal'
     )
 
-    ruta = os.path.join(settings.MEDIA_ROOT, factura.rutaPDF)
+
+# ============================================================
+# DESCARGAR FACTURA
+# ============================================================
+
+@cliente_required
+def descargar_factura(request, idFactura):
+
+    usuario_id = request.session['usuario_id']
+
+    factura = get_object_or_404(
+        Factura,
+        idFactura=idFactura,
+        idCliente__idUsuario=usuario_id
+    )
+
+    ruta = os.path.join(
+        settings.MEDIA_ROOT,
+        factura.rutaPDF
+    )
+
     if not os.path.exists(ruta):
-        raise Http404('El archivo de la factura no fue encontrado.')
+
+        raise Http404(
+            'El archivo de la factura '
+            'no fue encontrado.'
+        )
 
     return FileResponse(
         open(ruta, 'rb'),
@@ -379,109 +936,215 @@ def descargar_factura(request, idFactura):
         filename=os.path.basename(ruta)
     )
 
-from django.http import JsonResponse
+
+# ============================================================
+# ACTUALIZAR ÓRDENES POR AJAX
+# ============================================================
 
 @cliente_required
 def actualizar_ordenes(request):
-    """Devuelve el HTML actualizado de la tabla de órdenes, para refrescar por AJAX."""
+
     usuario_id = request.session['usuario_id']
 
     try:
-        cliente = Cliente.objects.get(idUsuario=usuario_id)
+
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
+
     except Cliente.DoesNotExist:
-        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
 
-    ordenes = Orden.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
-    html = render_to_string('clientes/_tabla_ordenes.html', {'ordenes': ordenes})
+        return JsonResponse(
+            {
+                'error':
+                    'Cliente no encontrado'
+            },
+            status=404
+        )
 
-    return JsonResponse({'html': html})
+    ordenes = Orden.objects.filter(
+        idCliente=cliente
+    ).order_by(
+        '-fechaCreacion'
+    )
+
+    html = render_to_string(
+        'clientes/_tabla_ordenes.html',
+        {
+            'ordenes': ordenes
+        },
+        request=request
+    )
+
+    return JsonResponse(
+        {
+            'html': html
+        }
+    )
+
+
+# ============================================================
+# NOTIFICACIONES JSON
+# ============================================================
 
 @cliente_required
 def notificaciones_json(request):
-    """
-    Devuelve las notificaciones del cliente en JSON.
-    El portal las consulta cada 30 segundos para actualizar
-    el contador del campanita sin recargar la página.
- 
-    GET /clientes/notificaciones/
-    Respuesta:
-    {
-        "no_leidas": 2,
-        "notificaciones": [
-            {
-                "id": 5,
-                "tipo": "orden",
-                "titulo": "🔧 Tu orden está en producción",
-                "mensaje": "El equipo de HebraTech...",
-                "leida": false,
-                "fecha": "22/08/2026 14:35"
-            },
-            ...
-        ]
-    }
-    """
+
     usuario_id = request.session['usuario_id']
- 
+
     try:
-        cliente = Cliente.objects.get(idUsuario=usuario_id)
+
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
+
     except Cliente.DoesNotExist:
-        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
- 
-    # ── Antes: se cortaba con [:20] y LUEGO se filtraba sobre ese
-    # queryset ya recortado → "Cannot filter a query once a slice
-    # has been taken." Ahora: contamos no_leidas sobre el queryset
-    # completo, y recién después aplicamos el slice para el listado. ──
-    todas = Notificacion.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
-    no_leidas = todas.filter(leida=False).count()
-    notificaciones = todas[:20]   # Últimas 20
- 
+
+        return JsonResponse(
+            {
+                'error':
+                    'Cliente no encontrado'
+            },
+            status=404
+        )
+
+    todas = (
+        Notificacion.objects
+        .filter(idCliente=cliente)
+        .order_by('-fechaCreacion')
+    )
+
+    no_leidas = todas.filter(
+        leida=False
+    ).count()
+
+    notificaciones = todas[:20]
+
     data = {
         'no_leidas': no_leidas,
+
         'notificaciones': [
+
             {
-                'id':      n.idNotificacion,
-                'tipo':    n.tipo,
-                'titulo':  n.titulo,
-                'mensaje': n.mensaje,
-                'leida':   n.leida,
-                'fecha':   n.fechaCreacion.strftime('%d/%m/%Y %H:%M'),
+                'id':
+                    n.idNotificacion,
+
+                'tipo':
+                    n.tipo,
+
+                'titulo':
+                    n.titulo,
+
+                'mensaje':
+                    n.mensaje,
+
+                'leida':
+                    n.leida,
+
+                'fecha':
+                    n.fechaCreacion.strftime(
+                        '%d/%m/%Y %H:%M'
+                    ),
             }
+
             for n in notificaciones
         ],
     }
-    return JsonResponse(data)
- 
- 
+
+    return JsonResponse(
+        data
+    )
+
+
+# ============================================================
+# MARCAR NOTIFICACIÓN COMO LEÍDA
+# ============================================================
+
 @cliente_required
-def marcar_notificacion_leida(request, idNotificacion):
-    """
-    Marca una notificación como leída.
-    POST /clientes/notificaciones/<id>/leer/
- 
-    También acepta idNotificacion=0 para marcar TODAS como leídas.
-    """
+def marcar_notificacion_leida(
+    request,
+    idNotificacion
+):
+
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
- 
+
+        return JsonResponse(
+            {
+                'error':
+                    'Método no permitido'
+            },
+            status=405
+        )
+
     usuario_id = request.session['usuario_id']
- 
+
     try:
-        cliente = Cliente.objects.get(idUsuario=usuario_id)
+
+        cliente = Cliente.objects.get(
+            idUsuario=usuario_id
+        )
+
     except Cliente.DoesNotExist:
-        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
- 
+
+        return JsonResponse(
+            {
+                'error':
+                    'Cliente no encontrado'
+            },
+            status=404
+        )
+
+    # --------------------------------------------------------
+    # MARCAR TODAS
+    # --------------------------------------------------------
+
     if idNotificacion == 0:
-        # Marcar todas
-        Notificacion.objects.filter(idCliente=cliente, leida=False).update(leida=True)
-        return JsonResponse({'ok': True, 'accion': 'todas_leidas'})
- 
+
+        Notificacion.objects.filter(
+            idCliente=cliente,
+            leida=False
+        ).update(
+            leida=True
+        )
+
+        return JsonResponse(
+            {
+                'ok': True,
+                'accion': 'todas_leidas'
+            }
+        )
+
+    # --------------------------------------------------------
+    # MARCAR UNA
+    # --------------------------------------------------------
+
     try:
+
         notif = Notificacion.objects.get(
             idNotificacion=idNotificacion,
-            idCliente=cliente   # seguridad: solo las propias
+            idCliente=cliente
         )
+
         notif.leida = True
-        notif.save(update_fields=['leida'])
-        return JsonResponse({'ok': True, 'accion': 'leida', 'id': idNotificacion})
+
+        notif.save(
+            update_fields=['leida']
+        )
+
+        return JsonResponse(
+            {
+                'ok': True,
+                'accion': 'leida',
+                'id': idNotificacion
+            }
+        )
+
     except Notificacion.DoesNotExist:
-        return JsonResponse({'error': 'Notificación no encontrada'}, status=404)
+
+        return JsonResponse(
+            {
+                'error':
+                    'Notificación no encontrada'
+            },
+            status=404
+        )

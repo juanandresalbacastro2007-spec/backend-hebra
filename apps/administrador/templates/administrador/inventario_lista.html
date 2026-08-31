@@ -163,37 +163,53 @@
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label">Disponible</label>
-                <input type="number" name="cantidadDisponible" class="form-control" value="{{ item.cantidadDisponible }}" required>
+                <input type="number" name="cantidadDisponible" class="form-control" value="{{ item.cantidadDisponible }}" min="0" required>
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label">Mínimo Definido</label>
-                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" required>
+                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" required>
               </div>
             </div>
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label">Nivel de Stock</label>
-                <input type="text" name="nivelStock" class="form-control" value="{{ item.nivelStock|default:'' }}">
+                <select name="nivelStock" class="form-select">
+                  <option value="">-- Seleccionar --</option>
+                  <option value="Alto" {% if item.nivelStock == "Alto" %}selected{% endif %}>Alto</option>
+                  <option value="Normal" {% if item.nivelStock == "Normal" %}selected{% endif %}>Normal</option>
+                  <option value="Bajo" {% if item.nivelStock == "Bajo" %}selected{% endif %}>Bajo</option>
+                  <option value="Crítico" {% if item.nivelStock == "Crítico" %}selected{% endif %}>Crítico</option>
+                </select>
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label">Unidades</label>
-                <input type="text" name="unidades" class="form-control" value="{{ item.unidades }}" required>
+                <select name="unidades" class="form-select" required>
+                  <option value="">-- Seleccionar --</option>
+                  <option value="Unidades" {% if item.unidades == "Unidades" %}selected{% endif %}>Unidades</option>
+                  <option value="Metros" {% if item.unidades == "Metros" %}selected{% endif %}>Metros</option>
+                  <option value="Kilogramos" {% if item.unidades == "Kilogramos" %}selected{% endif %}>Kilogramos</option>
+                  <option value="Cajas" {% if item.unidades == "Cajas" %}selected{% endif %}>Cajas</option>
+                  <option value="Pares" {% if item.unidades == "Pares" %}selected{% endif %}>Pares</option>
+                  <option value="Docenas" {% if item.unidades == "Docenas" %}selected{% endif %}>Docenas</option>
+                </select>
               </div>
             </div>
             <div class="mb-3">
               <label class="form-label">Ubicación</label>
-              <input type="text" name="ubicacion" class="form-control" value="{{ item.ubicacion|default:'' }}">
+              <select name="ubicacion" class="form-select">
+                <option value="">-- Seleccionar --</option>
+                <option value="Bodega Principal" {% if item.ubicacion == "Bodega Principal" %}selected{% endif %}>Bodega Principal</option>
+                <option value="Bodega Secundaria" {% if item.ubicacion == "Bodega Secundaria" %}selected{% endif %}>Bodega Secundaria</option>
+                <option value="Bodega Formal" {% if item.ubicacion == "Bodega Formal" %}selected{% endif %}>Bodega Formal</option>
+                <option value="Área de Producción" {% if item.ubicacion == "Área de Producción" %}selected{% endif %}>Área de Producción</option>
+                <option value="Área de Despacho" {% if item.ubicacion == "Área de Despacho" %}selected{% endif %}>Área de Despacho</option>
+              </select>
             </div>
-            <div class="row">
-              <div class="col-6 mb-3">
-                <label class="form-label">Ingresado</label>
-                <input type="number" name="cantidadIngresada" class="form-control" value="{{ item.cantidadIngresada }}">
-              </div>
-              <div class="col-6 mb-3">
-                <label class="form-label">Egresado</label>
-                <input type="number" name="cantidadEgresada" class="form-control" value="{{ item.cantidadEgresada }}">
-              </div>
-            </div>
+
+            <!-- INGRESADO / EGRESADO: no se muestran al editar, se definen solo al crear el registro -->
+            <input type="hidden" name="cantidadIngresada" value="{{ item.cantidadIngresada }}">
+            <input type="hidden" name="cantidadEgresada" value="{{ item.cantidadEgresada }}">
+
             <div class="mb-3">
               <label class="form-label">Fecha Salida</label>
               <input type="date" name="fechaSalida" class="form-control" value="{{ item.fechaSalida|date:'Y-m-d' }}">
@@ -515,35 +531,55 @@ x
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Cantidad Disponible</label>
-              <input type="number" name="cantidadDisponible" class="form-control" value="0" required>
+              <input type="number" name="cantidadDisponible" class="form-control" value="0" min="0" required>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Mínimo Definido</label>
-              <input type="number" name="minimoDefinido" class="form-control" value="0" required>
+              <input type="number" name="minimoDefinido" class="form-control" value="0" min="0" required>
             </div>
           </div>
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Nivel de Stock</label>
-              <input type="text" name="nivelStock" class="form-control" placeholder="Ej: Normal, Bajo">
+              <select name="nivelStock" class="form-select">
+                <option value="">-- Seleccionar --</option>
+                <option value="Alto">Alto</option>
+                <option value="Normal" selected>Normal</option>
+                <option value="Bajo">Bajo</option>
+                <option value="Crítico">Crítico</option>
+              </select>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Unidades</label>
-              <input type="text" name="unidades" class="form-control" value="Unidades" required>
+              <select name="unidades" class="form-select" required>
+                <option value="Unidades" selected>Unidades</option>
+                <option value="Metros">Metros</option>
+                <option value="Kilogramos">Kilogramos</option>
+                <option value="Cajas">Cajas</option>
+                <option value="Pares">Pares</option>
+                <option value="Docenas">Docenas</option>
+              </select>
             </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Ubicación</label>
-            <input type="text" name="ubicacion" class="form-control" placeholder="Ej: Bodega Principal">
+            <select name="ubicacion" class="form-select">
+              <option value="">-- Seleccionar --</option>
+              <option value="Bodega Principal">Bodega Principal</option>
+              <option value="Bodega Secundaria">Bodega Secundaria</option>
+              <option value="Bodega Formal">Bodega Formal</option>
+              <option value="Área de Producción">Área de Producción</option>
+              <option value="Área de Despacho">Área de Despacho</option>
+            </select>
           </div>
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Cantidad Ingresada</label>
-              <input type="number" name="cantidadIngresada" class="form-control" value="0">
+              <input type="number" name="cantidadIngresada" class="form-control" value="0" min="0">
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Cantidad Egresada</label>
-              <input type="number" name="cantidadEgresada" class="form-control" value="0">
+              <input type="number" name="cantidadEgresada" class="form-control" value="0" min="0">
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from .models import (
@@ -818,8 +818,41 @@ def crear_inventario(request):
         producto_id = request.POST.get('producto')
         producto = get_object_or_404(Producto, pk=producto_id)
 
-        cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
-        min_definido = int(request.POST.get('minimoDefinido') or 0)
+        # ── Validar que no exista ya un inventario para este producto ──
+        # (evita el IntegrityError por la restricción única uq_inv_producto)
+        if Inventario.objects.filter(producto=producto).exists():
+            messages.error(
+                request,
+                f"Ya existe un registro de inventario para el producto "
+                f"'{producto.nombre}'. Edítalo en lugar de crear uno nuevo."
+            )
+            return redirect('admin_inventario')
+
+        try:
+            cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
+            min_definido = int(request.POST.get('minimoDefinido') or 0)
+        except ValueError:
+            messages.error(request, "La cantidad disponible y el mínimo definido deben ser números enteros.")
+            return redirect('admin_inventario')
+
+        # ── Validaciones de negocio (respaldo del lado servidor) ──
+        if cant_disponible < 0 or min_definido < 0:
+            messages.error(request, "Los valores de stock no pueden ser negativos.")
+            return redirect('admin_inventario')
+
+        if cant_disponible < min_definido:
+            messages.error(request, "El stock actual no puede ser menor al mínimo definido.")
+            return redirect('admin_inventario')
+
+        try:
+            cant_ingresada = int(request.POST.get('cantidadIngresada') or 0)
+        except ValueError:
+            messages.error(request, "La cantidad ingresada debe ser un número entero.")
+            return redirect('admin_inventario')
+
+        if cant_ingresada < 0:
+            messages.error(request, "La cantidad ingresada no puede ser negativa.")
+            return redirect('admin_inventario')
 
         # Parseo seguro a entero para nivelStock
         nivel_stock_input = request.POST.get('nivelStock')
@@ -830,24 +863,33 @@ def crear_inventario(request):
 
         unidades = request.POST.get('unidades') or 'Unidades'
         ubicacion = request.POST.get('ubicacion')
-        cant_ingresada = int(request.POST.get('cantidadIngresada') or 0)
-        cant_egresada = int(request.POST.get('cantidadEgresada') or 0)
+        # Se fuerza a 0: un registro nuevo no debería nacer con egresos
+        cant_egresada = 0
         fecha_ingreso = request.POST.get('fechaIngreso') or timezone.now().date()
         fecha_salida = request.POST.get('fechaSalida') or None
 
-        Inventario.objects.create(
-            producto=producto,
-            cantidadDisponible=cant_disponible,
-            minimoDefinido=min_definido,
-            nivelStock=nivel_stock,
-            unidades=unidades,
-            ubicacion=ubicacion,
-            cantidadIngresada=cant_ingresada,
-            cantidadEgresada=cant_egresada,
-            fechaIngreso=fecha_ingreso,
-            fechaSalida=fecha_salida if fecha_salida else None
-        )
-        messages.success(request, "Registro de inventario creado exitosamente.")
+        try:
+            Inventario.objects.create(
+                producto=producto,
+                cantidadDisponible=cant_disponible,
+                minimoDefinido=min_definido,
+                nivelStock=nivel_stock,
+                unidades=unidades,
+                ubicacion=ubicacion,
+                cantidadIngresada=cant_ingresada,
+                cantidadEgresada=cant_egresada,
+                fechaIngreso=fecha_ingreso,
+                fechaSalida=fecha_salida if fecha_salida else None
+            )
+            messages.success(request, "Registro de inventario creado exitosamente.")
+        except IntegrityError:
+            # Red de seguridad ante una condición de carrera
+            # (dos peticiones casi simultáneas para el mismo producto)
+            messages.error(
+                request,
+                f"Ya existe un registro de inventario para el producto '{producto.nombre}'."
+            )
+
     return redirect('admin_inventario')
 
 
@@ -856,11 +898,45 @@ def editar_inventario(request, pk):
     item = get_object_or_404(Inventario, pk=pk)
     if request.method == 'POST':
         producto_id = request.POST.get('producto')
-        item.producto = get_object_or_404(Producto, pk=producto_id)
+        nuevo_producto = get_object_or_404(Producto, pk=producto_id)
 
-        cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
-        min_definido = int(request.POST.get('minimoDefinido') or 0)
+        # ── Si cambia de producto, verificar que el nuevo no tenga ya otro inventario ──
+        if nuevo_producto.pk != item.producto.pk and \
+                Inventario.objects.filter(producto=nuevo_producto).exclude(pk=item.pk).exists():
+            messages.error(
+                request,
+                f"El producto '{nuevo_producto.nombre}' ya tiene un registro de inventario."
+            )
+            return redirect('admin_inventario')
 
+        try:
+            cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
+            min_definido = int(request.POST.get('minimoDefinido') or 0)
+        except ValueError:
+            messages.error(request, "La cantidad disponible y el mínimo definido deben ser números enteros.")
+            return redirect('admin_inventario')
+
+        # ── Validaciones de negocio (respaldo del lado servidor) ──
+        if cant_disponible < 0 or min_definido < 0:
+            messages.error(request, "Los valores de stock no pueden ser negativos.")
+            return redirect('admin_inventario')
+
+        if cant_disponible < min_definido:
+            messages.error(request, "El stock actual no puede ser menor al mínimo definido.")
+            return redirect('admin_inventario')
+
+        try:
+            cant_ingresada = int(request.POST.get('cantidadIngresada') or 0)
+            cant_egresada = int(request.POST.get('cantidadEgresada') or 0)
+        except ValueError:
+            messages.error(request, "Las cantidades ingresada/egresada deben ser números enteros.")
+            return redirect('admin_inventario')
+
+        if cant_ingresada < 0 or cant_egresada < 0:
+            messages.error(request, "Las cantidades ingresada/egresada no pueden ser negativas.")
+            return redirect('admin_inventario')
+
+        item.producto = nuevo_producto
         item.cantidadDisponible = cant_disponible
         item.minimoDefinido = min_definido
 
@@ -873,14 +949,21 @@ def editar_inventario(request, pk):
 
         item.unidades = request.POST.get('unidades')
         item.ubicacion = request.POST.get('ubicacion')
-        item.cantidadIngresada = int(request.POST.get('cantidadIngresada') or 0)
-        item.cantidadEgresada = int(request.POST.get('cantidadEgresada') or 0)
+        item.cantidadIngresada = cant_ingresada
+        item.cantidadEgresada = cant_egresada
 
         fecha_salida = request.POST.get('fechaSalida')
         item.fechaSalida = fecha_salida if fecha_salida else None
 
-        item.save()
-        messages.success(request, f"Registro de inventario #{item.idInventario} actualizado.")
+        try:
+            item.save()
+            messages.success(request, f"Registro de inventario #{item.idInventario} actualizado.")
+        except IntegrityError:
+            messages.error(
+                request,
+                f"El producto '{nuevo_producto.nombre}' ya tiene un registro de inventario."
+            )
+
     return redirect('admin_inventario')
 
 

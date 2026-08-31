@@ -1,4 +1,5 @@
 {% extends "administrador/admin_base.html" %}
+{% load l10n %}
 
 {% block titulo %}Órdenes{% endblock %}
 {% block topbar_titulo %}Órdenes de clientes{% endblock %}
@@ -153,13 +154,14 @@
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Cantidad</label>
-                    <input type="number" min="1" name="cantidad" class="form-control" value="{{ orden.cantidad|default:'' }}" placeholder="Ej: 50" required>
+                    <input type="number" min="1" name="cantidad" class="form-control" value="{% if orden.cantidad %}{{ orden.cantidad|unlocalize }}{% endif %}" placeholder="Ej: 50" required>
                     <div class="invalid-feedback small">Ingresa una cantidad mayor a 0.</div>
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Precio Unitario ($)</label>
-                    <input type="number" min="0" step="any" name="precio_unitario" class="form-control" value="{{ orden.precioUnitario|default:'' }}" placeholder="Ej: 1500" required>
+                    <input type="number" min="0" step="any" name="precio_unitario" class="form-control" value="{% if orden.precioUnitario %}{{ orden.precioUnitario|unlocalize }}{% endif %}" placeholder="Ej: 1500" oninput="this.value = this.value.replace(',', '.')">
+                    <div class="form-text small">Usá punto para decimales (ej: 1500.50), no coma.</div>
                     <div class="invalid-feedback small">Ingresa un valor monetario válido.</div>
                   </div>
 
@@ -168,11 +170,11 @@
                     <label class="form-label fw-medium small">Fecha de Entrega Estimada</label>
                     <input type="date" 
                            name="fecha_entrega" 
-                           class="form-control" 
+                           class="form-control fecha-entrega-input" 
                            value="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}" 
-                           min="{% now 'Y-m-d' %}" 
-                           onclick="this.showPicker && this.showPicker()" 
-                           required>
+                           data-fecha-original="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}"
+                           data-hoy="{% now 'Y-m-d' %}"
+                           onclick="this.showPicker && this.showPicker()">
                     <div class="invalid-feedback small">Selecciona una fecha válida (hoy o posterior).</div>
                   </div>
 
@@ -231,9 +233,41 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+
+    // Restringe el selector de calendario a "hoy en adelante" solo mientras
+    // el usuario lo está usando activamente. Si al salir del campo no cambió
+    // el valor, se quita el "min" para no invalidar una fecha vieja que la
+    // orden ya traía guardada (y que no se está tocando).
+    document.querySelectorAll('.fecha-entrega-input').forEach(input => {
+      input.addEventListener('focus', function () {
+        this.min = this.dataset.hoy;
+      });
+      input.addEventListener('blur', function () {
+        if (this.value === this.dataset.fechaOriginal) {
+          this.removeAttribute('min');
+        }
+      });
+    });
+
     const forms = document.querySelectorAll('.needs-validation');
     Array.from(forms).forEach(form => {
       form.addEventListener('submit', event => {
+
+        // Solo exigir "fecha >= hoy" si el usuario cambió la fecha respecto
+        // a la que ya tenía la orden. Así una orden ya vencida se puede
+        // seguir editando (estado, cantidad, etc.) sin que la fecha vieja
+        // bloquee el guardado.
+        const fechaInput = form.querySelector('.fecha-entrega-input');
+        if (fechaInput) {
+          const original = fechaInput.dataset.fechaOriginal || '';
+          const hoy = fechaInput.dataset.hoy || '';
+          if (fechaInput.value && fechaInput.value !== original && fechaInput.value < hoy) {
+            fechaInput.setCustomValidity('La nueva fecha debe ser hoy o posterior.');
+          } else {
+            fechaInput.setCustomValidity('');
+          }
+        }
+
         if (!form.checkValidity()) {
           event.preventDefault();
           event.stopPropagation();

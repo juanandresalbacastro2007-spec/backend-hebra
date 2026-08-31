@@ -64,22 +64,22 @@
         <div class="dropdown">
           <button class="btn-icon" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-bell-fill"></i>
-            <span class="badge bg-danger notif-count">{{ ordenes_pendientes }}</span>
+            <span class="badge bg-danger notif-count" id="notifCount" style="display:none;">0</span>
           </button>
-          <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:280px;" aria-labelledby="notifDropdown">
-            <li class="dropdown-header">Notificaciones</li>
+          <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:300px;max-height:400px;overflow-y:auto;" aria-labelledby="notifDropdown">
+            <li class="dropdown-header d-flex align-items-center justify-content-between">
+              <span>Notificaciones</span>
+              <button type="button" id="btnMarcarTodasLeidas" class="btn btn-link btn-sm text-decoration-none p-0" style="font-size:0.72rem;">Marcar todas leídas</button>
+            </li>
             <li>
               <hr class="dropdown-divider">
             </li>
-            {% for orden in ordenes_recientes %}
-            <li class="px-2 py-2">
-              <div class="small">
-                <i class="bi bi-box-seam me-1 text-info"></i>
-                Orden #{{ orden.idOrden }}: <strong>{{ orden.estado }}</strong>
-              </div>
-              <div class="text-muted small">{{ orden.fechaCreacion }}</div>
-            </li>
-            {% endfor %}
+            <div id="notifDropdownList">
+              <li class="px-3 py-3 text-center text-muted small">
+                <i class="bi bi-bell-slash d-block mb-1 fs-4 opacity-50"></i>
+                Sin notificaciones nuevas
+              </li>
+            </div>
             <li>
               <hr class="dropdown-divider">
             </li>

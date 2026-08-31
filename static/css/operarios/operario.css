@@ -338,7 +338,7 @@ html, body {
 .ht-controls-bar {
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  padding: 10px 24px;
+  padding: 12px 24px;
   position: sticky;
   top: 56px;
   z-index: 1030;
@@ -348,7 +348,7 @@ html, body {
   max-width: 1600px;
   margin: 0 auto;
   display: flex;
-  align-items: center;
+  align-items: end;
   gap: 16px;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -382,24 +382,26 @@ html, body {
 .ht-controls-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+  margin-left: auto; /* Empuja todo el bloque a la derecha */
 }
 
 .ht-btn-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--border-md);
   border-radius: var(--radius-xs);
-  padding: 7px 12px;
-  font-size: .82rem;
+  padding: 10px 16px;
+  font-size: 0.95rem;
   font-family: 'Roboto', sans-serif;
   cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
   white-space: nowrap;
+  height: 42px;
 }
 
 .ht-btn-toggle:hover {
@@ -414,26 +416,6 @@ html, body {
   border-color: var(--primary);
 }
 
-.ht-btn-report {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-xs);
-  padding: 7px 14px;
-  font-size: .85rem;
-  font-weight: 600;
-  font-family: 'Roboto', sans-serif;
-  cursor: pointer;
-  transition: background .15s, transform .1s;
-  white-space: nowrap;
-}
-
-.ht-btn-report:hover { background: var(--accent2); transform: translateY(-1px); }
-.ht-btn-report:active { transform: translateY(0); }
-
 .ht-search-wrap {
   position: relative;
   display: flex;
@@ -442,9 +424,9 @@ html, body {
 
 .ht-search-icon {
   position: absolute;
-  left: 10px;
+  left: 12px;
   color: var(--text-muted);
-  font-size: .85rem;
+  font-size: 1.1rem;
   pointer-events: none;
 }
 
@@ -452,13 +434,14 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border-md);
   border-radius: var(--radius-xs);
-  padding: 7px 12px 7px 30px;
+  padding: 8px 14px 8px 38px;
   color: var(--text);
   font-family: 'Roboto', sans-serif;
-  font-size: .85rem;
-  width: 190px;
+  font-size: 0.95rem;
+  width: 220px;
   transition: border-color .15s;
   outline: none;
+  height: 42px;
 }
 .ht-search-input::placeholder { color: var(--text-muted); }
 .ht-search-input:focus { border-color: var(--hi2); }
@@ -467,13 +450,14 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border-md);
   border-radius: var(--radius-xs);
-  padding: 7px 12px;
+  padding: 8px 14px;
   color: var(--text);
   font-family: 'Roboto', sans-serif;
-  font-size: .85rem;
+  font-size: 0.95rem;
   cursor: pointer;
   outline: none;
   transition: border-color .15s;
+  height: 42px;
 }
 .ht-filter-select:focus { border-color: var(--hi2); }
 

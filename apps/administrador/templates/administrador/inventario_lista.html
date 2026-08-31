@@ -619,12 +619,14 @@ x
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Stock Actual</label>
-              <input type="number" name="stockActual" class="form-control" placeholder="Ej: 10" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+              <input type="number" name="stockActual" class="form-control" placeholder="Ej: 10" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
               <div class="invalid-feedback">El stock actual debe ser mayor a 0.</div>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Stock Mínimo</label>
-              <input type="number" name="stockMinimo" class="form-control" placeholder="Ej: 5" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+              <input type="number" name="stockMinimo" class="form-control" placeholder="Ej: 5" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" 
+              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
               <div class="invalid-feedback">El stock mínimo debe ser mayor a 0.</div>
             </div>
           </div>

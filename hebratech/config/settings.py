@@ -19,7 +19,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',  # Requerido por allauth
+    'django.contrib.sites', 
+    'django.contrib.humanize', # Requerido por allauth
 
     # Librerías de Autenticación y API
     'rest_framework',
@@ -102,6 +103,7 @@ LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
+USE_THOUSAND_SEPARATOR = True
 
 # --- ARCHIVOS ESTÁTICOS Y MEDIA ---
 STATIC_URL = '/static/'

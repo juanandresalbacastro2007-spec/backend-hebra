@@ -5,6 +5,7 @@
 {% block topbar_sub %}Listado detallado de existencias, bodegas y materias primas{% endblock %}
 
 {% block topbar_extra %}
+{% load humanize %}
 <div class="ms-auto d-flex gap-2 align-items-center">
   <form method="GET" action="{% url 'admin_inventario' %}" id="searchForm" class="d-flex align-items-center">
     <div class="input-group input-group-sm" style="max-width: 280px;">
@@ -241,7 +242,7 @@
       </button>
     </div>
   </div>
-
+x 
   <div class="table-responsive">
     <table class="ht-table">
       <thead>
@@ -257,7 +258,7 @@
           <th class="text-center">Acciones</th>
         </tr>
       </thead>
-      <tbody>
+     <tbody>
         {% for mat in materiales_list %}
         <tr>
           <td class="text-center"><strong>#{{ mat.idMaterial }}</strong></td>
@@ -277,10 +278,22 @@
             {% endif %}
           </td>
           <td class="text-center">{{ mat.stockMinimo }}</td>
-          <td class="text-center"><span class="badge-ht badge-pending">{{ mat.unidadBase }}</span></td>
+          <td class="text-center">
+            <span class="badge-ht badge-pending">
+              {% if mat.unidadBase == 'm' or mat.unidadBase == 'Metro' or mat.unidadBase == 'Metros' %}Metros
+              {% elif mat.unidadBase == 'cm' or mat.unidadBase == 'Centímetro' or mat.unidadBase == 'Centímetros' %}Centímetros
+              {% elif mat.unidadBase == 'mm' or mat.unidadBase == 'Milímetro' or mat.unidadBase == 'Milímetros' %}Milímetros
+              {% elif mat.unidadBase == 'kg' or mat.unidadBase == 'Kilogramo' or mat.unidadBase == 'Kilogramos' %}Kilogramos
+              {% elif mat.unidadBase == 'g' or mat.unidadBase == 'Gramo' or mat.unidadBase == 'Gramos' %}Gramos
+              {% elif mat.unidadBase == 'und' or mat.unidadBase == 'Unidad' or mat.unidadBase == 'Unidades' %}Unidad
+              {% elif mat.unidadBase == 'conos' or mat.unidadBase == 'Cono' or mat.unidadBase == 'Conos' %}Conos
+              {% else %}{{ mat.unidadBase|capfirst }}
+              {% endif %}
+            </span>
+          </td>
           <td class="text-end fw-bold text-dark">
             {% if mat.costoUnitario %}
-              ${{ mat.costoUnitario|floatformat:2 }}
+              ${{ mat.costoUnitario|intcomma }}
             {% else %}
               —
             {% endif %}
@@ -297,6 +310,81 @@
             </div>
           </td>
         </tr>
+        <div class="modal fade" id="modalEditarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'editar_material' mat.pk %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Material #{{ mat.idMaterial }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          
+          <div class="mb-3">
+            <label class="form-label">Nombre del Material</label>
+            <input type="text" name="nombreMaterial" class="form-control" value="{{ mat.nombreMaterial }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion }}</textarea>
+          </div>
+
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Stock Actual</label>
+              <input type="number" name="stockActual" class="form-control" value="{{ mat.stockActual }}" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+            </div>
+            <div class="col-6 mb-3">
+              <label class="form-label">Stock Mínimo</label>
+              <input type="number" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-6 mb-3">
+              <label class="form-label">Unidad Base</label>
+              <select name="unidadBase" class="form-select" required>
+                <option value="Metros" {% if mat.unidadBase == 'Metros' or mat.unidadBase == 'm' %}selected{% endif %}>Metros</option>
+                <option value="Centímetros" {% if mat.unidadBase == 'Centímetros' or mat.unidadBase == 'cm' %}selected{% endif %}>Centímetros</option>
+                <option value="Milímetros" {% if mat.unidadBase == 'Milímetros' or mat.unidadBase == 'mm' %}selected{% endif %}>Milímetros</option>
+                <option value="Kilogramos" {% if mat.unidadBase == 'Kilogramos' or mat.unidadBase == 'kg' %}selected{% endif %}>Kilogramos</option>
+                <option value="Gramos" {% if mat.unidadBase == 'Gramos' or mat.unidadBase == 'g' %}selected{% endif %}>Gramos</option>
+                <option value="Conos" {% if mat.unidadBase == 'Conos' or mat.unidadBase == 'conos' %}selected{% endif %}>Conos</option>
+                <option value="Unidad" {% if mat.unidadBase == 'Unidad' or mat.unidadBase == 'und' %}selected{% endif %}>Unidad</option>
+              </select>
+            </div>
+            
+            <div class="col-6 mb-3">
+              <label class="form-label">Costo Unitario</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  placeholder="1.000.000" 
+                  value="{% if mat.costoUnitario %}{{ mat.costoUnitario|intcomma }}{% endif %}"
+                  oninput="formatearMilesEdit(this, 'costoUnitarioEdit{{ mat.idMaterial }}')"
+                  required>
+              </div>
+              <input 
+                type="hidden" 
+                name="costoUnitario" 
+                id="costoUnitarioEdit{{ mat.idMaterial }}" 
+                value="{{ mat.costoUnitario|default:'' }}">
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div> 
         {% empty %}
         <tr>
           <td colspan="9" class="text-center text-muted py-5">
@@ -313,50 +401,70 @@
 <!-- Modales de Materiales (Edit y Delete) fuera de la tabla -->
 {% for mat in materiales_list %}
   <!-- Modal Editar Material -->
+  
   <div class="modal fade" id="modalEditarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
       <div class="modal-content">
-        <form method="POST" action="{% url 'editar_material' mat.idMaterial %}">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Material #{{ mat.idMaterial }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        
+        <form action="{% url 'editar_material' mat.idMaterial %}" method="POST">
           {% csrf_token %}
-          <div class="modal-header">
-            <h5 class="modal-title">Editar Material: {{ mat.nombreMaterial }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
           <div class="modal-body">
+            
+            <!-- Nombre -->
             <div class="mb-3">
               <label class="form-label">Nombre del Material</label>
               <input type="text" name="nombreMaterial" class="form-control" value="{{ mat.nombreMaterial }}" required>
             </div>
+
+            <!-- Descripción -->
             <div class="mb-3">
               <label class="form-label">Descripción</label>
-              <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion|default:'' }}</textarea>
+              <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion }}</textarea>
             </div>
+
+            <!-- Stock Actual y Mínimo -->
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label">Stock Actual</label>
-                <input type="number" step="0.01" name="stockActual" class="form-control" value="{{ mat.stockActual }}" required>
+                <input type="number" name="stockActual" class="form-control" value="{{ mat.stockActual }}" min="0" step="1" required>
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label">Stock Mínimo</label>
-                <input type="number" step="0.01" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" required>
+                <input type="number" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" min="0" step="1" required>
               </div>
             </div>
+
+            <!-- Unidad Base y Costo Unitario -->
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label">Unidad Base</label>
-                <input type="text" name="unidadBase" class="form-control" value="{{ mat.unidadBase }}" required>
+                <select name="unidadBase" class="form-select" required>
+                  <option value="Metros" {% if mat.unidadBase == 'Metros' or mat.unidadBase == 'm' %}selected{% endif %}>Metros</option>
+                  <option value="Centímetros" {% if mat.unidadBase == 'Centímetros' or mat.unidadBase == 'cm' %}selected{% endif %}>Centímetros</option>
+                  <option value="Milímetros" {% if mat.unidadBase == 'Milímetros' or mat.unidadBase == 'mm' %}selected{% endif %}>Milímetros</option>
+                  <option value="Kilogramos" {% if mat.unidadBase == 'Kilogramos' or mat.unidadBase == 'kg' %}selected{% endif %}>Kilogramos</option>
+                  <option value="Gramos" {% if mat.unidadBase == 'Gramos' or mat.unidadBase == 'g' %}selected{% endif %}>Gramos</option>
+                  <option value="Conos" {% if mat.unidadBase == 'Conos' or mat.unidadBase == 'conos' %}selected{% endif %}>Conos</option>
+                  <option value="Unidad" {% if mat.unidadBase == 'Unidad' or mat.unidadBase == 'und' %}selected{% endif %}>Unidad</option>
+                </select>
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label">Costo Unitario</label>
-                <input type="number" step="0.01" name="costoUnitario" class="form-control" value="{{ mat.costoUnitario|default:'' }}">
+                <input type="number" step="any" name="costoUnitario" class="form-control" value="{{ mat.costoUnitario|default:'' }}">
               </div>
             </div>
+
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="submit" class="btn btn-primary">Guardar Cambios</button>
           </div>
         </form>
+
       </div>
     </div>
   </div>
@@ -459,34 +567,52 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          
           <div class="mb-3">
             <label class="form-label">Nombre del Material</label>
             <input type="text" name="nombreMaterial" class="form-control" required placeholder="Ej: Tela Algodón 100%">
           </div>
+          
           <div class="mb-3">
             <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles o especificaciones del material"></textarea>
+            <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles o especificaciones"></textarea>
           </div>
+
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Stock Actual</label>
-              <input type="number" step="0.01" name="stockActual" class="form-control" value="0" required>
+              <input type="number" name="stockActual" class="form-control" value="0" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Stock Mínimo</label>
-              <input type="number" step="0.01" name="stockMinimo" class="form-control" value="0" required>
+              <input type="number" name="stockMinimo" class="form-control" value="0" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
             </div>
           </div>
+
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Unidad Base</label>
-              <input type="text" name="unidadBase" class="form-control" placeholder="Ej: Metros, Kg, Conos" required>
+              <select name="unidadBase" class="form-select" required>
+                <option value="Metros">Metros</option>
+                <option value="Centímetros">Centímetros</option>
+                <option value="Milímetros">Milímetros</option>
+                <option value="Kilogramos">Kilogramos</option>
+                <option value="Gramos">Gramos</option>
+                <option value="Conos">Conos</option>
+                <option value="Unidad">Unidad</option>
+              </select>
             </div>
+            
             <div class="col-6 mb-3">
               <label class="form-label">Costo Unitario</label>
-              <input type="number" step="0.01" name="costoUnitario" class="form-control" placeholder="0.00">
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" class="form-control" placeholder="1.000.000" oninput="formatearMiles(this)" required>
+              </div>
+              <input type="hidden" name="costoUnitario" id="costoUnitario">
             </div>
           </div>
+
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -496,6 +622,8 @@
     </div>
   </div>
 </div>
+
+
 
 {% endblock %}
 
@@ -531,5 +659,34 @@
     // Por si los modales se cargan/renderizan dinámicamente después
     document.body.addEventListener('shown.bs.modal', bloquearFechasPasadas);
   });
+
+
+
+  function formatearMiles(input) {
+    // 1. Quitar todo lo que no sea número
+    let valor = input.value.replace(/\D/g, "");
+
+    // 2. Guardar el valor limpio en el input oculto
+    document.getElementById("costoUnitario").value = valor;
+
+    // 3. Formatear con puntos de miles/millones para la vista
+    if (valor !== "") {
+      input.value = new Intl.NumberFormat("es-CO").format(valor);
+    } else {
+      input.value = "";
+    }
+  }
+
+
+  function formatearMilesEdit(input, hiddenId) {
+    let valor = input.value.replace(/\D/g, "");
+    document.getElementById(hiddenId).value = valor;
+    
+    if (valor !== "") {
+      input.value = new Intl.NumberFormat("es-CO").format(valor);
+    } else {
+      input.value = "";
+    }
+  }
 </script>
 {% endblock %}

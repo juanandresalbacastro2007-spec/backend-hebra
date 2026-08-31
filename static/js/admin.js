@@ -40,3 +40,66 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
         });
+
+document.addEventListener("DOMContentLoaded", function () {
+  const forms = document.querySelectorAll('.needs-validation');
+
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      // 1. Sincronizar y validar el costo unitario (debe ser mayor a 0)
+      const costoVis = form.querySelector('#costoVisible');
+      const costoHid = form.querySelector('#costoUnitario');
+      if (costoVis && costoHid) {
+        const valCosto = parseInt(costoHid.value, 10);
+        if (!costoHid.value || isNaN(valCosto) || valCosto <= 0) {
+          costoVis.setCustomValidity("El costo debe ser mayor a 0");
+        } else {
+          costoVis.setCustomValidity("");
+        }
+      }
+
+      // 2. Validar que stockActual y stockMinimo sean mayores a 0
+      const stockAct = form.querySelector('[name="stockActual"]');
+      if (stockAct) {
+        if (!stockAct.value || parseInt(stockAct.value, 10) <= 0) {
+          stockAct.setCustomValidity("Debe ser mayor a 0");
+        } else {
+          stockAct.setCustomValidity("");
+        }
+      }
+
+      const stockMin = form.querySelector('[name="stockMinimo"]');
+      if (stockMin) {
+        if (!stockMin.value || parseInt(stockMin.value, 10) <= 0) {
+          stockMin.setCustomValidity("Debe ser mayor a 0");
+        } else {
+          stockMin.setCustomValidity("");
+        }
+      }
+
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      form.classList.add('was-validated');
+    }, false);
+  });
+});
+
+function formatearMiles(input) {
+  let valor = input.value.replace(/\D/g, "");
+  const hiddenField = document.getElementById("costoUnitario");
+
+  if (hiddenField) {
+    hiddenField.value = valor;
+  }
+
+  if (valor !== "" && parseInt(valor, 10) > 0) {
+    input.value = new Intl.NumberFormat("es-CO").format(valor);
+    input.setCustomValidity("");
+  } else {
+    input.value = valor === "0" ? "0" : "";
+    input.setCustomValidity("El costo debe ser mayor a 0");
+  }
+}

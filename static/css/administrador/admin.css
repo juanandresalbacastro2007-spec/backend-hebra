@@ -503,3 +503,33 @@ body {
     box-shadow: 5px 0 15px rgba(0,0,0,0.5);
   }
 }
+
+
+/* Borde rojo en campos vacíos o inválidos */
+.form-control.is-invalid, 
+.form-select.is-invalid {
+  border-color: #dc3545 !important;
+  padding-right: 2.25rem !important;
+}
+
+/* Posicionamiento para el icono de advertencia */
+.wrapper-input-error {
+  position: relative;
+}
+
+.wrapper-input-error .icono-error {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #dc3545;
+  pointer-events: none;
+}
+
+/* Mensaje en texto rojo */
+.texto-error {
+  color: #dc3545;
+  font-size: 0.82rem;
+  margin-top: 0.25rem;
+  display: block;
+}

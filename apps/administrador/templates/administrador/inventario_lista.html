@@ -560,7 +560,7 @@ x
 <div class="modal fade" id="modalCrearMaterial" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <form method="POST" action="{% url 'crear_material' %}">
+      <form method="POST" action="{% url 'crear_material' %}" class="needs-validation" novalidate>
         {% csrf_token %}
         <div class="modal-header">
           <h5 class="modal-title">Registrar Nuevo Material</h5>
@@ -571,21 +571,25 @@ x
           <div class="mb-3">
             <label class="form-label">Nombre del Material</label>
             <input type="text" name="nombreMaterial" class="form-control" required placeholder="Ej: Tela Algodón 100%">
+            <div class="invalid-feedback">Ingresa el nombre del material.</div>
           </div>
           
           <div class="mb-3">
             <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles o especificaciones"></textarea>
+            <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles o especificaciones" required></textarea>
+            <div class="invalid-feedback">Ingresa una descripción para el material.</div>
           </div>
 
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Stock Actual</label>
-              <input type="number" name="stockActual" class="form-control" value="0" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+              <input type="number" name="stockActual" class="form-control" placeholder="Ej: 10" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+              <div class="invalid-feedback">El stock actual debe ser mayor a 0.</div>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Stock Mínimo</label>
-              <input type="number" name="stockMinimo" class="form-control" value="0" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+              <input type="number" name="stockMinimo" class="form-control" placeholder="Ej: 5" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
+              <div class="invalid-feedback">El stock mínimo debe ser mayor a 0.</div>
             </div>
           </div>
 
@@ -593,6 +597,7 @@ x
             <div class="col-6 mb-3">
               <label class="form-label">Unidad Base</label>
               <select name="unidadBase" class="form-select" required>
+                <option value="" disabled selected>Selecciona una opción...</option>
                 <option value="Metros">Metros</option>
                 <option value="Centímetros">Centímetros</option>
                 <option value="Milímetros">Milímetros</option>
@@ -601,15 +606,17 @@ x
                 <option value="Conos">Conos</option>
                 <option value="Unidad">Unidad</option>
               </select>
+              <div class="invalid-feedback">Selecciona una unidad base.</div>
             </div>
             
             <div class="col-6 mb-3">
               <label class="form-label">Costo Unitario</label>
-              <div class="input-group">
+              <div class="input-group has-validation">
                 <span class="input-group-text">$</span>
-                <input type="text" class="form-control" placeholder="1.000.000" oninput="formatearMiles(this)" required>
+                <input type="text" id="costoVisible" class="form-control" placeholder="1.000.000" oninput="formatearMiles(this)" required>
+                <div class="invalid-feedback">Ingresa un costo unitario válido.</div>
               </div>
-              <input type="hidden" name="costoUnitario" id="costoUnitario">
+              <input type="hidden" name="costoUnitario" id="costoUnitario" required>
             </div>
           </div>
 
@@ -622,8 +629,6 @@ x
     </div>
   </div>
 </div>
-
-
 
 {% endblock %}
 
@@ -655,37 +660,66 @@ x
     }
 
     bloquearFechasPasadas();
-
-    // Por si los modales se cargan/renderizan dinámicamente después
     document.body.addEventListener('shown.bs.modal', bloquearFechasPasadas);
+
+    // --- VALIDACIÓN DE FORMULARIOS ---
+    const forms = document.querySelectorAll('.needs-validation');
+
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', event => {
+        // Sincronizar campo visible de costo con el hidden antes de evaluar validez
+        const costoVis = form.querySelector('#costoVisible');
+        const costoHid = form.querySelector('#costoUnitario');
+        if (costoVis && costoHid) {
+          if (costoVis.value.trim() === "") {
+            costoVis.setCustomValidity("Campo requerido");
+            costoHid.value = "";
+          } else {
+            costoVis.setCustomValidity("");
+          }
+        }
+
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+
+        form.classList.add('was-validated');
+      }, false);
+    });
   });
 
-
-
   function formatearMiles(input) {
-    // 1. Quitar todo lo que no sea número
     let valor = input.value.replace(/\D/g, "");
+    const hiddenField = document.getElementById("costoUnitario");
 
-    // 2. Guardar el valor limpio en el input oculto
-    document.getElementById("costoUnitario").value = valor;
+    if (hiddenField) {
+      hiddenField.value = valor;
+    }
 
-    // 3. Formatear con puntos de miles/millones para la vista
     if (valor !== "") {
       input.value = new Intl.NumberFormat("es-CO").format(valor);
+      input.setCustomValidity("");
     } else {
       input.value = "";
+      input.setCustomValidity("Campo requerido");
     }
   }
 
-
   function formatearMilesEdit(input, hiddenId) {
     let valor = input.value.replace(/\D/g, "");
-    document.getElementById(hiddenId).value = valor;
-    
+    const hiddenField = document.getElementById(hiddenId);
+
+    if (hiddenField) {
+      hiddenField.value = valor;
+    }
+
     if (valor !== "") {
       input.value = new Intl.NumberFormat("es-CO").format(valor);
+      input.setCustomValidity("");
     } else {
       input.value = "";
+      input.setCustomValidity("Campo requerido");
     }
   }
 </script>

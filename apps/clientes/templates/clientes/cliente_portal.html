@@ -202,6 +202,58 @@
           </div>
         </div>
 
+        <!-- MIS COTIZACIONES -->
+        <div class="card mb-4 shadow-sm" id="secMisCotizaciones" style="scroll-margin-top:78px;">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2" style="color:var(--primary);"></i>Mis cotizaciones</h6>
+          </div>
+          <div class="card-body p-0">
+            {% if cotizaciones %}
+            <div class="table-responsive">
+              <table class="table table-hover mb-0 align-middle">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Subtotal estimado</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for cot in cotizaciones %}
+                  <tr>
+                    <td><strong>#{{ cot.idCotizacion }}</strong></td>
+                    <td>{{ cot.idProducto.nombre|default:"—" }}</td>
+                    <td>{{ cot.cantidad }}</td>
+                    <td>${{ cot.subtotalEstimado|floatformat:0 }}</td>
+                    <td>{{ cot.fechaCreacion|date:"d/m/Y H:i" }}</td>
+                    <td>
+                      {% if cot.estado == 'Aprobada' %}
+                        <span class="badge" style="background-color:#d4edda;color:#155724;">Aprobada</span>
+                      {% elif cot.estado == 'Rechazada' %}
+                        <span class="badge" style="background-color:#f8d7da;color:#721c24;">Rechazada</span>
+                      {% elif cot.estado == 'Revisada' %}
+                        <span class="badge" style="background-color:#cfe2ff;color:#084298;">Revisada</span>
+                      {% else %}
+                        <span class="badge" style="background-color:#F5D6A8;color:#7A5200;">Pendiente</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
+              <p class="mb-0">Todavía no has solicitado ninguna cotización.</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
         <!-- MIS ÓRDENES -->
         <div class="card mb-4 shadow-sm" id="secMisOrdenes" style="scroll-margin-top:78px;">
           <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -272,9 +324,12 @@
             <h6 class="mb-0">Acciones rápidas</h6>
           </div>
           <div class="card-body d-flex flex-column gap-2">
-            <button class="btn btn-outline-primary w-100 text-start" data-bs-toggle="modal" data-bs-target="#newOrderModal">
-              <i class="bi bi-plus-circle me-2"></i>Nueva orden de producción
+            <button class="btn btn-outline-primary w-100 text-start" data-bs-toggle="modal" data-bs-target="#quoteModal">
+              <i class="bi bi-file-earmark-text me-2"></i>Generar cotización
             </button>
+            <a href="#secMisCotizaciones" class="btn btn-outline-secondary w-100 text-start mb-2">
+              <i class="bi bi-file-earmark-ruled me-2"></i>Ver mis cotizaciones
+            </a>
             <a href="#secMisOrdenes" class="btn btn-outline-secondary w-100 text-start">
               <i class="bi bi-clock-history me-2"></i>Ver mis órdenes
             </a>
@@ -344,7 +399,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
 
-        <form method="POST" action="{% url 'registrar_orden' %}">
+        <form method="POST" action="{% url 'registrar_orden' %}" id="formNuevaOrden" class="needs-validation" novalidate>
           {% csrf_token %}
 
           <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
@@ -362,7 +417,7 @@
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Producto</label>
                 <select class="form-select" name="producto" id="modalProducto" required onchange="actualizarPrecio()">
-                  <option value="">Seleccionar...</option>
+                  <option value="" selected disabled>Seleccionar...</option>
                   {% for producto in productos %}
                   <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio }}">
                     {{ producto.nombre }} — ${{ producto.precio|floatformat:0 }}
@@ -376,16 +431,18 @@
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Prioridad</label>
                 <select class="form-select" name="prioridad" required>
-                  <option value="Normal" selected>Normal</option>
+                  <option value="" selected disabled>Seleccionar...</option>
+                  <option value="Normal">Normal</option>
                   <option value="Urgente">Urgente</option>
                 </select>
+                <div class="invalid-feedback">Selecciona una prioridad.</div>
               </div>
 
               <!-- Cantidad -->
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Cantidad (Unidades)</label>
                 <input type="number" class="form-control" name="cantidad" id="modalCantidad" min="1"
-                  placeholder="Ej. 200" required oninput="actualizarSubtotal()">
+                  placeholder="Ej. 200" required oninput="actualizarSubtotalOrden()">
                 <div class="invalid-feedback">Ingresa una cantidad válida.</div>
               </div>
 
@@ -412,10 +469,11 @@
               <div class="col-12 col-md-6">
                 <div class="rango-fechas-container">
                   <label for="o-fecha-rango" class="rango-fechas-title fw-semibold mb-2">Fecha Estimada (Rango) *</label>
-                  <div class="input-group">
+                  <div class="input-group has-validation">
                     <span class="input-group-text bg-white"><i class="bi bi-calendar-range"></i></span>
                     <input type="text" id="o-fecha-rango" name="fecha_rango" class="form-control"
-                      placeholder="Seleccionar período..." required />
+                      placeholder="Seleccionar período..." required readonly autocomplete="off" />
+                    <div class="invalid-feedback">Selecciona un rango de fechas.</div>
                   </div>
                 </div>
               </div>
@@ -424,7 +482,8 @@
               <div class="col-12">
                 <label class="form-label fw-semibold">Instrucciones y especificaciones</label>
                 <textarea class="form-control" name="instrucciones" rows="3" maxlength="1000"
-                  placeholder="Tallas, colores, detalles de empaque, logotipos..."></textarea>
+                  placeholder="Tallas, colores, detalles de empaque, logotipos..." required></textarea>
+                <div class="invalid-feedback">Agrega instrucciones o especificaciones para la orden.</div>
                 <div class="form-text text-end">Máximo 1000 caracteres.</div>
               </div>
 
@@ -438,6 +497,71 @@
             </button>
           </div>
 
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GENERAR COTIZACIÓN -->
+  <div class="modal fade" id="quoteModal" tabindex="-1" aria-labelledby="quoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;">
+        <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+          <h5 class="modal-title" style="font-family:var(--ff-display);" id="quoteModalLabel">
+            <i class="bi bi-file-earmark-text me-2"></i>Generar Cotización
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="formCotizacion" class="needs-validation" novalidate data-url="{% url 'generar_cotizacion' %}">
+          <div class="modal-body">
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Producto</label>
+              <select class="form-select" name="producto" id="quotePrenda" required>
+                <option value="" disabled selected>Seleccionar...</option>
+                {% for producto in productos %}
+                <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio }}">{{ producto.nombre }}</option>
+                {% endfor %}
+              </select>
+              <div class="invalid-feedback">Selecciona un producto.</div>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Cantidad (Unidades)</label>
+                <input type="number" class="form-control" name="cantidad" id="quoteCantidad" min="1"
+                  placeholder="Ej. 200" required>
+                <div class="invalid-feedback">Ingresa una cantidad válida.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Precio Unitario</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="text" class="form-control" id="quotePrecioUnitario" readonly
+                    style="background-color:#f8f9fa;" placeholder="Se autocompleta">
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-3 w-100 d-flex justify-content-between align-items-center mt-3"
+              style="background-color:rgba(57,91,100,0.08);border:1px dashed var(--primary);">
+              <span class="fw-bold text-uppercase" style="font-size:0.8rem;color:var(--primary-dark);">Subtotal estimado:</span>
+              <span class="h5 mb-0 fw-bold text-primary" id="quoteSubtotalDisplay">$0</span>
+            </div>
+
+            <div class="mt-3">
+              <label class="form-label fw-semibold">Notas adicionales</label>
+              <textarea class="form-control" name="notas" rows="2" maxlength="500"
+                placeholder="Detalles, tallas, colores..."></textarea>
+            </div>
+
+          </div>
+          <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i>Solicitar cotización
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -1218,3 +1218,192 @@ html, body {
   align-items: center;
   gap: 4px;
 }
+
+/* ================================================================
+   HEBRATECH — ADDENDUM (agregar al final de operario.css)
+   Clases nuevas que usa el rediseño del tablero operario.
+   ================================================================ */
+
+/* ── KPI chips del navbar ────────────────────────────────────── */
+.ht-kpis-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ht-kpi-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border-md);
+  border-radius: 30px;
+  padding: 5px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: transform .15s, border-color .15s, color .15s;
+}
+
+.ht-kpi-chip .ht-kpi-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+
+.ht-kpi-chip .ht-kpi-count {
+  font-size: .75rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  min-width: 20px;
+  text-align: center;
+}
+
+.ht-kpi-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.ht-kpi-chip--pending  .ht-kpi-dot  { background: var(--text-muted); }
+.ht-kpi-chip--pending  .ht-kpi-count { background: var(--text-muted); }
+
+.ht-kpi-chip--progress .ht-kpi-dot  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.ht-kpi-chip--progress .ht-kpi-count { background: var(--info); }
+
+.ht-kpi-chip--done     .ht-kpi-dot  { background: var(--ok); }
+.ht-kpi-chip--done     .ht-kpi-count { background: var(--ok); }
+
+.ht-kpi-chip--incidence .ht-kpi-dot  { background: var(--danger); }
+.ht-kpi-chip--incidence .ht-kpi-count { background: var(--danger); }
+
+/* ── Tags dentro de la tarjeta ──────────────────────────────── */
+.ht-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+/* ── Bloque de cronómetro en tarjeta ────────────────────────── */
+.ht-timer-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--status-progress-bg, #e0f2fe);
+  border: 1px solid rgba(2,132,199,.3);
+  border-radius: var(--radius-xs);
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  font-size: .82rem;
+  color: #0369a1;
+}
+
+.ht-timer-block i { font-size: 1rem; }
+
+.ht-timer-text {
+  font-family: monospace;
+  font-size: .95rem;
+  font-weight: 700;
+  color: #0369a1;
+  flex: 1;
+}
+
+.ht-timer-excess {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--danger);
+  background: rgba(176,42,55,.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── Fila de acciones debajo de la tarjeta ──────────────────── */
+.ht-card-actions {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+
+.ht-card-btn-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-md);
+  font-size: .8rem;
+  font-weight: 600;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  transition: background .15s, transform .1s, color .15s;
+  min-height: 38px;
+}
+
+.ht-card-btn--start {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.ht-card-btn--start:hover { background: var(--accent2); }
+
+.ht-card-btn--finish {
+  background: var(--ok);
+  color: #fff;
+  border-color: var(--ok);
+}
+.ht-card-btn--finish:hover { background: #0f5f37; }
+
+.ht-card-btn--warn {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+  flex: 0 0 auto;
+  padding: 7px 12px;
+}
+.ht-card-btn--warn:hover { background: #fde68a; }
+
+/* ── Pestañas móvil ─────────────────────────────────────────── */
+.ht-mobile-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.ht-mobile-tab {
+  flex: 1;
+  padding: 9px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  transition: background .15s, color .15s;
+}
+
+.ht-mobile-tab.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Mobile: mostrar solo columna activa */
+@media (max-width: 767px) {
+  .ht-kanban-col { display: none; }
+  .ht-kanban-col.active-mobile-col { display: flex; }
+}

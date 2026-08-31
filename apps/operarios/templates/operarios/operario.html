@@ -9,94 +9,127 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/operarios/operario.css' %}">
-
-  <style>
-    body{
-      background-color: #e7f6f2;
-    }
-  </style>
 </head>
 
 <body>
 
-  <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+  <!-- ═══════════════════════════════════════════════════
+       NAVBAR SUPERIOR
+  ════════════════════════════════════════════════════ -->
   <nav class="ht-navbar-top">
     <div class="ht-navbar-inner">
-      
-      <!-- Logo / Marca -->
+
+      <!-- Logo -->
       <a href="{% url 'operarios:tablero' %}" class="ht-brand">
         <div class="brand-icon">
-          <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:100%;object-fit:contain;">
+          <img src="{% static 'img/logo.png' %}" alt="HebraTech">
         </div>
         <span class="ht-brand-name">HebraTech</span>
       </a>
 
-      <!-- Acciones del Navbar -->
+      <!-- KPIs interactivos (solo desktop) -->
+      <div class="ht-kpis-row d-none d-lg-flex">
+        <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ir a Pendientes">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">Pendientes</span>
+          <strong class="ht-kpi-count" id="kpiCountPending">0</strong>
+        </button>
+        <button class="ht-kpi-chip ht-kpi-chip--progress" id="kpiProgress" title="Ir a En Proceso">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">En Proceso</span>
+          <strong class="ht-kpi-count" id="kpiCountProgress">0</strong>
+        </button>
+        <button class="ht-kpi-chip ht-kpi-chip--done" id="kpiDone" title="Ir a Completadas">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">Completadas</span>
+          <strong class="ht-kpi-count" id="kpiCountDone">0</strong>
+        </button>
+        <button class="ht-kpi-chip ht-kpi-chip--incidence" id="kpiIncidence" title="Abrir gestión de incidencias">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">Incidencias</span>
+          <strong class="ht-kpi-count" id="kpiCountIncidence">0</strong>
+        </button>
+      </div>
+
+      <!-- Acciones -->
       <div class="ht-nav-actions">
 
-        <!-- Dropdown: Mis Tareas -->
-        <div class="dropdown">
-          <button class="ht-nav-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Mis tareas">
-            <i class="bi bi-clipboard-check"></i>
-            <span class="ht-nav-btn-label">Mis Tareas</span>
-            <span class="ht-badge-count" id="navTaskCount">0</span>
-          </button>
-          <div class="dropdown-menu dropdown-menu-end ht-dropdown-panel">
-            <div class="ht-dropdown-header">
-              <i class="bi bi-person-workspace"></i>
-              <span>Tareas Asignadas</span>
-            </div>
-            <div id="navTasksContainer">
-              <div class="ht-empty-state"><i class="bi bi-inbox"></i><span>Sin tareas asignadas</span></div>
-            </div>
-          </div>
-        </div>
+        <!-- Botón generar incidencia -->
+        <button class="ht-btn-report" id="btnGenerateReport">
+          <i class="bi bi-plus-lg"></i>
+          <span class="d-none d-sm-inline">Generar Incidencia</span>
+        </button>
 
-        <!-- Dropdown: Historial de Incidencias -->
+        <!-- Campana de incidencias recientes -->
         <div class="dropdown">
-          <button class="ht-nav-btn" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Historial de incidencias">
-            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-            <span class="ht-nav-btn-label">Incidencias</span>
+          <button class="ht-nav-btn position-relative" type="button"
+                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  title="Incidencias recientes">
+            <i class="bi bi-bell-fill"></i>
+            <span class="ht-badge-count" id="navIncidenceBadge">0</span>
           </button>
           <div class="dropdown-menu dropdown-menu-end ht-dropdown-panel ht-dropdown-panel--wide">
             <div class="ht-dropdown-header">
-              <i class="bi bi-journal-text"></i>
-              <span>Incidencias Generadas</span>
+              <i class="bi bi-journal-text me-2"></i>
+              <span>Mis Incidencias</span>
+              <button class="btn btn-sm btn-link p-0 ms-auto text-decoration-none"
+                      style="color:var(--primary);" id="btnOpenIncidenceModule">
+                Ver todas
+              </button>
             </div>
             <div id="navReportesContainer">
-              <div class="ht-empty-state"><i class="bi bi-file-earmark-text"></i><span>Sin incidencias aún</span></div>
+              <div class="ht-empty-state">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Sin incidencias registradas</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="ht-nav-divider"></div>
 
-        <!-- Menú Desplegable de Usuario / Perfil -->
+        <!-- Perfil de usuario -->
         <div class="dropdown">
-          <button class="ht-profile-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opciones de usuario">
+          <button class="ht-profile-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             {% if operario.idUsuario.fotoPerfil %}
-              <img src="{{ operario.idUsuario.fotoPerfil.url }}" class="ht-avatar" id="navAvatar" alt="Avatar" style="object-fit:cover;">
+              <img src="{{ operario.idUsuario.fotoPerfil.url }}" class="ht-avatar" alt="Avatar" style="object-fit:cover;">
             {% else %}
-              <div class="ht-avatar" id="navAvatar">
-                {% if operario %}{{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}{% else %}OP{% endif %}
+              <div class="ht-avatar">
+                {% if operario %}
+                  {{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}
+                {% else %}OP{% endif %}
               </div>
             {% endif %}
-            <span class="d-none d-md-inline font-weight-500" id="navNombre">
+            <span class="d-none d-md-inline" style="font-weight:500; font-size:.9rem;">
               {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% else %}Operario{% endif %}
             </span>
             <i class="bi bi-chevron-down ht-chevron"></i>
           </button>
-
-          <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2" style="min-width: 190px;">
+          <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2" style="min-width:200px;">
+            <li class="px-3 py-2 border-bottom" style="border-color:var(--border)!important;">
+              <div style="font-family:'Fredoka',sans-serif;font-size:1rem;color:var(--primary);">
+                {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% endif %}
+              </div>
+              <small style="color:var(--text-muted);">{{ operario.especialidad|default:"Operario de Planta" }}</small>
+            </li>
             <li>
-              <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2" href="{% url 'operarios:perfil' %}">
+              <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2"
+                 href="{% url 'operarios:perfil' %}">
                 <i class="bi bi-person-gear text-muted"></i>
                 <span>Editar Perfil</span>
               </a>
             </li>
-            <li><hr class="dropdown-divider my-1" style="border-color: var(--border);"></li>
             <li>
-              <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-danger" href="{% url 'logout' %}">
+              <button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2"
+                      id="btnOpenAllIncidences">
+                <i class="bi bi-shield-exclamation text-muted"></i>
+                <span>Gestión de Incidencias</span>
+              </button>
+            </li>
+            <li><hr class="dropdown-divider my-1" style="border-color:var(--border);"></li>
+            <li>
+              <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-danger"
+                 href="{% url 'logout' %}">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Cerrar Sesión</span>
               </a>
@@ -108,10 +141,13 @@
     </div>
   </nav>
 
-  <!-- BARRA DE CONTROLES Y FILTROS -->
+  <!-- ═══════════════════════════════════════════════════
+       BARRA DE CONTROLES Y FILTROS
+  ════════════════════════════════════════════════════ -->
   <div class="ht-controls-bar">
     <div class="ht-controls-inner">
 
+      <!-- Estadísticas rápidas -->
       <div class="ht-stats-row">
         <span class="ht-stat ht-stat-pending">
           <span class="ht-stat-dot"></span>
@@ -130,14 +166,12 @@
         </span>
       </div>
 
+      <!-- Controles derechos -->
       <div class="ht-controls-right">
-        <button class="ht-btn-toggle" id="btnToggleCompletadas" title="Ocultar/mostrar tareas completadas">
-          <i class="bi bi-eye-slash"></i>
-          <span>Ocultar completadas</span>
-        </button>
-        <button class="ht-btn-report" id="btnGenerateReport">
-          <i class="bi bi-plus-lg"></i>
-          <span>Generar Incidencia</span>
+        <button class="ht-btn-toggle" id="btnVerHistorial" title="Ver historial de tareas completadas">
+          <i class="bi bi-archive"></i>
+          <span>Ver historial</span>
+          <span class="ht-badge-count" id="historialBadgeCount" style="margin-left:4px;">0</span>
         </button>
         <div class="ht-search-wrap">
           <i class="bi bi-search ht-search-icon"></i>
@@ -145,76 +179,112 @@
         </div>
         <select id="filterPrio" class="ht-filter-select">
           <option value="">Todas</option>
-          <option value="Alta">🔴 Alta</option>
-          <option value="Urgente">🟠 Urgente</option>
+          <option value="Urgente">🔴 Urgente</option>
+          <option value="Alta">🟠 Alta</option>
           <option value="Media">⚪ Media</option>
-          <option value="Baja">🟢 Baja</option>
+          <option value="Normal">🟢 Normal</option>
         </select>
+        <select id="filterProcess" class="ht-filter-select">
+          <option value="">Todos</option>
+          <option value="Confección">Confección</option>
+          <option value="Ensamble">Ensamble</option>
+          <option value="Corte">Corte</option>
+          <option value="Terminado">Terminado</option>
+          <option value="Planchado">Planchado</option>
+        </select>
+        <button class="ht-btn-toggle" id="btnResetFilters" title="Limpiar filtros">
+          <i class="bi bi-funnel-fill"></i>
+        </button>
       </div>
-
     </div>
   </div>
 
-  <!-- CONTENIDO PRINCIPAL / TABLERO KANBAN -->
+  <!-- ═══════════════════════════════════════════════════
+       MAIN — TABLERO KANBAN
+  ════════════════════════════════════════════════════ -->
   <main class="ht-main">
 
+    <!-- Encabezado de página -->
     <div class="ht-page-header">
       <div>
-        <h1 class="ht-page-title"><i class="bi bi-kanban"></i>Tablero Operarios</h1>
+        <h1 class="ht-page-title"><i class="bi bi-kanban"></i> Tablero Operativo</h1>
         <p class="ht-page-sub">Total de tareas: <strong id="totalTasks">0</strong></p>
       </div>
-      <div class="ht-loading" id="loadingIndicator">
+      <div class="ht-loading" id="loadingIndicator" style="display:none;">
         <div class="ht-spinner"></div>
         <span>Cargando tareas…</span>
       </div>
     </div>
 
+    <!-- Toast container -->
     <div class="ht-toast-wrap" id="toastWrap" aria-live="polite"></div>
 
+    <!-- Pestañas móvil -->
+    <div class="ht-mobile-tabs d-md-none">
+      <button class="ht-mobile-tab active" data-tab="Pendiente">
+        <i class="bi bi-clock-history me-1"></i>Pendientes
+        <span class="ms-1">(<span id="mobCountPending">0</span>)</span>
+      </button>
+      <button class="ht-mobile-tab" data-tab="En Progreso">
+        <i class="bi bi-play-circle-fill me-1"></i>En Proceso
+        <span class="ms-1">(<span id="mobCountProgress">0</span>)</span>
+      </button>
+      <button class="ht-mobile-tab" data-tab="Completada">
+        <i class="bi bi-check-circle-fill me-1"></i>Terminadas
+        <span class="ms-1">(<span id="mobCountDone">0</span>)</span>
+      </button>
+    </div>
+
+    <!-- Board Kanban -->
     <div class="ht-kanban-board" id="kanbanBoard">
 
       <!-- Columna: Pendiente -->
-      <div class="ht-kanban-col" id="col-Pendiente" style="border: solid grey;">
+      <div class="ht-kanban-col" id="col-Pendiente" data-estado="Pendiente">
         <div class="ht-col-header ht-col-header--pending">
           <div class="ht-col-dot"></div>
-          <span class="ht-col-title">Pendiente</span>
+          <span class="ht-col-title">Pendientes</span>
           <span class="ht-col-count" id="count-Pendiente">0</span>
         </div>
         <div class="ht-drop-zone" id="list-Pendiente" data-status="Pendiente">
           <div class="ht-col-empty" id="empty-Pendiente">
-            <i class="bi bi-inbox"></i>
-            <span>Sin tareas pendientes</span>
+            <i class="bi bi-check2-circle"></i>
+            <strong>¡Todo al día!</strong>
+            <span>No tienes tareas pendientes.</span>
           </div>
         </div>
       </div>
 
       <!-- Columna: En Progreso -->
-      <div class="ht-kanban-col" id="col-En Progreso" style="border: solid grey;">
+      <div class="ht-kanban-col" id="col-En Progreso" data-estado="En Progreso">
         <div class="ht-col-header ht-col-header--progress">
           <div class="ht-col-dot"></div>
-          <span class="ht-col-title">En Progreso</span>
+          <span class="ht-col-title">En Proceso</span>
           <span class="ht-col-count" id="count-En Progreso">0</span>
         </div>
         <div class="ht-drop-zone" id="list-En Progreso" data-status="En Progreso">
           <div class="ht-col-empty" id="empty-En Progreso">
             <i class="bi bi-play-circle"></i>
-            <span>Arrastra una tarea aquí</span>
+            <strong>Sin tareas en ejecución</strong>
+            <span>Arrastra o inicia una tarea aquí.</span>
           </div>
         </div>
       </div>
 
       <!-- Columna: Completada -->
-      <div class="ht-kanban-col ht-kanban-col--completada" id="col-Completada " style="border: solid grey;">
-        <div class="ht-col-header ht-col-header--done" id="headerCompletada" style="cursor:pointer;" title="Colapsar/expandir">
+      <div class="ht-kanban-col ht-kanban-col--completada" id="col-Completada" data-estado="Completada">
+        <div class="ht-col-header ht-col-header--done"
+             id="headerCompletada" style="cursor:pointer;" title="Colapsar/expandir">
           <div class="ht-col-dot"></div>
-          <span class="ht-col-title">Completada</span>
+          <span class="ht-col-title">Completadas</span>
           <span class="ht-col-count" id="count-Completada">0</span>
           <i class="bi bi-chevron-up ht-col-chevron ms-auto" id="chevronCompletada"></i>
         </div>
         <div class="ht-drop-zone" id="list-Completada" data-status="Completada">
           <div class="ht-col-empty" id="empty-Completada">
-            <i class="bi bi-check-circle"></i>
-            <span>Las tareas completadas aparecerán aquí</span>
+            <i class="bi bi-trophy"></i>
+            <strong>¡Al día!</strong>
+            <span>Las tareas que completes se archivan automáticamente.</span>
+            <button type="button" class="btn btn-link btn-sm p-0 mt-1" id="linkVerHistorialDesdeColumna">Ver historial →</button>
           </div>
         </div>
       </div>
@@ -222,30 +292,138 @@
     </div>
   </main>
 
-  <!-- MODAL: DETALLE DE TAREA -->
-  <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-labelledby="taskDetailModalLabel" aria-hidden="true">
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: DETALLE DE TAREA
+  ════════════════════════════════════════════════════ -->
+  <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content ht-modal-content">
         <div class="modal-header ht-modal-header">
           <div class="ht-modal-title-wrap">
             <span class="ht-modal-eyebrow">Detalle de Tarea</span>
-            <h5 class="modal-title ht-modal-title" id="taskDetailModalLabel">—</h5>
+            <h5 class="modal-title ht-modal-title" id="dtlTaskTitle">—</h5>
           </div>
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body ht-modal-body" id="taskDetailBody"></div>
+        <div class="modal-body ht-modal-body" id="taskDetailBody">
+          <!-- Se genera dinámicamente -->
+        </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-          <button type="button" class="ht-btn-primary" id="btnOpenReport">
-            <i class="bi bi-plus-circle me-1"></i>Generar Incidencia sobre esta tarea
+          <button type="button" class="ht-btn-primary" id="dtlBtnAction">
+            <i class="bi bi-play-fill me-1"></i>Acción
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: CREAR/EDITAR REPORTE DE INCIDENCIA -->
-  <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: CONFIRMAR INICIO DE TAREA
+  ════════════════════════════════════════════════════ -->
+  <div class="modal fade" id="modalIniciarTarea" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content ht-modal-content">
+        <div class="modal-header ht-modal-header">
+          <div class="ht-modal-title-wrap">
+            <span class="ht-modal-eyebrow">Confirmar inicio</span>
+            <h5 class="modal-title ht-modal-title">Iniciar tarea</h5>
+          </div>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body ht-modal-body">
+          <div class="ht-detail-desc">
+            <h5 id="startTaskTitle" style="font-family:'Fredoka',sans-serif;color:var(--primary-dark);margin-bottom:10px;">—</h5>
+            <div class="ht-detail-grid" style="margin-bottom:0;">
+              <div class="ht-detail-item">
+                <div class="ht-detail-label"><i class="bi bi-tools"></i> Operación</div>
+                <div class="ht-detail-value" id="startTaskProcess">—</div>
+              </div>
+              <div class="ht-detail-item">
+                <div class="ht-detail-label"><i class="bi bi-boxes"></i> Cantidad</div>
+                <div class="ht-detail-value" id="startTaskQty">—</div>
+              </div>
+              <div class="ht-detail-item">
+                <div class="ht-detail-label"><i class="bi bi-clock"></i> Tiempo est.</div>
+                <div class="ht-detail-value" id="startTaskTime">—</div>
+              </div>
+              <div class="ht-detail-item">
+                <div class="ht-detail-label"><i class="bi bi-flag"></i> Prioridad</div>
+                <div class="ht-detail-value" id="startTaskPrio">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer ht-modal-footer">
+          <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="ht-btn-primary" id="btnConfirmStartTask">
+            <i class="bi bi-play-circle-fill me-1"></i>Iniciar ahora
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: FINALIZAR TAREA
+  ════════════════════════════════════════════════════ -->
+  <div class="modal fade" id="modalFinalizarTarea" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content ht-modal-content">
+        <div class="modal-header ht-modal-header">
+          <div class="ht-modal-title-wrap">
+            <span class="ht-modal-eyebrow">Registrar finalización</span>
+            <h5 class="modal-title ht-modal-title">Completar tarea</h5>
+          </div>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body ht-modal-body">
+
+          <div class="ht-form-group">
+            <label class="ht-label" for="finishQtyGood">
+              Unidades conformes <span class="ht-required">*</span>
+            </label>
+            <input type="number" id="finishQtyGood" class="ht-input" min="0" placeholder="Ej: 120">
+          </div>
+
+          <div class="ht-form-group">
+            <label class="ht-label" for="finishQtyBad">Unidades defectuosas / merma</label>
+            <input type="number" id="finishQtyBad" class="ht-input" min="0" value="0">
+          </div>
+
+          <div class="ht-form-group">
+            <label class="ht-label" for="finishNotes">Observaciones (opcional)</label>
+            <textarea id="finishNotes" class="ht-input ht-textarea" rows="2"
+                      placeholder="Notas sobre el lote o novedades…"></textarea>
+          </div>
+
+          <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="finishHasIncidence">
+            <label class="form-check-label" for="finishHasIncidence" style="color:var(--warn);font-weight:600;">
+              ¿Hubo inconvenientes durante la ejecución?
+            </label>
+          </div>
+
+        </div>
+        <div class="modal-footer ht-modal-footer">
+          <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="ht-btn-primary" id="btnConfirmFinishTask"
+                  style="background:var(--ok);">
+            <i class="bi bi-check-circle-fill me-1"></i>Finalizar y registrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: CREAR / EDITAR INCIDENCIA
+  ════════════════════════════════════════════════════ -->
+  <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content ht-modal-content">
         <div class="modal-header ht-modal-header">
@@ -260,48 +438,133 @@
           <input type="hidden" id="reportEditId" value="">
 
           <div class="ht-form-group">
-            <label class="ht-label" for="reportTipo">Tipo de incidencia <span class="ht-required">*</span></label>
-            <input type="text" class="ht-input" id="reportTipo" placeholder="Ej: Error de corte, Fallo mecánico…" maxlength="50">
-            <div class="ht-field-hint"><span id="tipoCount">0</span>/50</div>
+            <label class="ht-label" for="reportTipo">
+              Tipo de incidencia <span class="ht-required">*</span>
+            </label>
+            <select class="ht-input" id="reportTipo" style="cursor:pointer;">
+              <option value="" disabled selected>Selecciona una categoría…</option>
+              <option value="Falla Mecánica / Maquinaria">Falla Mecánica / Maquinaria</option>
+              <option value="Falta de Insumos / Tela">Falta de Insumos / Materiales</option>
+              <option value="Problema Eléctrico">Problema Eléctrico</option>
+              <option value="Defecto de Calidad">Defecto de Calidad</option>
+              <option value="Seguridad / Accidente">Seguridad Industrial</option>
+              <option value="Otro motivo">Otro inconveniente</option>
+            </select>
             <div class="ht-field-error" id="err-tipo"></div>
           </div>
 
           <div class="ht-form-group">
-            <label class="ht-label" for="reportDesc">Descripción <span class="ht-required">*</span></label>
-            <textarea class="ht-input ht-textarea" id="reportDesc" rows="4" placeholder="Describe detalladamente el problema o situación ocurrida…" maxlength="2000"></textarea>
-            <div class="ht-field-hint"><span id="descCount">0</span>/2000 (mín. 10 caracteres)</div>
+            <label class="ht-label" for="reportSeveridad">Severidad</label>
+            <select class="ht-input" id="reportSeveridad" style="cursor:pointer;">
+              <option value="Baja">🟢 Baja — No detiene producción</option>
+              <option value="Media" selected>🔵 Media — Atención requerida</option>
+              <option value="Alta">🟠 Alta — Línea ralentizada</option>
+              <option value="Crítica">🔴 Crítica — Parada total de máquina</option>
+            </select>
+          </div>
+
+          <div class="ht-form-group">
+            <label class="ht-label" for="reportDesc">
+              Descripción detallada <span class="ht-required">*</span>
+            </label>
+            <textarea class="ht-input ht-textarea" id="reportDesc" rows="4"
+                      maxlength="2000"
+                      placeholder="Describe qué sucedió, máquina involucrada y estado actual…"></textarea>
+            <div class="ht-field-hint"><span id="descCount">0</span>/2000</div>
             <div class="ht-field-error" id="err-desc"></div>
           </div>
 
           <div class="ht-report-info" id="reportTareaRef" style="display:none;">
             <i class="bi bi-link-45deg"></i>
-            <span>Relacionado con: <strong id="reportTareaName">—</strong></span>
+            <span>Vinculada a: <strong id="reportTareaName">—</strong></span>
           </div>
 
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="ht-btn-primary" id="btnSaveReport">
-            <i class="bi bi-send me-1"></i><span id="btnSaveReportLabel">Enviar reporte</span>
+          <button type="button" class="ht-btn-primary" id="btnSaveReport"
+                  style="background:#d97706;">
+            <i class="bi bi-send me-1"></i>
+            <span id="btnSaveReportLabel">Enviar reporte</span>
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: ELIMINAR REPORTE -->
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: GESTIÓN DE INCIDENCIAS (tabla completa)
+  ════════════════════════════════════════════════════ -->
+  <div class="modal fade" id="modalGestionIncidencias" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content ht-modal-content">
+        <div class="modal-header ht-modal-header">
+          <div class="ht-modal-title-wrap">
+            <span class="ht-modal-eyebrow">Historial completo</span>
+            <h5 class="modal-title ht-modal-title">Gestión de Incidencias</h5>
+          </div>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body ht-modal-body">
+
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div class="ht-search-wrap">
+              <i class="bi bi-search ht-search-icon"></i>
+              <input type="text" id="searchIncidenceModal" class="ht-search-input"
+                     placeholder="Filtrar incidencias…">
+            </div>
+            <button class="ht-btn-report" id="btnCreateIncidenceFromModule">
+              <i class="bi bi-plus-lg me-1"></i>Nueva Incidencia
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle" style="font-size:.86rem;">
+              <thead style="background:var(--surface2);">
+                <tr>
+                  <th style="color:var(--primary);"># ID</th>
+                  <th style="color:var(--primary);">Tipo</th>
+                  <th style="color:var(--primary);">Descripción</th>
+                  <th style="color:var(--primary);">Estado</th>
+                  <th style="color:var(--primary);">Fecha</th>
+                  <th class="text-end" style="color:var(--primary);">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableIncidenciasBody">
+                <tr>
+                  <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
+                    Cargando incidencias…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+        <div class="modal-footer ht-modal-footer">
+          <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: CONFIRMAR ELIMINACIÓN
+  ════════════════════════════════════════════════════ -->
   <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content ht-modal-content">
         <div class="modal-header ht-modal-header">
           <div class="ht-modal-title-wrap">
             <span class="ht-modal-eyebrow">Confirmar acción</span>
-            <h5 class="modal-title ht-modal-title">Eliminar reporte</h5>
+            <h5 class="modal-title ht-modal-title">Eliminar incidencia</h5>
           </div>
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-          <p class="mb-0" style="font-size:.9rem; color:var(--text-muted);">
+          <p class="mb-0" style="font-size:.9rem;color:var(--text-muted);">
             ¿Estás seguro de que quieres eliminar este reporte? Esta acción no se puede deshacer.
           </p>
         </div>
@@ -310,6 +573,44 @@
           <button type="button" class="ht-btn-danger" id="btnConfirmDelete">
             <i class="bi bi-trash me-1"></i>Eliminar
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: HISTORIAL DE TAREAS COMPLETADAS -->
+  <div class="modal fade" id="modalHistorialTareas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content ht-modal-content">
+        <div class="modal-header ht-modal-header">
+          <div class="ht-modal-title-wrap">
+            <span class="ht-modal-eyebrow">Archivo</span>
+            <h5 class="modal-title ht-modal-title"><i class="bi bi-archive me-2"></i>Historial de tareas completadas</h5>
+          </div>
+          <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body ht-modal-body">
+          <div class="ht-search-wrap mb-3" style="max-width:280px;">
+            <i class="bi bi-search ht-search-icon"></i>
+            <input type="text" id="searchHistorialModal" class="ht-search-input" placeholder="Buscar en historial…">
+          </div>
+          <div class="table-responsive">
+            <table class="ht-table">
+              <thead>
+                <tr>
+                  <th>Tarea</th>
+                  <th>Proceso</th>
+                  <th>Cantidad</th>
+                  <th>Fecha finalización</th>
+                  <th>Horas reales</th>
+                </tr>
+              </thead>
+              <tbody id="tableHistorialBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer ht-modal-footer">
+          <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
         </div>
       </div>
     </div>

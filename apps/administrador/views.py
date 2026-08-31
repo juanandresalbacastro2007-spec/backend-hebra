@@ -179,7 +179,7 @@ def usuario_editar(request, idUsuario):
 def usuario_eliminar(request, idUsuario):
     if request.method == 'POST':
         usuario_obj = get_object_or_404(Usuario, idUsuario=idUsuario)
-        
+
         # Validación de seguridad: Solo permitir eliminar si es operario
         if usuario_obj.rol != 'operario':
             messages.error(request, '⚠️ No está permitido eliminar usuarios con rol diferente a Operario.')
@@ -260,26 +260,6 @@ def _parsear_fecha(valor):
 
 # ── Tareas ───────────────────────────────────────────────────
 @admin_required
-def tareas_lista(request):
-    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    asignaciones = AsignacionTarea.objects.all().order_by('-fechaAsignacion')
-
-    buscar_filtro = request.GET.get('buscar', '')
-    if buscar_filtro:
-        asignaciones = asignaciones.filter(
-            Q(idTarea__nombreTarea__icontains=buscar_filtro) |
-            Q(idOperario__idUsuario__nombre__icontains=buscar_filtro) |
-            Q(idOperario__idUsuario__apellido__icontains=buscar_filtro)
-        )
-
-    return render(request, 'administrador/tareas_lista.html', {
-        'usuario': usuario,
-        'asignaciones': asignaciones,
-        'buscar_filtro': buscar_filtro,
-    })
-
-
-@admin_required
 def tarea_asignar(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
@@ -289,7 +269,8 @@ def tarea_asignar(request):
         id_tarea = request.POST.get('tarea')
         tarea_personalizada = request.POST.get('tarea_personalizada', '').strip()
         proceso_personalizado = request.POST.get('proceso_personalizado', '').strip()
-        id_operario = request.POST.get('operario')
+        # ── Antes: request.POST.get('operario') → ahora: lista de operarios ──
+        ids_operarios = request.POST.getlist('operarios')
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
         fecha_limite = request.POST.get('fechaLimite')
@@ -299,6 +280,11 @@ def tarea_asignar(request):
         horas_estimadas = request.POST.get('horasEstimadas')
 
         try:
+            # ── Validar que se haya seleccionado al menos un operario ──
+            if not ids_operarios:
+                messages.error(request, 'Debes seleccionar al menos un operario.')
+                return redirect('admin_tarea_asignar')
+
             # ── Manejar tarea personalizada ──────────────────────
             if id_tarea == 'otra':
                 if not tarea_personalizada:
@@ -308,16 +294,15 @@ def tarea_asignar(request):
                     messages.error(request, 'Por favor, ingresa el proceso/categoría de la tarea.')
                     return redirect('admin_tarea_asignar')
 
-                # Crear nueva tarea
+                # Crear nueva tarea (una sola vez, aunque se asigne a varios operarios)
                 tarea = Tarea.objects.create(
                     nombreTarea=tarea_personalizada,
                     descripcionTarea=descripcion or f'Tarea personalizada: {tarea_personalizada}',
                     proceso=proceso_personalizado,
-                    complejidad='media'  # Complejidad por defecto
+                    complejidad='media'
                 )
                 mensaje_tarea = f'✓ Tarea personalizada "{tarea_personalizada}" creada. '
             else:
-                # Usar tarea existente
                 try:
                     tarea = Tarea.objects.get(idTarea=id_tarea)
                     mensaje_tarea = ''
@@ -325,11 +310,32 @@ def tarea_asignar(request):
                     messages.error(request, 'La tarea seleccionada no existe.')
                     return redirect('admin_tarea_asignar')
 
-            # ── Obtener operario ────────────────────────────────
-            try:
-                operario = Operario.objects.select_related('idUsuario').get(idOperario=id_operario)
-            except Operario.DoesNotExist:
-                messages.error(request, 'El operario seleccionado no existe.')
+            # ── Obtener y validar operarios seleccionados ─────────
+            operarios_seleccionados = list(
+                Operario.objects.select_related('idUsuario').filter(idOperario__in=ids_operarios)
+            )
+            if len(operarios_seleccionados) != len(ids_operarios):
+                messages.error(request, 'Uno o más operarios seleccionados no existen.')
+                return redirect('admin_tarea_asignar')
+
+            # ── Restricción: un operario no puede tener más de 1 tarea activa ──
+            ESTADOS_ACTIVOS = ['Pendiente', 'En Progreso']
+            ocupados = []
+            for operario in operarios_seleccionados:
+                tiene_activa = AsignacionTarea.objects.filter(
+                    idOperario=operario,
+                    estado__in=ESTADOS_ACTIVOS
+                ).exists()
+                if tiene_activa:
+                    ocupados.append(f'{operario.idUsuario.nombre} {operario.idUsuario.apellido}')
+
+            if ocupados:
+                messages.error(
+                    request,
+                    'No se puede asignar: los siguientes operarios ya tienen una tarea activa '
+                    '(Pendiente o En Progreso) → ' + ', '.join(ocupados) +
+                    '. Un operario solo puede tener una tarea activa a la vez.'
+                )
                 return redirect('admin_tarea_asignar')
 
             # ── Convertir cantidad a entero si existe ─────────────
@@ -361,24 +367,30 @@ def tarea_asignar(request):
             else:
                 horas_calculadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else 0.5
 
-            # ── Crear la asignación ───────────────────────────────
-            asignacion = AsignacionTarea.objects.create(
-                idTarea=tarea,
-                idOperario=operario,
-                descripcion=descripcion,
-                fechaInicio=fecha_inicio_dt,
-                fechaLimite=fecha_limite_dt,
-                prioridad=prioridad,
-                tipoPrenda=tipo_prenda or None,
-                cantidadPrendas=cantidad_int,
-                horasEstimadas=horas_calculadas,
-                estado='Pendiente'
-            )
+            # ── Crear una asignación por cada operario seleccionado ──
+            asignaciones_creadas = []
+            for operario in operarios_seleccionados:
+                asignacion = AsignacionTarea.objects.create(
+                    idTarea=tarea,
+                    idOperario=operario,
+                    descripcion=descripcion,
+                    fechaInicio=fecha_inicio_dt,
+                    fechaLimite=fecha_limite_dt,
+                    prioridad=prioridad,
+                    tipoPrenda=tipo_prenda or None,
+                    cantidadPrendas=cantidad_int,
+                    horasEstimadas=horas_calculadas,
+                    estado='Pendiente'
+                )
+                asignaciones_creadas.append(asignacion)
 
+            nombres = ', '.join(
+                f'{op.idUsuario.nombre} {op.idUsuario.apellido}' for op in operarios_seleccionados
+            )
             messages.success(
                 request,
-                f'{mensaje_tarea}Asignación #{asignacion.idAsignacion} creada correctamente. '
-                f'Tarea asignada a {operario.idUsuario.nombre}.'
+                f'{mensaje_tarea}Se crearon {len(asignaciones_creadas)} asignación(es) correctamente. '
+                f'Tarea asignada a: {nombres}.'
             )
             return redirect('admin_tareas')
 
@@ -395,51 +407,84 @@ def tarea_asignar(request):
 
 
 @admin_required
+def tareas_lista(request):
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+    asignaciones = AsignacionTarea.objects.select_related(
+        'idTarea', 'idOperario__idUsuario'
+    ).order_by('-fechaAsignacion')
+
+    buscar_filtro = request.GET.get('buscar', '')
+    if buscar_filtro:
+        asignaciones = asignaciones.filter(
+            Q(idTarea__nombreTarea__icontains=buscar_filtro) |
+            Q(idOperario__idUsuario__nombre__icontains=buscar_filtro) |
+            Q(idOperario__idUsuario__apellido__icontains=buscar_filtro)
+        )
+
+    estado_filtro = request.GET.get('estado', '')
+    if estado_filtro:
+        asignaciones = asignaciones.filter(estado=estado_filtro)
+
+    return render(request, 'administrador/tareas_lista.html', {
+        'usuario': usuario,
+        'asignaciones': asignaciones,
+        'buscar_filtro': buscar_filtro,
+        'estado_filtro': estado_filtro,
+    })
+
+
+@admin_required
 def tarea_editar(request, idAsignacion):
+    asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
+
     if request.method == 'POST':
-        asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
-        asignacion.descripcion = request.POST.get('descripcion')
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_limite = request.POST.get('fecha_limite')
-        horas_estimadas = request.POST.get('horas_estimadas')
-        tipo_prenda = request.POST.get('tipoPrenda')
-        cantidad = request.POST.get('cantidadPrendas')
+        descripcion = request.POST.get('descripcion')
+        fecha_inicio = request.POST.get('fechaInicio')
+        fecha_limite = request.POST.get('fechaLimite')
+        fecha_finalizacion = request.POST.get('fechaFinalizacion')
+        estado = request.POST.get('estado')
+        prioridad = request.POST.get('prioridad')
+        horas_estimadas = request.POST.get('horasEstimadas')
+        horas_reales = request.POST.get('horasReales')
 
-        fecha_inicio_dt = _parsear_fecha(fecha_inicio)
-        fecha_limite_dt = _parsear_fecha(fecha_limite)
+        try:
+            if descripcion is not None:
+                asignacion.descripcion = descripcion
 
-        if fecha_inicio_dt and fecha_inicio_dt != asignacion.fechaInicio and fecha_inicio_dt < date.today():
-            messages.error(request, 'La fecha de inicio no puede ser anterior a hoy.')
-            return redirect('admin_tareas')
+            fecha_inicio_dt = _parsear_fecha(fecha_inicio)
+            fecha_limite_dt = _parsear_fecha(fecha_limite)
+            fecha_finalizacion_dt = _parsear_fecha(fecha_finalizacion)
 
-        if fecha_limite_dt and fecha_limite_dt < date.today():
-            messages.error(request, 'La fecha límite no puede ser anterior a hoy.')
-            return redirect('admin_tareas')
+            if fecha_inicio_dt:
+                asignacion.fechaInicio = fecha_inicio_dt
+            asignacion.fechaLimite = fecha_limite_dt
+            asignacion.fechaFinalizacion = fecha_finalizacion_dt
 
-        if fecha_inicio_dt and fecha_limite_dt and fecha_limite_dt < fecha_inicio_dt:
-            messages.error(request, 'La fecha límite no puede ser anterior a la fecha de inicio.')
-            return redirect('admin_tareas')
+            if estado:
+                asignacion.estado = estado
+            if prioridad:
+                asignacion.prioridad = prioridad
 
-        asignacion.fechaInicio = fecha_inicio_dt
-        asignacion.fechaLimite = fecha_limite_dt
-        asignacion.horasEstimadas = horas_estimadas if horas_estimadas and horas_estimadas.strip() else None
-        asignacion.tipoPrenda = tipo_prenda or None
-        asignacion.cantidadPrendas = int(cantidad) if cantidad and cantidad.strip() else None
-        asignacion.prioridad = request.POST.get('prioridad')
-        asignacion.estado = request.POST.get('estado')
-        asignacion.save()
-        messages.success(request, f'La asignación #{idAsignacion} ha sido modificada con éxito.')
+            asignacion.horasEstimadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else asignacion.horasEstimadas
+            asignacion.horasReales = float(horas_reales) if horas_reales and horas_reales.strip() else None
+
+            asignacion.save()
+            messages.success(request, f'Asignación #{idAsignacion} actualizada correctamente.')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar la asignación: {str(e)}')
+
     return redirect('admin_tareas')
 
 
 @admin_required
 def tarea_eliminar(request, idAsignacion):
-    try:
-        asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
-        asignacion.delete()
-        messages.success(request, f'La asignación #{idAsignacion} se eliminó correctamente.')
-    except Exception as e:
-        messages.error(request, f'Error al intentar eliminar la asignación: {str(e)}')
+    if request.method == 'POST':
+        try:
+            asignacion = get_object_or_404(AsignacionTarea, pk=idAsignacion)
+            asignacion.delete()
+            messages.success(request, f'Asignación #{idAsignacion} eliminada correctamente.')
+        except Exception as e:
+            messages.error(request, f'Error al eliminar la asignación: {str(e)}')
     return redirect('admin_tareas')
 
 
@@ -620,13 +665,13 @@ def inventario_lista(request):
     # Aplicar filtro si se ingresó un valor en la caja de búsqueda
     if buscar:
         inventario_list = inventario_list.filter(
-            Q(producto__nombre__icontains=buscar) | 
+            Q(producto__nombre__icontains=buscar) |
             Q(idInventario__icontains=buscar) |
             Q(ubicacion__icontains=buscar)
         )
-        
+
         materiales_list = materiales_list.filter(
-            Q(nombreMaterial__icontains=buscar) | 
+            Q(nombreMaterial__icontains=buscar) |
             Q(descripcion__icontains=buscar) |
             Q(idMaterial__icontains=buscar)
         )
@@ -677,7 +722,7 @@ def editar_material(request, pk):
         material.stockMinimo = request.POST.get('stockMinimo')
         material.unidadBase = request.POST.get('unidadBase')
         material.costoUnitario = request.POST.get('costoUnitario')
-        
+
         material.save()
         messages.success(request, f"Material '{material.nombreMaterial}' actualizado correctamente.")
     return redirect('admin_inventario')
@@ -700,10 +745,10 @@ def crear_inventario(request):
     if request.method == 'POST':
         producto_id = request.POST.get('producto')
         producto = get_object_or_404(Producto, pk=producto_id)
-        
+
         cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
         min_definido = int(request.POST.get('minimoDefinido') or 0)
-        
+
         # Parseo seguro a entero para nivelStock
         nivel_stock_input = request.POST.get('nivelStock')
         try:
@@ -740,13 +785,13 @@ def editar_inventario(request, pk):
     if request.method == 'POST':
         producto_id = request.POST.get('producto')
         item.producto = get_object_or_404(Producto, pk=producto_id)
-        
+
         cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
         min_definido = int(request.POST.get('minimoDefinido') or 0)
 
         item.cantidadDisponible = cant_disponible
         item.minimoDefinido = min_definido
-        
+
         # Parseo seguro a entero para nivelStock
         nivel_stock_input = request.POST.get('nivelStock')
         try:
@@ -758,7 +803,7 @@ def editar_inventario(request, pk):
         item.ubicacion = request.POST.get('ubicacion')
         item.cantidadIngresada = int(request.POST.get('cantidadIngresada') or 0)
         item.cantidadEgresada = int(request.POST.get('cantidadEgresada') or 0)
-        
+
         fecha_salida = request.POST.get('fechaSalida')
         item.fechaSalida = fecha_salida if fecha_salida else None
 

@@ -11,7 +11,7 @@ from django.template.loader import render_to_string
 from django.http import FileResponse, Http404
 from xhtml2pdf import pisa
 
-from .models import Orden, Cliente, Producto, Usuario, Factura
+from .models import Orden, Cliente, Producto, Usuario, Factura, Cotizacion
 from apps.core.decorators import login_required_rol
 
 # ── Decorador de protección por rol ─────────────────────────
@@ -87,6 +87,9 @@ def cliente_portal(request):
     # ✅ FASE 4: Facturas del cliente, para el apartado de facturas
     facturas = Factura.objects.filter(idCliente=cliente).order_by('-fechaEmision')
 
+    # ✅ NUEVO: Cotizaciones del cliente
+    cotizaciones = Cotizacion.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
+
     return render(request, 'clientes/cliente_portal.html', {
         'cliente': cliente,
         'usuario': usuario,
@@ -99,6 +102,7 @@ def cliente_portal(request):
         'ordenes_recientes': ordenes_recientes,
         'orden_activa': orden_activa,
         'facturas': facturas,
+        'cotizaciones': cotizaciones,
     })
 
 
@@ -213,6 +217,63 @@ def registrar_orden(request):
             return redirect('cliente_portal')
 
     return redirect('cliente_portal')
+
+
+@cliente_required
+def generar_cotizacion(request):
+    """
+    Recibe el POST del modal 'Generar cotización' (AJAX, no redirige).
+    A diferencia de registrar_orden, NO valida orden_activa: una
+    cotización es solo una estimación, no reserva producción.
+
+    POST /clientes/cotizaciones/generar/
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    usuario_id = request.session['usuario_id']
+
+    try:
+        cliente = Cliente.objects.get(idUsuario=usuario_id)
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+
+    producto_id = request.POST.get('producto')
+    cantidad = request.POST.get('cantidad')
+    notas = request.POST.get('notas', '').strip()
+
+    if not producto_id or not cantidad:
+        return JsonResponse({'error': 'Selecciona un producto y una cantidad.'}, status=400)
+
+    try:
+        producto = Producto.objects.get(idProducto=producto_id)
+    except Producto.DoesNotExist:
+        return JsonResponse({'error': 'El producto seleccionado no existe.'}, status=400)
+
+    try:
+        cantidad_int = int(cantidad)
+        if cantidad_int <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'La cantidad debe ser un número mayor a 0.'}, status=400)
+
+    subtotal = producto.precio * cantidad_int
+
+    cotizacion = Cotizacion.objects.create(
+        idCliente=cliente,
+        idProducto=producto,
+        cantidad=cantidad_int,
+        precioUnitario=producto.precio,
+        subtotalEstimado=subtotal,
+        notas=notas or None,
+        estado='Pendiente'
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'idCotizacion': cotizacion.idCotizacion,
+        'mensaje': 'La solicitud se registró. Evaluaremos costos según tus especificaciones.',
+    })
 
 
 @cliente_required
@@ -335,7 +396,7 @@ def actualizar_ordenes(request):
 
     return JsonResponse({'html': html})
 
-cliente_required
+@cliente_required
 def notificaciones_json(request):
     """
     Devuelve las notificaciones del cliente en JSON.
@@ -366,12 +427,16 @@ def notificaciones_json(request):
     except Cliente.DoesNotExist:
         return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
  
-    notificaciones = Notificacion.objects.filter(
-        idCliente=cliente
-    ).order_by('-fechaCreacion')[:20]   # Últimas 20
+    # ── Antes: se cortaba con [:20] y LUEGO se filtraba sobre ese
+    # queryset ya recortado → "Cannot filter a query once a slice
+    # has been taken." Ahora: contamos no_leidas sobre el queryset
+    # completo, y recién después aplicamos el slice para el listado. ──
+    todas = Notificacion.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
+    no_leidas = todas.filter(leida=False).count()
+    notificaciones = todas[:20]   # Últimas 20
  
     data = {
-        'no_leidas': notificaciones.filter(leida=False).count(),
+        'no_leidas': no_leidas,
         'notificaciones': [
             {
                 'id':      n.idNotificacion,
@@ -420,4 +485,3 @@ def marcar_notificacion_leida(request, idNotificacion):
         return JsonResponse({'ok': True, 'accion': 'leida', 'id': idNotificacion})
     except Notificacion.DoesNotExist:
         return JsonResponse({'error': 'Notificación no encontrada'}, status=404)
- 

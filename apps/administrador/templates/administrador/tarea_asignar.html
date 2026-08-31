@@ -61,22 +61,27 @@
               </div>
             </div>
 
-            <!-- Operario asignado -->
+            <!-- Operarios asignados -->
             <div class="col-md-6">
-              <label for="selectOperario" class="form-label fw-medium small">
-                Operario asignado <span class="text-danger">*</span>
+              <label class="form-label fw-medium small">
+                Operarios asignados <span class="text-danger">*</span>
               </label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text bg-light text-muted"><i class="bi bi-person-badge"></i></span>
-                <select name="operario" id="selectOperario" class="form-select" required>
-                  <option value="" disabled selected>Seleccionar operario...</option>
-                  {% for op in operarios %}
-                  <option value="{{ op.idOperario }}">
+              <div id="operariosCheckGroup" class="border rounded p-2" style="max-height: 160px; overflow-y: auto;">
+                {% for op in operarios %}
+                <div class="form-check">
+                  <input class="form-check-input operario-check" type="checkbox" name="operarios"
+                         value="{{ op.idOperario }}" id="op{{ op.idOperario }}">
+                  <label class="form-check-label small" for="op{{ op.idOperario }}">
                     {{ op.idUsuario.nombre }} {{ op.idUsuario.apellido }} — {{ op.especialidad }}
-                  </option>
-                  {% endfor %}
-                </select>
-                <div class="invalid-feedback">Debes seleccionar un operario.</div>
+                  </label>
+                </div>
+                {% empty %}
+                <p class="text-muted small mb-0">No hay operarios activos disponibles.</p>
+                {% endfor %}
+              </div>
+              <div class="form-text small">Un operario solo puede tener 1 tarea activa a la vez.</div>
+              <div class="invalid-feedback d-block text-danger small" id="errOperarios" style="display:none !important;">
+                Debes seleccionar al menos un operario.
               </div>
             </div>
 
@@ -300,6 +305,16 @@
         valido = false;
       } else {
         fechaLimiteInput.setCustomValidity('');
+      }
+
+      // Validación extra: al menos un operario seleccionado (los checkboxes no soportan 'required' en grupo)
+      const operariosMarcados = document.querySelectorAll('.operario-check:checked');
+      const errOperarios = document.getElementById('errOperarios');
+      if (operariosMarcados.length === 0) {
+        valido = false;
+        if (errOperarios) errOperarios.style.setProperty('display', 'block', 'important');
+      } else {
+        if (errOperarios) errOperarios.style.setProperty('display', 'none', 'important');
       }
 
       if (!valido) {

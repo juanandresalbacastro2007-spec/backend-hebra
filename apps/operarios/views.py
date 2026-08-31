@@ -1,568 +1,426 @@
+# apps/operarios/views.py
+
 import json
-import logging
-import io
 from datetime import date, datetime
 
-from django.conf import settings
-from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_POST
+from django.contrib.auth.hashers import check_password, make_password
+from django.http import FileResponse, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.hashers import make_password, check_password
-from django.contrib import messages
+from django.views.decorators.http import require_http_methods
 
-# --- Imports nuevos para el PDF (ReportLab) ---
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer,
-    Table, TableStyle, HRFlowable
-)
-from reportlab.lib.enums import TA_CENTER
+from .models import AsignacionTarea, Incidencia, Operario
 
-from .models import Operario, AsignacionTarea, Incidencia, Usuario
-from apps.core.decorators import login_required_rol, login_required_api
+# ─────────────────────────────────────────────────────────────────
+# HELPER: obtener operario de la sesión
+# ─────────────────────────────────────────────────────────────────
 
-logger = logging.getLogger(__name__)
-
-ESTADOS_VALIDOS_ASIGNACION = ['Pendiente', 'En Progreso', 'Completada', 'Cancelada']
-TIPO_INCIDENCIA_MAX_LEN = 50
-
-# ── Decoradores de protección (centralizados en apps.core) ─────────
-operario_login_required = login_required_rol(rol_esperado='operario', session_key='idOperario')
-operario_login_required_api = login_required_api(rol_esperado='operario', session_key='idOperario')
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _get_operario_actual(request):
-    """
-    Obtiene el Operario logueado desde la sesión.
-    """
-    id_operario = request.session.get('idOperario')
-    if not id_operario:
+def _get_operario(request):
+    """Devuelve el Operario activo de la sesión o None."""
+    usuario_id = request.session.get('usuario_id')
+    if not usuario_id:
         return None
     try:
         return Operario.objects.select_related('idUsuario').get(
-            idOperario=id_operario,
-            estado='activo'
+            idUsuario__idUsuario=usuario_id,
+            estado='activo',
         )
     except Operario.DoesNotExist:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Vista principal — Tablero Kanban
-# ---------------------------------------------------------------------------
+def _json_error(msg, status=400):
+    return JsonResponse({'error': msg}, status=status)
 
-@operario_login_required
+
+# ─────────────────────────────────────────────────────────────────
+# 1. TABLERO (render HTML)
+# ─────────────────────────────────────────────────────────────────
+
 def tablero_operario(request):
-    """GET /operarios/"""
-    operario = _get_operario_actual(request)
-
-    asignaciones = []
-    if operario:
-        asignaciones = (
-            AsignacionTarea.objects
-            .filter(idOperario=operario)
-            .select_related('idTarea')
-            .order_by('fechaInicio')
-        )
-
-    contadores = {
-        'pendiente':   sum(1 for a in asignaciones if a.estado == 'Pendiente'),
-        'en_progreso': sum(1 for a in asignaciones if a.estado == 'En Progreso'),
-        'completada':  sum(1 for a in asignaciones if a.estado == 'Completada'),
-    }
-
-    context = {
-        'operario':     operario,
-        'asignaciones': asignaciones,
-        'contadores':   contadores,
-    }
-
-    return render(request, 'operarios/operario.html', context)
-
-
-# ---------------------------------------------------------------------------
-# Vista — Editar perfil del operario
-# ---------------------------------------------------------------------------
-
-@operario_login_required
-def perfil_operario(request):
-    """GET/POST /operarios/perfil/"""
-    operario = _get_operario_actual(request)
+    """Renderiza el tablero Kanban del operario."""
+    operario = _get_operario(request)
     if not operario:
-        messages.error(request, 'No se pudo cargar tu perfil.')
-        return redirect('operarios:tablero')
+        return redirect('login')
+    return render(request, 'operarios/operario.html', {'operario': operario})
+
+
+# ─────────────────────────────────────────────────────────────────
+# 2. PERFIL (GET: mostrar / POST: guardar cambios)
+# ─────────────────────────────────────────────────────────────────
+
+def perfil_operario(request):
+    """Ver y editar el perfil del operario logueado."""
+    operario = _get_operario(request)
+    if not operario:
+        return redirect('login')
 
     usuario = operario.idUsuario
 
     if request.method == 'POST':
-        nombre = request.POST.get('nombre', '').strip()
-        apellido = request.POST.get('apellido', '').strip()
-        telefono = request.POST.get('telefono', '').strip()
-        direccion = request.POST.get('direccion', '').strip()
+        # ── Datos personales
+        usuario.nombre   = request.POST.get('nombre',   usuario.nombre).strip()
+        usuario.apellido = request.POST.get('apellido', usuario.apellido).strip()
+        usuario.telefono = request.POST.get('telefono', '').strip() or None
+        usuario.direccion = request.POST.get('direccion', '').strip() or None
+
         especialidad = request.POST.get('especialidad', '').strip()
-
-        password_actual = request.POST.get('password_actual', '')
-        password_nueva = request.POST.get('password_nueva', '')
-        password_confirmar = request.POST.get('password_confirmar', '')
-
-        if not nombre or not apellido:
-            messages.error(request, 'Nombre y apellido son obligatorios.')
-            return render(request, 'operarios/perfil.html', {'operario': operario})
-
-        # Cambio de contraseña (opcional)
-        if password_actual or password_nueva or password_confirmar:
-            if not check_password(password_actual, usuario.contrasena):
-                messages.error(request, 'La contraseña actual no es correcta.')
-                return render(request, 'operarios/perfil.html', {'operario': operario})
-            if len(password_nueva) < 8:
-                messages.error(request, 'La nueva contraseña debe tener al menos 8 caracteres.')
-                return render(request, 'operarios/perfil.html', {'operario': operario})
-            if password_nueva != password_confirmar:
-                messages.error(request, 'Las contraseñas nuevas no coinciden.')
-                return render(request, 'operarios/perfil.html', {'operario': operario})
-            usuario.contrasena = make_password(password_nueva)
-
-        # Foto de perfil (opcional)
-        foto = request.FILES.get('fotoPerfil')
-        if foto:
-            if foto.size > 3 * 1024 * 1024:
-                messages.error(request, 'La imagen no puede superar 3MB.')
-                return render(request, 'operarios/perfil.html', {'operario': operario})
-            if not foto.content_type in ('image/jpeg', 'image/png', 'image/webp'):
-                messages.error(request, 'Formato de imagen no válido (usa JPG, PNG o WEBP).')
-                return render(request, 'operarios/perfil.html', {'operario': operario})
-            usuario.fotoPerfil = foto
-
-        usuario.nombre = nombre
-        usuario.apellido = apellido
-        usuario.telefono = telefono or None
-        usuario.direccion = direccion or None
-        usuario.save()
-
         if especialidad:
             operario.especialidad = especialidad
-            operario.save()
 
+        # ── Foto de perfil
+        if 'fotoPerfil' in request.FILES:
+            usuario.fotoPerfil = request.FILES['fotoPerfil']
+
+        # ── Cambio de contraseña (solo si se llenaron los tres campos)
+        pw_actual    = request.POST.get('password_actual', '')
+        pw_nueva     = request.POST.get('password_nueva', '')
+        pw_confirmar = request.POST.get('password_confirmar', '')
+
+        if pw_actual or pw_nueva or pw_confirmar:
+            if not check_password(pw_actual, usuario.contrasena):
+                from django.contrib import messages
+                messages.error(request, 'La contraseña actual es incorrecta.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+
+            if pw_nueva != pw_confirmar:
+                from django.contrib import messages
+                messages.error(request, 'Las contraseñas nuevas no coinciden.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+
+            if len(pw_nueva) < 6:
+                from django.contrib import messages
+                messages.error(request, 'La contraseña debe tener al menos 6 caracteres.')
+                return render(request, 'operarios/perfil.html', {'operario': operario})
+
+            usuario.contrasena = make_password(pw_nueva)
+
+        usuario.save()
+        operario.save()
+
+        from django.contrib import messages
         messages.success(request, 'Perfil actualizado correctamente.')
         return redirect('operarios:perfil')
 
     return render(request, 'operarios/perfil.html', {'operario': operario})
 
 
-# ---------------------------------------------------------------------------
-# API — Tareas del operario
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────
+# 3. API — Tareas asignadas al operario
+# GET /operarios/api/tareas/
+# ─────────────────────────────────────────────────────────────────
 
-@operario_login_required_api
 def api_tareas(request):
-    """GET /operarios/api/tareas/"""
-    operario = _get_operario_actual(request)
+    """
+    Devuelve las asignaciones del operario logueado.
+
+    Campos que el JS espera por cada tarea:
+        idAsignacion, nombreTarea, descripcionTarea, proceso,
+        complejidad, prioridad, estado, horasEstimadas,
+        tipoPrenda, cantidadPrendas, maquina,
+        fechaInicio, fechaFinalizacion, fechaInicioTs
+    """
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
 
     asignaciones = (
         AsignacionTarea.objects
-        .filter(idOperario=operario)
         .select_related('idTarea')
-        .order_by('fechaInicio')
+        .filter(idOperario=operario)
+        .exclude(estado='Cancelada')
+        .order_by('prioridad', 'fechaInicio')
     )
 
-    tareas = [
-        {
-            'idAsignacion':      a.idAsignacion,
-            'idTarea':           a.idTarea.idTarea,
-            'nombreTarea':       a.idTarea.nombreTarea,
-            'descripcionTarea':  a.idTarea.descripcionTarea,
-            'proceso':           a.idTarea.proceso,
-            'complejidad':       a.idTarea.complejidad,
-            'descripcion':       a.descripcion,
-            'fechaInicio':       str(a.fechaInicio),
+    tareas = []
+    for a in asignaciones:
+        tarea = a.idTarea
+
+        # Timestamp epoch (ms) del momento en que se marcó "En Progreso".
+        # Se usa el campo fechaInicio de la asignación como proxy.
+        fecha_inicio_ts = None
+        if a.estado == 'En Progreso' and a.fechaInicio:
+            try:
+                dt = datetime.combine(a.fechaInicio, datetime.min.time())
+                fecha_inicio_ts = int(dt.timestamp() * 1000)
+            except Exception:
+                fecha_inicio_ts = None
+
+        tareas.append({
+            'idAsignacion':    a.idAsignacion,
+            'nombreTarea':     tarea.nombreTarea,
+            'descripcionTarea': tarea.descripcionTarea or '',
+            'proceso':         tarea.proceso or 'General',
+            'complejidad':     tarea.complejidad or 'media',
+            'prioridad':       a.prioridad or 'Media',
+            'estado':          a.estado,
+            'horasEstimadas':  float(a.horasEstimadas or 0),
+            'tipoPrenda':      a.tipoPrenda or '',
+            'cantidadPrendas': a.cantidadPrendas or 0,
+            # La tabla no tiene columna 'maquina'; se usa proceso como fallback
+            'maquina':         tarea.proceso or 'Planta General',
+            'fechaInicio':     str(a.fechaInicio) if a.fechaInicio else None,
             'fechaFinalizacion': str(a.fechaFinalizacion) if a.fechaFinalizacion else None,
-            'estado':            a.estado,
-            'prioridad':         a.prioridad,
-            'tipoPrenda':        a.tipoPrenda,
-            'cantidadPrendas':   a.cantidadPrendas,
-            'horasEstimadas':    float(a.horasEstimadas),
-            'horasReales':       float(a.horasReales) if a.horasReales else None,
-        }
-        for a in asignaciones
-    ]
+            'fechaInicioTs':   fecha_inicio_ts,
+        })
 
     return JsonResponse({'tareas': tareas})
 
 
-# ---------------------------------------------------------------------------
-# API — Registrar incidencia
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────
+# 4. API — Cambiar estado de una asignación
+# POST /operarios/api/tarea/<id>/estado/
+# ─────────────────────────────────────────────────────────────────
 
-@operario_login_required_api
-@require_POST
+@require_http_methods(['POST'])
+def api_actualizar_estado(request, id_asignacion):
+    """Cambia el estado (Pendiente → En Progreso → Completada)."""
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
+
+    asignacion = get_object_or_404(
+        AsignacionTarea,
+        idAsignacion=id_asignacion,
+        idOperario=operario,
+    )
+
+    try:
+        body = json.loads(request.body)
+        nuevo_estado = body.get('estado', '').strip()
+    except (json.JSONDecodeError, AttributeError):
+        return _json_error('JSON inválido')
+
+    estados_validos = {'Pendiente', 'En Progreso', 'Completada'}
+    if nuevo_estado not in estados_validos:
+        return _json_error(f'Estado inválido: {nuevo_estado}')
+
+    asignacion.estado = nuevo_estado
+
+    # Si se completa, registrar fecha real de finalización
+    if nuevo_estado == 'Completada':
+        asignacion.fechaFinalizacion = date.today()
+    # Si se reinicia a Pendiente, borrar fecha de fin
+    elif nuevo_estado == 'Pendiente':
+        asignacion.fechaFinalizacion = None
+
+    asignacion.save()
+
+    return JsonResponse({'ok': True, 'estado': nuevo_estado})
+
+
+# ─────────────────────────────────────────────────────────────────
+# 5. API — Guardar nuevo reporte de incidencia
+# POST /operarios/api/reporte/
+# ─────────────────────────────────────────────────────────────────
+
+@require_http_methods(['POST'])
 def api_guardar_reporte(request):
-    """POST /operarios/api/reporte/"""
-    operario = _get_operario_actual(request)
+    """Crea una nueva Incidencia asociada al operario."""
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
 
     try:
-        data = json.loads(request.body)
+        body = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+        return _json_error('JSON inválido')
 
-    if not isinstance(data, dict):
-        return JsonResponse({'ok': False, 'error': 'Formato de datos inválido'}, status=400)
+    tipo        = body.get('tipoIncidencia', '').strip()
+    descripcion = body.get('descripcion', '').strip()
+    severidad   = body.get('severidad', 'Media').strip()   # campo extra del nuevo modal
 
-    tipo        = (data.get('tipoIncidencia') or '').strip()
-    descripcion = (data.get('descripcion') or '').strip()
-
-    errores = {}
     if not tipo:
-        errores['tipoIncidencia'] = 'El tipo de incidencia es obligatorio'
-    elif len(tipo) > TIPO_INCIDENCIA_MAX_LEN:
-        errores['tipoIncidencia'] = f'Máximo {TIPO_INCIDENCIA_MAX_LEN} caracteres'
+        return _json_error('El tipo de incidencia es obligatorio')
+    if not descripcion or len(descripcion) < 5:
+        return _json_error('La descripción es demasiado corta')
 
-    if not descripcion:
-        errores['descripcion'] = 'La descripción es obligatoria'
-    elif len(descripcion) < 10:
-        errores['descripcion'] = 'La descripción debe tener al menos 10 caracteres'
-    elif len(descripcion) > 2000:
-        errores['descripcion'] = 'La descripción no puede superar los 2000 caracteres'
-
-    if errores:
-        return JsonResponse({'ok': False, 'errores': errores}, status=400)
-
-    try:
-        incidencia = Incidencia.objects.create(
-            idUsuario       = operario,
-            tipoIncidencia  = tipo,
-            descripcion     = descripcion,
-            estado          = 'Generado',
-            fechaGeneracion = date.today(),
-        )
-    except Exception:
-        logger.exception("Error al crear incidencia para operario id=%s", operario.idOperario)
-        return JsonResponse({'ok': False, 'error': 'No se pudo guardar el reporte. Intenta de nuevo.'}, status=500)
+    incidencia = Incidencia.objects.create(
+        idUsuario=operario,
+        tipoIncidencia=tipo[:50],
+        descripcion=descripcion,
+        estado='Generado',
+        fechaGeneracion=date.today(),
+    )
 
     return JsonResponse({
-        'ok':           True,
+        'ok': True,
         'idIncidencia': incidencia.idIncidencia,
-        'mensaje':      'Reporte guardado correctamente',
-        'fecha':        str(incidencia.fechaGeneracion),
+        'mensaje': 'Incidencia registrada correctamente',
     }, status=201)
 
 
-# ---------------------------------------------------------------------------
-# API — Historial de reportes
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────
+# 6. API — Editar reporte existente
+# POST /operarios/api/reporte/<id>/editar/
+# ─────────────────────────────────────────────────────────────────
 
-@operario_login_required_api
+@require_http_methods(['POST'])
+def api_editar_reporte(request, id_incidencia):
+    """Edita tipo y descripción de una incidencia propia."""
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
+
+    incidencia = get_object_or_404(
+        Incidencia,
+        idIncidencia=id_incidencia,
+        idUsuario=operario,
+    )
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return _json_error('JSON inválido')
+
+    tipo        = body.get('tipoIncidencia', '').strip()
+    descripcion = body.get('descripcion', '').strip()
+
+    if not tipo:
+        return _json_error('El tipo de incidencia es obligatorio')
+    if not descripcion or len(descripcion) < 5:
+        return _json_error('La descripción es demasiado corta')
+
+    incidencia.tipoIncidencia = tipo[:50]
+    incidencia.descripcion    = descripcion
+    incidencia.save()
+
+    return JsonResponse({'ok': True, 'mensaje': 'Incidencia actualizada'})
+
+
+# ─────────────────────────────────────────────────────────────────
+# 7. API — Eliminar reporte
+# POST /operarios/api/reporte/<id>/eliminar/
+# ─────────────────────────────────────────────────────────────────
+
+@require_http_methods(['POST'])
+def api_eliminar_reporte(request, id_incidencia):
+    """Elimina una incidencia (solo si estado = 'Generado')."""
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
+
+    incidencia = get_object_or_404(
+        Incidencia,
+        idIncidencia=id_incidencia,
+        idUsuario=operario,
+    )
+
+    if incidencia.estado != 'Generado':
+        return _json_error(
+            'Solo se pueden eliminar incidencias en estado "Generado"',
+            status=403,
+        )
+
+    incidencia.delete()
+    return JsonResponse({'ok': True, 'mensaje': 'Incidencia eliminada'})
+
+
+# ─────────────────────────────────────────────────────────────────
+# 8. API — Historial de reportes del operario
+# GET /operarios/api/reportes/
+# ─────────────────────────────────────────────────────────────────
+
 def api_historial_reportes(request):
-    """GET /operarios/api/reportes/"""
-    operario = _get_operario_actual(request)
+    """Lista todas las incidencias del operario logueado."""
+    operario = _get_operario(request)
+    if not operario:
+        return _json_error('No autenticado', 401)
 
-    reportes_qs = (
+    incidencias = (
         Incidencia.objects
         .filter(idUsuario=operario)
-        .order_by('-fechaGeneracion')[:20]
+        .order_by('-fechaGeneracion', '-idIncidencia')
     )
 
     reportes = [
         {
-            'idIncidencia':    r.idIncidencia,
-            'tipoIncidencia':  r.tipoIncidencia,
-            'descripcion':     (r.descripcion[:100] + '...') if len(r.descripcion) > 100 else r.descripcion,
-            'estado':          r.estado,
-            'fechaGeneracion': str(r.fechaGeneracion),
-            'fechaRevision':   str(r.fechaRevision) if r.fechaRevision else None,
+            'idIncidencia':  inc.idIncidencia,
+            'tipoIncidencia': inc.tipoIncidencia,
+            'descripcion':   inc.descripcion,
+            'estado':        inc.estado,
+            'fechaReporte':  str(inc.fechaGeneracion) if inc.fechaGeneracion else '',
+            # Alias que usan ambas versiones del JS
+            'fechaGeneracion': str(inc.fechaGeneracion) if inc.fechaGeneracion else '',
         }
-        for r in reportes_qs
+        for inc in incidencias
     ]
 
     return JsonResponse({'reportes': reportes})
 
 
-# ---------------------------------------------------------------------------
-# API — Actualizar estado de una asignación (drag & drop)
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────
+# 9. PDF — Generar reporte de incidencia
+# GET /operarios/api/reporte/<id>/pdf/
+# ─────────────────────────────────────────────────────────────────
 
-@operario_login_required_api
-@require_POST
-def api_actualizar_estado(request, id_asignacion):
-    """POST /operarios/api/tarea/<id_asignacion>/estado/"""
-    operario = _get_operario_actual(request)
-
-    asignacion = get_object_or_404(
-        AsignacionTarea, idAsignacion=id_asignacion, idOperario=operario
-    )
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
-
-    nuevo_estado = (data.get('estado') or '').strip()
-    if nuevo_estado not in ESTADOS_VALIDOS_ASIGNACION:
-        return JsonResponse({
-            'ok': False,
-            'error': f'Estado inválido. Opciones: {ESTADOS_VALIDOS_ASIGNACION}'
-        }, status=400)
-
-    asignacion.estado = nuevo_estado
-    if nuevo_estado == 'Completada' and not asignacion.fechaFinalizacion:
-        asignacion.fechaFinalizacion = date.today()
-
-    asignacion.save()
-
-    return JsonResponse({
-        'ok':     True,
-        'estado': asignacion.estado,
-        'fecha':  str(asignacion.fechaFinalizacion) if asignacion.fechaFinalizacion else None,
-    })
-
-
-# ---------------------------------------------------------------------------
-# API — Editar reporte
-# ---------------------------------------------------------------------------
-
-@operario_login_required_api
-@require_POST
-def api_editar_reporte(request, id_incidencia):
-    """
-    POST /operarios/api/reporte/<id_incidencia>/editar/
-    """
-    operario = _get_operario_actual(request)
-
-    try:
-        incidencia = Incidencia.objects.get(
-            idIncidencia=id_incidencia,
-            idUsuario=operario
-        )
-    except Incidencia.DoesNotExist:
-        return JsonResponse({'ok': False, 'error': 'Reporte no encontrado'}, status=404)
-
-    if incidencia.estado != 'Generado':
-        return JsonResponse({
-            'ok': False,
-            'error': 'No se puede editar un reporte que ya fue revisado'
-        }, status=400)
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
-
-    tipo        = (data.get('tipoIncidencia') or '').strip()
-    descripcion = (data.get('descripcion') or '').strip()
-
-    errores = {}
-    if not tipo:
-        errores['tipoIncidencia'] = 'El tipo de incidencia es obligatorio'
-    elif len(tipo) > 50:
-        errores['tipoIncidencia'] = 'Máximo 50 caracteres'
-
-    if not descripcion:
-        errores['descripcion'] = 'La descripción es obligatoria'
-    elif len(descripcion) < 10:
-        errores['descripcion'] = 'La descripción debe tener al menos 10 caracteres'
-    elif len(descripcion) > 2000:
-        errores['descripcion'] = 'La descripción no puede superar los 2000 caracteres'
-
-    if errores:
-        return JsonResponse({'ok': False, 'errores': errores}, status=400)
-
-    try:
-        incidencia.tipoIncidencia  = tipo
-        incidencia.descripcion     = descripcion
-        incidencia.save()
-    except Exception:
-        logger.exception("Error al editar incidencia id=%s", id_incidencia)
-        return JsonResponse({'ok': False, 'error': 'No se pudo actualizar el reporte'}, status=500)
-
-    return JsonResponse({
-        'ok':      True,
-        'mensaje': 'Reporte actualizado correctamente',
-    })
-
-
-# ---------------------------------------------------------------------------
-# API — Eliminar reporte
-# ---------------------------------------------------------------------------
-
-@operario_login_required_api
-@require_POST
-def api_eliminar_reporte(request, id_incidencia):
-    """
-    POST /operarios/api/reporte/<id_incidencia>/eliminar/
-    """
-    operario = _get_operario_actual(request)
-
-    try:
-        incidencia = Incidencia.objects.get(
-            idIncidencia=id_incidencia,
-            idUsuario=operario
-        )
-    except Incidencia.DoesNotExist:
-        return JsonResponse({'ok': False, 'error': 'Reporte no encontrado'}, status=404)
-
-    if incidencia.estado != 'Generado':
-        return JsonResponse({
-            'ok': False,
-            'error': 'No se puede eliminar un reporte que ya fue revisado'
-        }, status=400)
-
-    try:
-        incidencia.delete()
-    except Exception:
-        logger.exception("Error al eliminar incidencia id=%s", id_incidencia)
-        return JsonResponse({'ok': False, 'error': 'No se pudo eliminar el reporte'}, status=500)
-
-    return JsonResponse({'ok': True, 'mensaje': 'Reporte eliminado correctamente'})
-
-
-# ── PDF — Generar y descargar incidencia ──────────────────────
-@operario_login_required
 def generar_pdf_reporte(request, id_incidencia):
-    operario = _get_operario_actual(request)
+    """
+    Genera un PDF sencillo de la incidencia usando ReportLab.
+    Si ReportLab no está instalado, devuelve el reporte como texto plano.
+    """
+    operario = _get_operario(request)
+    if not operario:
+        return redirect('login')
 
     incidencia = get_object_or_404(
-        Incidencia, idIncidencia=id_incidencia, idUsuario=operario
+        Incidencia,
+        idIncidencia=id_incidencia,
+        idUsuario=operario,
     )
 
-    usuario         = operario.idUsuario
-    nombre_completo = f"{usuario.nombre} {usuario.apellido}"
-    especialidad    = operario.especialidad or '—'
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.units import cm
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+        import io
 
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, pagesize=letter,
-        rightMargin=2*cm, leftMargin=2*cm,
-        topMargin=3*cm,   bottomMargin=2*cm,
-    )
-    story  = []
-    styles = getSampleStyleSheet()
+        buffer = io.BytesIO()
+        doc    = SimpleDocTemplate(buffer, pagesize=A4,
+                                   leftMargin=2*cm, rightMargin=2*cm,
+                                   topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        story  = []
 
-    story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph('HebraTech — Reporte de Incidencia', styles['Title']))
+        story.append(Spacer(1, 0.5*cm))
+        story.append(Paragraph(f'<b>ID:</b> #{str(incidencia.idIncidencia).zfill(4)}', styles['Normal']))
+        story.append(Paragraph(f'<b>Tipo:</b> {incidencia.tipoIncidencia}', styles['Normal']))
+        story.append(Paragraph(f'<b>Estado:</b> {incidencia.estado}', styles['Normal']))
+        story.append(Paragraph(f'<b>Fecha:</b> {incidencia.fechaGeneracion}', styles['Normal']))
+        story.append(Spacer(1, 0.4*cm))
+        story.append(Paragraph('<b>Descripción:</b>', styles['Normal']))
+        story.append(Paragraph(incidencia.descripcion, styles['Normal']))
+        story.append(Spacer(1, 0.4*cm))
+        story.append(Paragraph(
+            f'<b>Operario:</b> {operario.idUsuario.nombre} {operario.idUsuario.apellido}',
+            styles['Normal'],
+        ))
 
-    C_PURPLE = colors.HexColor('#7c3aed')
-    C_PINK   = colors.HexColor('#db2777')
-    C_LIGHT  = colors.HexColor('#f5f0ff')
-    C_BORDER = colors.HexColor('#c4b5fd')
-    C_GRAY   = colors.HexColor('#6b7280')
-    C_DARK   = colors.HexColor('#111827')
+        doc.build(story)
+        buffer.seek(0)
 
-    def st(nombre, **kw):
-        return ParagraphStyle(nombre, parent=styles['Normal'], **kw)
+        nombre_archivo = f'HebraTech_Incidencia_{str(incidencia.idIncidencia).zfill(4)}.pdf'
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        return response
 
-    lbl = st('Lbl', fontSize=9,  fontName='Helvetica-Bold', textColor=C_GRAY)
-    val = st('Val', fontSize=10, fontName='Helvetica',      textColor=C_DARK)
-
-    def bloque_encabezado(texto, color):
-        t = Table(
-            [[Paragraph(texto, st('Th', fontSize=10, fontName='Helvetica-Bold',
-                                 textColor=colors.white, alignment=TA_CENTER))]],
-            colWidths=[16*cm]
+    except ImportError:
+        # Fallback: texto plano si ReportLab no está disponible
+        contenido = (
+            f'HebraTech — Reporte de Incidencia\n'
+            f'{"=" * 40}\n'
+            f'ID:          #{str(incidencia.idIncidencia).zfill(4)}\n'
+            f'Tipo:        {incidencia.tipoIncidencia}\n'
+            f'Estado:      {incidencia.estado}\n'
+            f'Fecha:       {incidencia.fechaGeneracion}\n'
+            f'Operario:    {operario.idUsuario.nombre} {operario.idUsuario.apellido}\n\n'
+            f'Descripción:\n{incidencia.descripcion}\n'
         )
-        t.setStyle(TableStyle([
-            ('BACKGROUND',    (0,0), (-1,-1), color),
-            ('TOPPADDING',    (0,0), (-1,-1), 8),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-            ('LEFTPADDING',   (0,0), (-1,-1), 12),
-        ]))
-        return t
-
-    def bloque_filas(filas):
-        t = Table(filas, colWidths=[4.5*cm, 11.5*cm])
-        t.setStyle(TableStyle([
-            ('ROWBACKGROUNDS', (0,0), (-1,-1), [C_LIGHT, colors.white]),
-            ('BOX',            (0,0), (-1,-1), 1, C_BORDER),
-            ('LINEBELOW',      (0,0), (-1,-2), 0.5, C_BORDER),
-            ('TOPPADDING',     (0,0), (-1,-1), 8),
-            ('BOTTOMPADDING',  (0,0), (-1,-1), 8),
-            ('LEFTPADDING',    (0,0), (-1,-1), 12),
-            ('VALIGN',         (0,0), (-1,-1), 'MIDDLE'),
-        ]))
-        return t
-
-    if incidencia.fechaGeneracion and hasattr(incidencia.fechaGeneracion, 'strftime'):
-        fecha_str = incidencia.fechaGeneracion.strftime('%d/%m/%Y')
-    else:
-        fecha_str = str(incidencia.fechaGeneracion) if incidencia.fechaGeneracion else datetime.now().strftime('%d/%m/%Y')
-
-    story.append(Paragraph(
-        "HebraTech",
-        st('Brand', fontSize=26, leading=32, fontName='Helvetica-Bold',
-           textColor=C_PURPLE, alignment=TA_CENTER, spaceAfter=2)
-    ))
-    story.append(Paragraph(
-        "Sistema de Gestión de Incidencias Operativas",
-        st('Sub', fontSize=10, textColor=C_GRAY, alignment=TA_CENTER, spaceAfter=6)
-    ))
-    story.append(HRFlowable(width='100%', thickness=2, color=C_PURPLE, spaceAfter=10))
-    story.append(Paragraph(
-        f"REPORTE DE INCIDENCIA  #<b>{incidencia.idIncidencia:04d}</b>",
-        st('RID', fontSize=13, textColor=C_PURPLE,
-           fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=4)
-    ))
-    story.append(Paragraph(
-        f"Generado el {fecha_str}",
-        st('Fecha', fontSize=9, textColor=C_GRAY, alignment=TA_CENTER, spaceAfter=18)
-    ))
-
-    story.append(bloque_encabezado('INFORMACIÓN DEL OPERARIO', C_PURPLE))
-    story.append(bloque_filas([
-        [Paragraph('Nombre:',       lbl), Paragraph(nombre_completo, val)],
-        [Paragraph('Especialidad:', lbl), Paragraph(especialidad,    val)],
-    ]))
-    story.append(Spacer(1, 0.5*cm))
-
-    story.append(bloque_encabezado('DETALLE DE LA INCIDENCIA', C_PINK))
-    story.append(bloque_filas([
-        [Paragraph('Tipo de incidencia:', lbl), Paragraph(incidencia.tipoIncidencia or '—', val)],
-        [Paragraph('Estado:',             lbl), Paragraph(incidencia.estado or '—', val)],
-        [Paragraph('Fecha generación:',   lbl), Paragraph(fecha_str, val)],
-    ]))
-    story.append(Spacer(1, 0.4*cm))
-
-    story.append(bloque_encabezado('DESCRIPCIÓN DE LA INCIDENCIA', C_PURPLE))
-    t_desc = Table(
-        [[Paragraph(incidencia.descripcion or 'Sin descripción.',
-                    st('Body', fontSize=10, leading=16, textColor=C_DARK))]],
-        colWidths=[16*cm]
-    )
-    t_desc.setStyle(TableStyle([
-        ('BOX',           (0,0), (-1,-1), 1, C_BORDER),
-        ('TOPPADDING',    (0,0), (-1,-1), 12),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
-        ('LEFTPADDING',   (0,0), (-1,-1), 12),
-        ('RIGHTPADDING',  (0,0), (-1,-1), 12),
-    ]))
-    story.append(t_desc)
-    story.append(Spacer(1, 1.2*cm))
-
-    story.append(Table([
-        [Paragraph('_______________________________',
-                   st('Ln', fontSize=10, alignment=TA_CENTER))],
-        [Paragraph(nombre_completo,
-                   st('FN', fontSize=9, fontName='Helvetica-Bold',
-                      textColor=C_DARK, alignment=TA_CENTER))],
-        [Paragraph('Firma del Operario',
-                   st('FL', fontSize=8, textColor=C_GRAY, alignment=TA_CENTER))],
-    ], colWidths=[16*cm]))
-    story.append(Spacer(1, 0.8*cm))
-
-    story.append(HRFlowable(width='100%', thickness=1, color=C_BORDER, spaceAfter=6))
-    story.append(Paragraph(
-        f"HebraTech  ·  Reporte #{incidencia.idIncidencia:04d}  ·  "
-        f"Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}  ·  Documento de uso interno",
-        st('Foot', fontSize=8, textColor=C_GRAY, alignment=TA_CENTER)
-    ))
-
-    doc.build(story)
-    buffer.seek(0)
-
-    filename = f"HebraTech_Incidencia_{incidencia.idIncidencia:04d}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+        response = HttpResponse(contenido, content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = (
+            f'attachment; filename="HebraTech_Incidencia_'
+            f'{str(incidencia.idIncidencia).zfill(4)}.txt"'
+        )
+        return response

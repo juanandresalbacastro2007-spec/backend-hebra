@@ -53,6 +53,11 @@ const formatterCOP = new Intl.NumberFormat('es-CO', {
   minimumFractionDigits: 0,
 });
 
+function getCsrfCookie() {
+  const c = document.cookie.split(';').find(x => x.trim().startsWith('csrftoken='));
+  return c ? c.split('=')[1] : '';
+}
+
 function calcularCotizacion() {
   const prendaEl   = document.getElementById('quotePrenda');
   const cantidadEl = document.getElementById('quoteCantidad');
@@ -60,8 +65,10 @@ function calcularCotizacion() {
   const subtotalEl = document.getElementById('quoteSubtotalDisplay');
   if (!prendaEl || !cantidadEl) return;
 
-  const precio   = parseFloat(prendaEl.value) || 0;
-  const cantidad = parseInt(cantidadEl.value)  || 0;
+  // El value del <option> es el idProducto; el precio va en data-precio.
+  const opcion   = prendaEl.options[prendaEl.selectedIndex];
+  const precio   = opcion ? parseFloat(opcion.getAttribute('data-precio')) || 0 : 0;
+  const cantidad = parseInt(cantidadEl.value) || 0;
 
   if (precioEl) {
     precioEl.value = precio > 0 ? precio.toLocaleString('es-CO') : '';
@@ -76,26 +83,68 @@ document.getElementById('quoteCantidad')?.addEventListener('input', calcularCoti
 
 const formCotizacion = document.getElementById('formCotizacion');
 if (formCotizacion) {
-  formCotizacion.addEventListener('submit', function (e) {
+  formCotizacion.addEventListener('submit', async function (e) {
     e.preventDefault();
     if (!formCotizacion.checkValidity()) {
       formCotizacion.classList.add('was-validated');
       return;
     }
 
-    bootstrap.Modal.getInstance(document.getElementById('quoteModal'))?.hide();
+    const url = formCotizacion.dataset.url;
+    const btnSubmit = formCotizacion.querySelector('button[type="submit"]');
+    const labelOriginal = btnSubmit ? btnSubmit.innerHTML : '';
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...';
+    }
 
-    mostrarToast({
-      tipo: 'success', icono: 'bi-file-earmark-check',
-      titulo: 'Cotización enviada',
-      mensaje: 'La solicitud se registró. Evaluaremos costos según tus especificaciones.',
-      accion: null,
-    });
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCsrfCookie(),
+        },
+        body: new FormData(formCotizacion),
+      });
+      const data = await resp.json();
 
-    formCotizacion.reset();
-    formCotizacion.classList.remove('was-validated');
-    const subtotalEl = document.getElementById('quoteSubtotalDisplay');
-    if (subtotalEl) subtotalEl.textContent = '$0';
+      if (!resp.ok || data.error) {
+        throw new Error(data.error || 'No se pudo generar la cotización.');
+      }
+
+      bootstrap.Modal.getInstance(document.getElementById('quoteModal'))?.hide();
+
+      mostrarToast({
+        tipo: 'success', icono: 'bi-file-earmark-check',
+        titulo: 'Cotización enviada',
+        mensaje: data.mensaje || 'La solicitud se registró. Evaluaremos costos según tus especificaciones.',
+        accion: null,
+      });
+
+      formCotizacion.reset();
+      formCotizacion.classList.remove('was-validated');
+      const subtotalEl = document.getElementById('quoteSubtotalDisplay');
+      if (subtotalEl) subtotalEl.textContent = '$0';
+      const precioEl = document.getElementById('quotePrecioUnitario');
+      if (precioEl) precioEl.value = '';
+
+      // Refrescamos la página para que 'Mis cotizaciones' muestre la nueva.
+      setTimeout(() => window.location.reload(), 900);
+
+    } catch (err) {
+      mostrarToast({
+        tipo: 'error', icono: 'bi-exclamation-triangle',
+        titulo: 'Error al generar la cotización',
+        mensaje: err.message || 'Intenta nuevamente en unos segundos.',
+        accion: null,
+      });
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = labelOriginal;
+      }
+    }
   });
 }
 
@@ -469,6 +518,36 @@ function deleteSede(id) {
 
 
 /* ══════════════════════════════════════════════════════════════
+   9b. VALIDACIÓN — modal Nueva Orden de Producción
+       (mismo patrón needs-validation que formCotizacion)
+══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+  const formNuevaOrden = document.getElementById('formNuevaOrden');
+  if (!formNuevaOrden) return;
+
+  formNuevaOrden.addEventListener('submit', function (e) {
+    let valido = formNuevaOrden.checkValidity();
+
+    if (!valido) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    formNuevaOrden.classList.add('was-validated');
+  });
+
+  // Si el usuario corrige un campo, quitamos el estado inválido visual al vuelo
+  formNuevaOrden.querySelectorAll('input, select, textarea').forEach(function (campo) {
+    campo.addEventListener('input', function () {
+      if (campo.checkValidity()) campo.classList.remove('is-invalid');
+    });
+    campo.addEventListener('change', function () {
+      if (campo.checkValidity()) campo.classList.remove('is-invalid');
+    });
+  });
+});
+
+
+/* ══════════════════════════════════════════════════════════════
    9. CALENDARIO AUTOMATIZADO (DateRangePicker)
 ══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', function () {
@@ -538,6 +617,7 @@ document.addEventListener('DOMContentLoaded', function () {
     pickerInput.on('show.daterangepicker', actualizarLeyendasFooter);
     pickerInput.on('apply.daterangepicker', function(ev, picker) {
       $(this).val(picker.startDate.format('YYYY-MM-DD') + ' hasta ' + picker.endDate.format('YYYY-MM-DD'));
+      this.dispatchEvent(new Event('change', { bubbles: true }));
       actualizarLeyendasFooter();
     });
     pickerInput.on('cancel.daterangepicker', function() {

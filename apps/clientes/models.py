@@ -192,3 +192,68 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f'[{self.tipo}] {self.titulo} → Cliente #{self.idCliente_id}'
+
+
+# ── NUEVO: Cotizaciones ───────────────────────────────────────
+class Cotizacion(models.Model):
+    """
+    Solicitud de cotización que el cliente genera desde el portal
+    (botón "Generar cotización" en Acciones rápidas).
+
+    A diferencia de Orden, una cotización NO reserva producción:
+    es solo una estimación de costo que el cliente puede solicitar
+    tantas veces como quiera, y por eso NO está sujeta a la
+    restricción de "una orden activa a la vez".
+
+    La tabla se crea manualmente con el SQL adjunto
+    (managed = False, igual que el resto del proyecto).
+
+    SQL sugerido:
+    CREATE TABLE cotizaciones (
+        idCotizacion INT AUTO_INCREMENT PRIMARY KEY,
+        idCliente INT NOT NULL,
+        idProducto INT NULL,
+        cantidad INT NOT NULL,
+        precioUnitario DECIMAL(10,2) NOT NULL,
+        subtotalEstimado DECIMAL(12,2) NOT NULL,
+        notas TEXT NULL,
+        estado VARCHAR(20) NOT NULL DEFAULT 'Pendiente',
+        fechaCreacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (idCliente) REFERENCES clientes(idCliente) ON DELETE CASCADE,
+        FOREIGN KEY (idProducto) REFERENCES productos(idProducto) ON DELETE SET NULL
+    );
+    """
+    ESTADO_CHOICES = [
+        ('Pendiente', 'Pendiente'),
+        ('Revisada', 'Revisada'),
+        ('Aprobada', 'Aprobada'),
+        ('Rechazada', 'Rechazada'),
+    ]
+
+    idCotizacion = models.AutoField(primary_key=True)
+    idCliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='idCliente',
+        related_name='cotizaciones'
+    )
+    idProducto = models.ForeignKey(
+        Producto,
+        on_delete=models.SET_NULL,
+        db_column='idProducto',
+        null=True, blank=True
+    )
+    cantidad = models.IntegerField()
+    precioUnitario = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotalEstimado = models.DecimalField(max_digits=12, decimal_places=2)
+    notas = models.TextField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
+    fechaCreacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'cotizaciones'
+        managed = False
+        ordering = ['-fechaCreacion']
+
+    def __str__(self):
+        return f'Cotización #{self.idCotizacion} — Cliente #{self.idCliente_id}'

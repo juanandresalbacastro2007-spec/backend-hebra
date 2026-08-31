@@ -11,6 +11,7 @@ urlpatterns = [
     path('orden/<int:idOrden>/eliminar/', views.eliminar_orden, name='eliminar_orden'),
     path('factura/<int:idFactura>/descargar/', views.descargar_factura, name='descargar_factura'),
     path('actualizar-ordenes/', views.actualizar_ordenes, name='actualizar_ordenes'),
+    path('cotizaciones/generar/', views.generar_cotizacion, name='generar_cotizacion'),
 
     # ── NUEVAS: notificaciones ───────────────────────────────
     path('notificaciones/', views.notificaciones_json, name='notificaciones_json'),

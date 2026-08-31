@@ -1,17 +1,13 @@
 /**
  * HEBRATECH — MÓDULO OPERARIO
- * Bugs corregidos:
- *   - Empty state se oculta/muestra correctamente
- *   - Botón ojo abre el modal de detalle
- *   - Contadores top bar se actualizan al arrastrar
- * Nuevo:
- *   - Tarjeta y modal de detalle muestran tipo de prenda y cantidad asignada
- *   - Modal de detalle calcula días estimados y fecha de finalización (10h/día laboral)
+ * Tablero Kanban con: cronómetros en tiempo real, drag & drop,
+ * gestión completa de incidencias (crear / editar / eliminar / PDF),
+ * filtros, KPIs de navbar y pestañas móvil.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-// ─── Endpoints ───────────────────────────────────────────────────
+    // ─── ENDPOINTS ───────────────────────────────────────────────
     const ENDPOINTS = {
         tareas:            '/operarios/api/tareas/',
         cambiarEstado:     (id) => `/operarios/api/tarea/${id}/estado/`,
@@ -22,64 +18,51 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfReporte:        (id) => `/operarios/api/reporte/${id}/pdf/`,
     };
 
-    // ─── Constantes de negocio ─────────────────────────────────────
-    const HORAS_LABORALES_DIA = 10;
+    // ─── ESTADO LOCAL ────────────────────────────────────────────
+    const cacheTareas       = {};   // { idAsignacion: tareaObj }
+    const cacheIncidencias  = {};   // { idIncidencia: incObj }
+    const timerIntervals    = {};   // { idAsignacion: intervalId }
 
-    // ─── Estado local ────────────────────────────────────────────────
-    let completadasOcultas = false;
-    let pendingDeleteId    = null;
-    // Cache de objetos tarea para el modal de detalle
-    const cacheTareas = {};
+    let pendingDeleteId        = null;
+    let activeStartTaskId      = null;
+    let activeFinishTaskId     = null;
 
-    // ─── Selectores ──────────────────────────────────────────────────
-    const contadoresColumna = {
-        'Pendiente':   document.getElementById('count-Pendiente'),
-        'En Progreso': document.getElementById('count-En Progreso'),
-        'Completada':  document.getElementById('count-Completada'),
+    // ─── SELECTORES ESTÁTICOS ────────────────────────────────────
+    const zonas = {
+        'Pendiente':   document.getElementById('list-Pendiente'),
+        'En Progreso': document.getElementById('list-En Progreso'),
+        'Completada':  document.getElementById('list-Completada'),
     };
 
-    const formReporte = {
-        editId:       document.getElementById('reportEditId'),
-        tipo:         document.getElementById('reportTipo'),
-        descripcion:  document.getElementById('reportDesc'),
-        periodo:      document.getElementById('reportPeriodo'),
-        btnGuardar:   document.getElementById('btnSaveReport'),
-        btnLabel:     document.getElementById('btnSaveReportLabel'),
-        eyebrow:      document.getElementById('reportModalEyebrow'),
-        modalTitle:   document.getElementById('reportModalLabel'),
-        tipoCount:    document.getElementById('tipoCount'),
-        descCount:    document.getElementById('descCount'),
-        periodoCount: document.getElementById('periodoCount'),
-        errTipo:      document.getElementById('err-tipo'),
-        errDesc:      document.getElementById('err-desc'),
-        errPeriodo:   document.getElementById('err-periodo'),
-    };
-
-    // ─── Init ────────────────────────────────────────────────────────
+    // ─── INIT ────────────────────────────────────────────────────
     function init() {
-        obtenerTareas();
-        obtenerHistorialReportes();
+        cargarTareas();
+        cargarHistorialReportes();
         configurarDragAndDrop();
-        configurarFormularioReportes();
+        configurarFormularioIncidencia();
         configurarBotonesExteriores();
-        configurarToggleCompletadas();
-        configurarColapsarCompletada();
+        configurarHistorialTareas();
+        configurarColapsarColumnaCompletada();
         configurarModalEliminar();
-        configurarBuscadorYFiltro();
+        configurarBuscadorYFiltros();
+        configurarKpisNavbar();
+        configurarPestañasMobile();
+        configurarModalesAccion();
+        configurarBusquedaTablaIncidencias();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 1. TAREAS — FETCH & RENDER
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════
+    // 1. CARGA Y RENDER DE TAREAS
+    // ═══════════════════════════════════════════════════════════
 
-    async function obtenerTareas() {
+    async function cargarTareas() {
         const loading = document.getElementById('loadingIndicator');
         if (loading) loading.style.display = 'flex';
         try {
-            const res  = await fetch(ENDPOINTS.tareas);
+            const res = await fetch(ENDPOINTS.tareas);
             if (!res.ok) throw new Error('Error al cargar tareas');
             const data = await res.json();
-            renderizarTareas(data.tareas);
+            renderizarKanban(data.tareas || []);
         } catch (err) {
             console.error(err);
             mostrarToast('No se pudieron cargar las tareas', 'err');
@@ -88,552 +71,403 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarTareas(tareas) {
-        // Limpiar zonas y cache
+    function renderizarKanban(tareas) {
+        // Limpiar cache y cronómetros
         Object.keys(cacheTareas).forEach(k => delete cacheTareas[k]);
+        Object.keys(timerIntervals).forEach(id => {
+            clearInterval(timerIntervals[id]);
+            delete timerIntervals[id];
+        });
 
+        // Limpiar cards del DOM (conservar empty states)
         ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
-            const zona = document.getElementById(`list-${estado}`);
+            const zona = zonas[estado];
+            if (zona) zona.querySelectorAll('.ht-card').forEach(c => c.remove());
+        });
+
+        tareas.forEach(t => {
+            cacheTareas[t.idAsignacion] = t;
+            // Las tareas Completadas ya no se muestran en el tablero:
+            // quedan archivadas y solo se ven en el modal de Historial.
+            if (t.estado === 'Completada') return;
+            const card = crearCard(t);
+            const zona = zonas[t.estado];
             if (!zona) return;
-            // Quitar solo las cards, conservar el empty state en el DOM
-            zona.querySelectorAll('.ht-card').forEach(c => c.remove());
+            const emptyEl = zona.querySelector('.ht-col-empty');
+            emptyEl ? zona.insertBefore(card, emptyEl) : zona.appendChild(card);
         });
 
-        tareas.forEach(tarea => {
-            // Guardar en cache para el modal de detalle
-            cacheTareas[tarea.idAsignacion] = tarea;
-            const card = crearTarjetaTarea(tarea);
-            const zona = document.getElementById(`list-${tarea.estado}`);
-            if (zona) {
-                // ✅ FIX 1: insertar ANTES del empty state para que quede arriba
-                const emptyEl = zona.querySelector('.ht-col-empty');
-                if (emptyEl) {
-                    zona.insertBefore(card, emptyEl);
-                } else {
-                    zona.appendChild(card);
-                }
-            }
-        });
-
-        // Actualizar visibilidad del empty state en cada columna
         actualizarEmptyStates();
-        actualizarTodosLosContadores(tareas);
-        actualizarNavTareas(tareas);
-        aplicarVisibilidadCompletadas();
+        actualizarContadores(tareas);
+        actualizarBadgeHistorial(tareas);
+        aplicarFiltros();
 
         const total = document.getElementById('totalTasks');
         if (total) total.textContent = tareas.length;
     }
 
-    // ✅ FIX 1: controla el empty state por columna
-    function actualizarEmptyStates() {
-        ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
-            const zona    = document.getElementById(`list-${estado}`);
-            const emptyEl = document.getElementById(`empty-${estado}`);
-            if (!zona || !emptyEl) return;
-            const tieneCards = zona.querySelectorAll('.ht-card').length > 0;
-            emptyEl.classList.toggle('hidden', tieneCards);
-        });
-    }
+    // ─── Crear tarjeta de tarea ──────────────────────────────────
+    function crearCard(t) {
+        const card = document.createElement('div');
+        card.className = 'ht-card';
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-id-asignacion', t.idAsignacion);
+        card.setAttribute('data-prio', t.prioridad);
+        card.setAttribute('data-estado', t.estado);
+        card.setAttribute('data-process', t.proceso || '');
 
-    function crearTarjetaTarea(tarea) {
-        const div = document.createElement('div');
-        div.className = 'ht-card';
-        div.setAttribute('draggable', 'true');
-        div.setAttribute('data-id-asignacion', tarea.idAsignacion);
-        div.setAttribute('data-prio', tarea.prioridad);
-        div.setAttribute('data-estado', tarea.estado);
+        const prioClass  = `ht-badge-prio-${t.prioridad}`;
+        const compClass  = `ht-badge-complex-${(t.complejidad || 'media').toLowerCase()}`;
 
-        const complejidadClass = `ht-badge-complex-${(tarea.complejidad || 'media').toLowerCase()}`;
-        const prioClass        = `ht-badge-prio-${tarea.prioridad}`;
-
-        // Chip de cantidad de prendas (solo si la asignación tiene tipo/cantidad cargados)
-        const chipCantidad = (tarea.tipoPrenda && tarea.cantidadPrendas)
-            ? `<span class="ht-card-hours"><i class="bi bi-boxes"></i>${tarea.cantidadPrendas} ${tarea.tipoPrenda}</span>`
+        const chipCantidad = (t.tipoPrenda && t.cantidadPrendas)
+            ? `<span class="ht-card-hours"><i class="bi bi-boxes"></i>${t.cantidadPrendas} ${t.tipoPrenda}</span>`
             : '';
 
-        div.innerHTML = `
+        // Bloque de cronómetro (solo para "En Progreso")
+        const timerBlock = t.estado === 'En Progreso'
+            ? `<div class="ht-timer-block" id="timerBlock-${t.idAsignacion}">
+                   <i class="bi bi-stopwatch-fill"></i>
+                   <span class="ht-timer-text" id="timer-${t.idAsignacion}">00:00:00</span>
+                   <span class="ht-timer-excess d-none" id="excess-${t.idAsignacion}"></span>
+               </div>`
+            : '';
+
+        // Botones de acción según estado
+        let actionBtns = '';
+        if (t.estado === 'Pendiente') {
+            actionBtns = `
+                <button class="ht-card-btn-action ht-card-btn--start" data-action="iniciar">
+                    <i class="bi bi-play-fill me-1"></i>Iniciar
+                </button>`;
+        } else if (t.estado === 'En Progreso') {
+            actionBtns = `
+                <button class="ht-card-btn-action ht-card-btn--finish" data-action="finalizar">
+                    <i class="bi bi-check-lg me-1"></i>Finalizar
+                </button>
+                <button class="ht-card-btn-action ht-card-btn--warn" data-action="reportar" title="Reportar incidencia">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </button>`;
+        }
+
+        card.innerHTML = `
             <div class="ht-card-header">
-                <span class="ht-card-name">${tarea.nombreTarea}</span>
+                <span class="ht-card-name">${t.nombreTarea || 'Tarea sin título'}</span>
+                <button class="ht-card-btn-detail" data-action="ver" title="Ver detalle">
+                    <i class="bi bi-eye"></i>
+                </button>
             </div>
             <div class="ht-card-proceso">
-                <i class="bi bi-gear-fill"></i>${tarea.proceso || 'General'}
+                <i class="bi bi-gear-fill"></i>${t.proceso || 'General'}
+                &nbsp;·&nbsp;
+                <i class="bi bi-cpu"></i>${t.maquina || 'Planta'}
             </div>
-            <p class="ht-card-desc">${tarea.descripcionTarea || 'Sin descripción adicional.'}</p>
-            <div class="ht-card-footer">
-                <div class="ht-card-meta">
-                    <span class="ht-badge ${prioClass}">${tarea.prioridad}</span>
-                    <span class="ht-badge ${complejidadClass}">${tarea.complejidad || 'Media'}</span>
-                </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    ${chipCantidad}
-                    <span class="ht-card-hours"><i class="bi bi-clock"></i>${tarea.horasEstimadas}h</span>
-                    <button class="ht-card-btn-detail" data-action="ver" title="Ver detalle">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="ht-card-btn-detail" data-action="reportar" title="Reportar incidencia" style="color:var(--warn);">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                    </button>
-                </div>
+            <p class="ht-card-desc">${t.descripcionTarea || 'Sin descripción adicional.'}</p>
+            <div class="ht-card-tags">
+                <span class="ht-badge ${prioClass}">${t.prioridad}</span>
+                <span class="ht-badge ${compClass}">${t.complejidad || 'Media'}</span>
+                ${t.cantidadPrendas ? `<span class="ht-badge" style="background:var(--surface);border:1px solid var(--border-md);color:var(--text-muted);"><i class="bi bi-boxes me-1"></i>${t.cantidadPrendas} ${t.tipoPrenda || 'uds'}</span>` : ''}
+                <span class="ht-badge" style="background:var(--surface);border:1px solid var(--border-md);color:var(--text-muted);"><i class="bi bi-clock me-1"></i>${t.horasEstimadas}h</span>
             </div>
+            ${timerBlock}
+            ${actionBtns ? `<div class="ht-card-actions">${actionBtns}</div>` : ''}
         `;
 
-        // Drag
-        div.addEventListener('dragstart', e => {
-            e.dataTransfer.setData('text/plain', String(tarea.idAsignacion));
-            div.classList.add('dragging');
+        // Eventos drag
+        card.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', String(t.idAsignacion));
+            card.classList.add('dragging');
         });
-        div.addEventListener('dragend', () => div.classList.remove('dragging'));
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
 
-        // ✅ FIX 2: delegación directa, sin buscar clase — usa data-action
-        div.addEventListener('click', e => {
+        // Eventos click en botones internos
+        card.addEventListener('click', e => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
             e.stopPropagation();
-            if (btn.dataset.action === 'ver')      abrirModalDetalle(tarea);
-            if (btn.dataset.action === 'reportar') abrirModalReporte(null, tarea);
+            const action = btn.dataset.action;
+            if (action === 'ver')        abrirDetalleTarea(t);
+            if (action === 'iniciar')    abrirModalIniciar(t);
+            if (action === 'finalizar')  abrirModalFinalizar(t);
+            if (action === 'reportar')   abrirModalIncidencia(null, t);
         });
 
-        return div;
+        // Iniciar cronómetro si corresponde
+        if (t.estado === 'En Progreso') iniciarCronometro(t);
+
+        return card;
     }
 
-    function actualizarNavTareas(tareas) {
-        const navCount = document.getElementById('navTaskCount');
-        if (navCount) navCount.textContent = tareas.length;
+    // ═══════════════════════════════════════════════════════════
+    // 2. CRONÓMETROS EN TIEMPO REAL
+    // ═══════════════════════════════════════════════════════════
 
-        const navTasks = document.getElementById('navTasksContainer');
-        if (!navTasks) return;
+    function iniciarCronometro(tarea) {
+        const id = tarea.idAsignacion;
+        // Usar el timestamp del backend si existe, si no usar Date.now() como referencia parcial
+        const inicioMs = tarea.fechaInicioTs || Date.now();
 
-        navTasks.innerHTML = tareas.length === 0
-            ? '<div class="ht-empty-state"><i class="bi bi-inbox"></i><span>Sin tareas asignadas</span></div>'
-            : tareas.map(t => `
-                <div style="padding:10px 14px;border-bottom:1px solid var(--border);">
-                    <div style="font-weight:500;font-size:.84rem;color:var(--text);">${t.nombreTarea}</div>
-                    <div style="font-size:.76rem;color:var(--text-muted);margin-top:2px;">${t.estado} · ${t.prioridad}</div>
-                </div>`).join('');
-    }
+        timerIntervals[id] = setInterval(() => {
+            const el = document.getElementById(`timer-${id}`);
+            if (!el) { clearInterval(timerIntervals[id]); return; }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 2. MODAL DETALLE DE TAREA
-    // ═══════════════════════════════════════════════════════════════
+            const diffSec = Math.floor((Date.now() - inicioMs) / 1000);
+            const h = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+            const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+            const s = String(diffSec % 60).padStart(2, '0');
+            el.textContent = `${h}:${m}:${s}`;
 
-    // Calcula días laborales necesarios y la fecha estimada de finalización
-    // a partir de las horas estimadas, asumiendo jornadas de 10h.
-    function calcularEstimacionFinalizacion(fechaInicioStr, horasEstimadas) {
-        if (!fechaInicioStr || !horasEstimadas || Number(horasEstimadas) <= 0) return null;
-
-        const dias = Math.ceil(Number(horasEstimadas) / HORAS_LABORALES_DIA);
-
-        // Se parte del mediodía para evitar problemas de zona horaria al sumar días
-        const fecha = new Date(fechaInicioStr + 'T12:00:00');
-        fecha.setDate(fecha.getDate() + dias);
-
-        return {
-            dias,
-            fechaFin: fecha,
-        };
-    }
-
-    function formatearFecha(fecha) {
-        return fecha.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    }
-
-    function abrirModalDetalle(tarea) {
-        const label = document.getElementById('taskDetailModalLabel');
-        const body  = document.getElementById('taskDetailBody');
-        if (!label || !body) return;
-
-        label.textContent = tarea.nombreTarea;
-
-        // Bloque opcional de prenda/cantidad — solo se muestra si la asignación lo tiene cargado
-        const bloquePrenda = (tarea.tipoPrenda && tarea.cantidadPrendas) ? `
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-shirt"></i> Tipo de prenda</div>
-                    <div class="ht-detail-value">${tarea.tipoPrenda}</div>
-                </div>
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-boxes"></i> Cantidad asignada</div>
-                    <div class="ht-detail-value">${tarea.cantidadPrendas} unidades</div>
-                </div>` : '';
-
-        // Bloque de estimación de finalización (días laborales de 10h + fecha estimada)
-        const estimacion = calcularEstimacionFinalizacion(tarea.fechaInicio, tarea.horasEstimadas);
-        const bloqueEstimacion = estimacion ? `
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-calendar-range"></i> Días estimados</div>
-                    <div class="ht-detail-value">${estimacion.dias} día(s) (jornada de ${HORAS_LABORALES_DIA}h)</div>
-                </div>
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-calendar-check"></i> Fecha estimada de fin</div>
-                    <div class="ht-detail-value">${formatearFecha(estimacion.fechaFin)}</div>
-                </div>` : '';
-
-        body.innerHTML = `
-            <div class="ht-detail-grid">
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-gear"></i> Proceso</div>
-                    <div class="ht-detail-value">${tarea.proceso || '—'}</div>
-                </div>
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-bar-chart"></i> Complejidad</div>
-                    <div class="ht-detail-value">${tarea.complejidad || '—'}</div>
-                </div>
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-flag"></i> Prioridad</div>
-                    <div class="ht-detail-value">${tarea.prioridad}</div>
-                </div>
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-clock"></i> Horas estimadas</div>
-                    <div class="ht-detail-value">${tarea.horasEstimadas}h</div>
-                </div>
-                ${bloquePrenda}
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-calendar"></i> Inicio</div>
-                    <div class="ht-detail-value">${tarea.fechaInicio}</div>
-                </div>
-                <div class="ht-detail-item">
-                    <div class="ht-detail-label"><i class="bi bi-check2-circle"></i> Estado</div>
-                    <div class="ht-detail-value">${tarea.estado}</div>
-                </div>
-                ${bloqueEstimacion}
-            </div>
-            <div class="ht-detail-desc">
-                <div class="ht-detail-label mb-2"><i class="bi bi-card-text"></i> Descripción</div>
-                <p>${tarea.descripcionTarea || 'Sin descripción adicional.'}</p>
-            </div>
-        `;
-
-        // ✅ FIX 2: reemplazar el botón del footer con uno limpio para evitar listeners duplicados
-        const btnOld = document.getElementById('btnOpenReport');
-        if (btnOld) {
-            const btnNew = btnOld.cloneNode(true);
-            btnOld.replaceWith(btnNew);
-            btnNew.addEventListener('click', () => {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('taskDetailModal')).hide();
-                setTimeout(() => abrirModalReporte(null, tarea), 320);
-            });
-        }
-
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('taskDetailModal')).show();
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 3. DRAG & DROP
-    // ═══════════════════════════════════════════════════════════════
-
-    function configurarDragAndDrop() {
-        document.querySelectorAll('.ht-drop-zone').forEach(zona => {
-            const estadoTarget = zona.getAttribute('data-status');
-
-            zona.addEventListener('dragover', e => {
-                e.preventDefault();
-                zona.classList.add('drag-over');
-            });
-            zona.addEventListener('dragleave', e => {
-                // Solo quitar si el cursor sale de la zona real (no de un hijo)
-                if (!zona.contains(e.relatedTarget)) zona.classList.remove('drag-over');
-            });
-            zona.addEventListener('drop', async e => {
-                e.preventDefault();
-                zona.classList.remove('drag-over');
-
-                const idAsignacion = e.dataTransfer.getData('text/plain');
-                const tarjeta      = document.querySelector(`[data-id-asignacion="${idAsignacion}"]`);
-                if (!tarjeta || !estadoTarget) return;
-
-                const estadoAnterior = tarjeta.getAttribute('data-estado');
-                if (estadoAnterior === estadoTarget) return; // sin cambio
-
-                // Mover card al DOM — insertarla antes del empty state
-                tarjeta.setAttribute('data-estado', estadoTarget);
-                // Actualizar cache
-                if (cacheTareas[idAsignacion]) cacheTareas[idAsignacion].estado = estadoTarget;
-
-                const emptyEl = zona.querySelector('.ht-col-empty');
-                if (emptyEl) zona.insertBefore(tarjeta, emptyEl);
-                else zona.appendChild(tarjeta);
-
-                // Visibilidad si es Completada
-                if (estadoTarget === 'Completada' && completadasOcultas) {
-                    tarjeta.classList.add('hidden-completed');
+            // Alerta de exceso de tiempo
+            const limitMs  = (tarea.horasEstimadas || 1) * 3600 * 1000;
+            const excessEl = document.getElementById(`excess-${id}`);
+            if (excessEl) {
+                const elapsed = Date.now() - inicioMs;
+                if (elapsed > limitMs) {
+                    const minEx = Math.floor((elapsed - limitMs) / 60000);
+                    excessEl.textContent = `⚠ +${minEx}m`;
+                    excessEl.classList.remove('d-none');
                 } else {
-                    tarjeta.classList.remove('hidden-completed');
+                    excessEl.classList.add('d-none');
                 }
+            }
+        }, 1000);
+    }
 
-                // ✅ FIX 3: actualizar TODOS los contadores desde el DOM
-                actualizarEmptyStates();
-                actualizarContadoresDesdeDOM();
+    // ═══════════════════════════════════════════════════════════
+    // 3. FLUJO INICIAR TAREA
+    // ═══════════════════════════════════════════════════════════
 
-                await actualizarEstadoEnServidor(idAsignacion, estadoTarget);
-            });
+    function abrirModalIniciar(tarea) {
+        activeStartTaskId = tarea.idAsignacion;
+        document.getElementById('startTaskTitle').textContent    = tarea.nombreTarea;
+        document.getElementById('startTaskProcess').textContent  = tarea.proceso || 'General';
+        document.getElementById('startTaskQty').textContent      = `${tarea.cantidadPrendas || 0} ${tarea.tipoPrenda || 'prendas'}`;
+        document.getElementById('startTaskTime').textContent     = `${tarea.horasEstimadas}h estimadas`;
+        document.getElementById('startTaskPrio').textContent     = tarea.prioridad || 'Media';
+        bootstrap.Modal.getOrCreateInstance(
+            document.getElementById('modalIniciarTarea')
+        ).show();
+    }
+
+    function configurarModalesAccion() {
+        document.getElementById('btnConfirmStartTask').addEventListener('click', async () => {
+            if (!activeStartTaskId) return;
+            await cambiarEstado(activeStartTaskId, 'En Progreso');
+            bootstrap.Modal.getInstance(document.getElementById('modalIniciarTarea')).hide();
         });
     }
 
-    async function actualizarEstadoEnServidor(idAsignacion, nuevoEstado) {
+    // ═══════════════════════════════════════════════════════════
+    // 4. FLUJO FINALIZAR TAREA
+    // ═══════════════════════════════════════════════════════════
+
+    function abrirModalFinalizar(tarea) {
+        activeFinishTaskId = tarea.idAsignacion;
+        document.getElementById('finishQtyGood').value        = tarea.cantidadPrendas || 0;
+        document.getElementById('finishQtyBad').value         = 0;
+        document.getElementById('finishNotes').value          = '';
+        document.getElementById('finishHasIncidence').checked = false;
+        bootstrap.Modal.getOrCreateInstance(
+            document.getElementById('modalFinalizarTarea')
+        ).show();
+    }
+
+    // Listener del botón de confirmar finalización
+    document.getElementById('btnConfirmFinishTask').addEventListener('click', async () => {
+        if (!activeFinishTaskId) return;
+        const hasIncidence = document.getElementById('finishHasIncidence').checked;
+        await cambiarEstado(activeFinishTaskId, 'Completada');
+        bootstrap.Modal.getInstance(document.getElementById('modalFinalizarTarea')).hide();
+        if (hasIncidence) {
+            const tarea = cacheTareas[activeFinishTaskId];
+            if (tarea) abrirModalIncidencia(null, tarea);
+        }
+    });
+
+    // ─── Cambiar estado en backend ───────────────────────────────
+    async function cambiarEstado(idAsignacion, nuevoEstado) {
         try {
             const res = await fetch(ENDPOINTS.cambiarEstado(idAsignacion), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken':  obtenerCsrfToken(),
+                    'X-CSRFToken': csrfToken(),
                 },
                 body: JSON.stringify({ estado: nuevoEstado }),
             });
-            if (!res.ok) throw new Error('Error al actualizar estado');
+            if (!res.ok) throw new Error('Error actualizando estado');
+            mostrarToast(`Tarea movida a "${nuevoEstado}"`, 'ok');
+            await cargarTareas();
         } catch (err) {
             console.error(err);
-            mostrarToast('Error al cambiar el estado. Recargando…', 'err');
-            obtenerTareas(); // revertir desde servidor
+            mostrarToast('No se pudo actualizar el estado', 'err');
         }
     }
 
-    // ✅ FIX 3: lee los data-estado actuales del DOM y actualiza los 6 contadores
-    function actualizarContadoresDesdeDOM() {
-        const cards = Array.from(document.querySelectorAll('.ht-card'));
-        const pendiente  = cards.filter(c => c.getAttribute('data-estado') === 'Pendiente').length;
-        const enProgreso = cards.filter(c => c.getAttribute('data-estado') === 'En Progreso').length;
-        const completada = cards.filter(c => c.getAttribute('data-estado') === 'Completada').length;
+    // ═══════════════════════════════════════════════════════════
+    // 5. DRAG & DROP
+    // ═══════════════════════════════════════════════════════════
 
-        // Contadores de columna (círculo junto al título)
-        if (contadoresColumna['Pendiente'])   contadoresColumna['Pendiente'].textContent   = pendiente;
-        if (contadoresColumna['En Progreso']) contadoresColumna['En Progreso'].textContent = enProgreso;
-        if (contadoresColumna['Completada'])  contadoresColumna['Completada'].textContent  = completada;
+    function configurarDragAndDrop() {
+        Object.values(zonas).forEach(zona => {
+            if (!zona) return;
 
-        // Contadores top bar (barra de controles)
-        const sp = document.getElementById('statPendiente');
-        const sc = document.getElementById('statProceso');
-        const sf = document.getElementById('statFinalizado');
-        if (sp) sp.textContent = pendiente;
-        if (sc) sc.textContent = enProgreso;
-        if (sf) sf.textContent = completada;
+            zona.addEventListener('dragover', e => {
+                e.preventDefault();
+                zona.classList.add('drag-over');
+            });
+            zona.addEventListener('dragleave', () => zona.classList.remove('drag-over'));
+            zona.addEventListener('drop', async e => {
+                e.preventDefault();
+                zona.classList.remove('drag-over');
+                const id     = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                const estado = zona.closest('.ht-kanban-col')?.dataset?.estado;
+                if (!id || !estado) return;
 
-        // Total
-        const total = document.getElementById('totalTasks');
-        if (total) total.textContent = cards.length;
-    }
+                const tarea = cacheTareas[id];
+                if (!tarea || tarea.estado === estado) return;
 
-    function actualizarTodosLosContadores(tareas) {
-        const pendiente  = tareas.filter(t => t.estado === 'Pendiente').length;
-        const enProgreso = tareas.filter(t => t.estado === 'En Progreso').length;
-        const completada = tareas.filter(t => t.estado === 'Completada').length;
-
-        if (contadoresColumna['Pendiente'])   contadoresColumna['Pendiente'].textContent   = pendiente;
-        if (contadoresColumna['En Progreso']) contadoresColumna['En Progreso'].textContent = enProgreso;
-        if (contadoresColumna['Completada'])  contadoresColumna['Completada'].textContent  = completada;
-
-        const sp = document.getElementById('statPendiente');
-        const sc = document.getElementById('statProceso');
-        const sf = document.getElementById('statFinalizado');
-        if (sp) sp.textContent = pendiente;
-        if (sc) sc.textContent = enProgreso;
-        if (sf) sf.textContent = completada;
-
-        const total = document.getElementById('totalTasks');
-        if (total) total.textContent = tareas.length;
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 4. TOGGLE — OCULTAR / MOSTRAR COMPLETADAS
-    // ═══════════════════════════════════════════════════════════════
-
-    function configurarToggleCompletadas() {
-        const btn = document.getElementById('btnToggleCompletadas');
-        if (!btn) return;
-        btn.addEventListener('click', () => {
-            completadasOcultas = !completadasOcultas;
-            btn.classList.toggle('active', completadasOcultas);
-            btn.querySelector('i').className   = completadasOcultas ? 'bi bi-eye' : 'bi bi-eye-slash';
-            btn.querySelector('span').textContent = completadasOcultas ? 'Mostrar completadas' : 'Ocultar completadas';
-            aplicarVisibilidadCompletadas();
+                if (estado === 'En Progreso') {
+                    abrirModalIniciar(tarea);
+                } else if (estado === 'Completada') {
+                    abrirModalFinalizar(tarea);
+                } else {
+                    await cambiarEstado(id, estado);
+                }
+            });
         });
     }
 
-    function aplicarVisibilidadCompletadas() {
-        document.querySelectorAll('.ht-card[data-estado="Completada"]').forEach(card => {
-            card.classList.toggle('hidden-completed', completadasOcultas);
-        });
-    }
+    // ═══════════════════════════════════════════════════════════
+    // 6. MODAL DE DETALLE DE TAREA
+    // ═══════════════════════════════════════════════════════════
 
-    // ═══════════════════════════════════════════════════════════════
-    // 5. COLAPSAR COLUMNA COMPLETADA
-    // ═══════════════════════════════════════════════════════════════
+    function abrirDetalleTarea(t) {
+        document.getElementById('dtlTaskTitle').textContent = t.nombreTarea;
 
-    function configurarColapsarCompletada() {
-        const header = document.getElementById('headerCompletada');
-        const col    = document.getElementById('col-Completada');
-        if (!header || !col) return;
-        header.addEventListener('click', () => col.classList.toggle('collapsed'));
-    }
+        // Calcular días estimados y fecha de fin
+        const diasEst = Math.ceil((t.horasEstimadas || 0) / 10);
+        let fechaFinStr = '—';
+        if (t.fechaInicio) {
+            const d = new Date(t.fechaInicio);
+            d.setDate(d.getDate() + diasEst);
+            fechaFinStr = d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 6. MODAL REPORTE — CREAR Y EDITAR
-    // ═══════════════════════════════════════════════════════════════
+        document.getElementById('taskDetailBody').innerHTML = `
+            <div class="ht-detail-desc">
+                <p>${t.descripcionTarea || 'Sin descripción adicional.'}</p>
+            </div>
+            <div class="ht-detail-grid">
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-gear-fill"></i> Proceso</div>
+                    <div class="ht-detail-value">${t.proceso || '—'}</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-boxes"></i> Cantidad</div>
+                    <div class="ht-detail-value">${t.cantidadPrendas || 0} ${t.tipoPrenda || 'uds'}</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-clock"></i> Horas estimadas</div>
+                    <div class="ht-detail-value">${t.horasEstimadas}h</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-flag"></i> Prioridad</div>
+                    <div class="ht-detail-value"><span class="ht-badge ht-badge-prio-${t.prioridad}">${t.prioridad}</span></div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-calendar-event"></i> Fecha inicio</div>
+                    <div class="ht-detail-value">${t.fechaInicio || '—'}</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-calendar-check"></i> Fin estimado</div>
+                    <div class="ht-detail-value">${fechaFinStr}</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-info-circle"></i> Estado</div>
+                    <div class="ht-detail-value">${t.estado}</div>
+                </div>
+                <div class="ht-detail-item">
+                    <div class="ht-detail-label"><i class="bi bi-calendar3"></i> Días estimados</div>
+                    <div class="ht-detail-value">${diasEst} día${diasEst !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
+        `;
 
-    function configurarBotonesExteriores() {
-        const btnGenerar = document.getElementById('btnGenerateReport');
-        if (btnGenerar) btnGenerar.addEventListener('click', () => abrirModalReporte());
-    }
-
-    function abrirModalReporte(reporte = null, tarea = null) {
-        limpiarErroresFormulario();
-        resetearFormularioReporte();
-
-        const tareaRef  = document.getElementById('reportTareaRef');
-        const tareaName = document.getElementById('reportTareaName');
-
-        if (reporte) {
-            // Modo edición
-            formReporte.editId.value           = reporte.idIncidencia;
-            formReporte.tipo.value             = reporte.tipoIncidencia || '';
-            formReporte.descripcion.value      = reporte.descripcionCompleta || reporte.descripcion || '';
-            formReporte.periodo.value          = reporte.periodoEvaluado || '';
-            formReporte.eyebrow.textContent    = 'Editar Incidencia';
-            formReporte.modalTitle.textContent = 'Editar Reporte';
-            formReporte.btnLabel.textContent   = 'Guardar cambios';
-            if (formReporte.tipoCount)    formReporte.tipoCount.textContent    = formReporte.tipo.value.length;
-            if (formReporte.descCount)    formReporte.descCount.textContent    = formReporte.descripcion.value.length;
-            if (formReporte.periodoCount) formReporte.periodoCount.textContent = formReporte.periodo.value.length;
-            if (tareaRef) tareaRef.style.display = 'none';
+        // Botón de acción contextual
+        const btnAccion = document.getElementById('dtlBtnAction');
+        if (t.estado === 'Pendiente') {
+            btnAccion.innerHTML = '<i class="bi bi-play-fill me-1"></i>Iniciar tarea';
+            btnAccion.onclick = () => {
+                bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
+                setTimeout(() => abrirModalIniciar(t), 200);
+            };
+        } else if (t.estado === 'En Progreso') {
+            btnAccion.innerHTML = '<i class="bi bi-check-lg me-1"></i>Finalizar tarea';
+            btnAccion.onclick = () => {
+                bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
+                setTimeout(() => abrirModalFinalizar(t), 200);
+            };
         } else {
-            // Modo crear
-            formReporte.editId.value           = '';
-            formReporte.eyebrow.textContent    = 'Nueva Incidencia';
-            formReporte.modalTitle.textContent = 'Generar Reporte';
-            formReporte.btnLabel.textContent   = 'Enviar reporte';
-
-            if (tarea && tareaRef && tareaName) {
-                tareaRef.style.display = 'flex';
-                tareaName.textContent  = tarea.nombreTarea;
-                formReporte.btnGuardar.setAttribute('data-id-tarea-vinculada', tarea.idTarea);
-            } else {
-                if (tareaRef) tareaRef.style.display = 'none';
-                formReporte.btnGuardar.removeAttribute('data-id-tarea-vinculada');
-            }
+            btnAccion.innerHTML = '<i class="bi bi-check-circle me-1"></i>Completada';
+            btnAccion.disabled = true;
         }
 
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('taskDetailModal')).show();
     }
 
-    function configurarFormularioReportes() {
-        if (!formReporte.btnGuardar) return;
+    // ═══════════════════════════════════════════════════════════
+    // 7. MÓDULO DE INCIDENCIAS
+    // ═══════════════════════════════════════════════════════════
 
-        if (formReporte.tipo) {
-            formReporte.tipo.addEventListener('input', e => {
-                if (formReporte.tipoCount) formReporte.tipoCount.textContent = e.target.value.length;
-            });
-        }
-        if (formReporte.descripcion) {
-            formReporte.descripcion.addEventListener('input', e => {
-                if (formReporte.descCount) formReporte.descCount.textContent = e.target.value.length;
-            });
-        }
-        if (formReporte.periodo) {
-            formReporte.periodo.addEventListener('input', e => {
-                if (formReporte.periodoCount) formReporte.periodoCount.textContent = e.target.value.length;
-            });
-        }
-
-        formReporte.btnGuardar.addEventListener('click', enviarReporte);
-    }
-
-    async function enviarReporte() {
-        limpiarErroresFormulario();
-
-        const payload = {
-            tipoIncidencia:  formReporte.tipo        ? formReporte.tipo.value.trim()        : '',
-            descripcion:     formReporte.descripcion ? formReporte.descripcion.value.trim() : '',
-            periodoEvaluado: formReporte.periodo     ? formReporte.periodo.value.trim()     : '',
-        };
-
-        const editId   = formReporte.editId ? formReporte.editId.value : '';
-        const esEdicion = !!editId;
-        const url      = esEdicion ? ENDPOINTS.editarReporte(editId) : ENDPOINTS.guardarReporte;
-
+    async function cargarHistorialReportes() {
         try {
-            formReporte.btnGuardar.disabled = true;
-            const res  = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': obtenerCsrfToken() },
-                body: JSON.stringify(payload),
-            });
+            const res = await fetch(ENDPOINTS.historialReportes);
+            if (!res.ok) throw new Error('Error cargando reportes');
             const data = await res.json();
-
-            if (res.status === 400 && data.errores) {
-                if (data.errores.tipoIncidencia  && formReporte.errTipo)    formReporte.errTipo.textContent    = data.errores.tipoIncidencia;
-                if (data.errores.descripcion     && formReporte.errDesc)    formReporte.errDesc.textContent    = data.errores.descripcion;
-                if (data.errores.periodoEvaluado && formReporte.errPeriodo) formReporte.errPeriodo.textContent = data.errores.periodoEvaluado;
-                return;
-            }
-
-            if (!res.ok) throw new Error(data.error || 'Error del servidor');
-
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).hide();
-            resetearFormularioReporte();
-            obtenerHistorialReportes();
-            mostrarToast(esEdicion ? '✏️ Reporte actualizado' : '✅ Reporte enviado correctamente', 'ok');
-
-            // — Descarga automática del PDF al crear (no al editar) —
-            if (!esEdicion && data.idIncidencia) {
-                descargarPDF(data.idIncidencia);
-            }
-
-        } catch (err) {
-            console.error(err);
-            mostrarToast('❌ No se pudo guardar el reporte', 'err');
-        } finally {
-            formReporte.btnGuardar.disabled = false;
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 7. HISTORIAL DE REPORTES
-    // ═══════════════════════════════════════════════════════════════
-
-    async function obtenerHistorialReportes() {
-        try {
-            const res  = await fetch(ENDPOINTS.historialReportes);
-            if (!res.ok) throw new Error('Error historial');
-            const data = await res.json();
-            renderizarHistorialReportes(data.reportes);
+            const reportes = data.reportes || [];
+            renderizarDropdownIncidencias(reportes);
+            renderizarTablaIncidencias(reportes);
         } catch (err) {
             console.error(err);
         }
     }
 
-    function renderizarHistorialReportes(reportes) {
-        const contenedor = document.getElementById('navReportesContainer');
-        if (!contenedor) return;
+    // ─── Dropdown campana ────────────────────────────────────────
+    function renderizarDropdownIncidencias(reportes) {
+        const badge   = document.getElementById('navIncidenceBadge');
+        const kpiEl   = document.getElementById('kpiCountIncidence');
+        const container = document.getElementById('navReportesContainer');
 
-        if (!reportes || reportes.length === 0) {
-            contenedor.innerHTML = `
-                <div class="ht-empty-state">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <span>Sin reportes aún</span>
-                </div>`;
+        if (badge)  badge.textContent  = reportes.length;
+        if (kpiEl)  kpiEl.textContent  = reportes.length;
+
+        if (!container) return;
+
+        if (reportes.length === 0) {
+            container.innerHTML = `<div class="ht-empty-state">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Sin incidencias registradas</span>
+            </div>`;
             return;
         }
 
-        contenedor.innerHTML = reportes.map(rep => `
-            <div class="ht-report-card" data-id="${rep.idIncidencia}">
+        container.innerHTML = reportes.slice(0, 5).map(rep => {
+            cacheIncidencias[rep.idIncidencia] = rep;
+            return `
+            <div class="ht-report-card">
                 <div class="ht-report-card-header">
                     <span class="ht-report-card-tipo">${rep.tipoIncidencia}</span>
                     <div class="ht-report-card-actions">
                         <button class="ht-report-action-btn ht-report-action-btn--edit"
-                                data-id="${rep.idIncidencia}"
-                                data-tipo="${encodeURIComponent(rep.tipoIncidencia)}"
-                                data-desc="${encodeURIComponent(rep.descripcion)}"
-                                data-periodo="${encodeURIComponent(rep.periodoEvaluado || '')}"
-                                title="Editar reporte">
+                                data-id="${rep.idIncidencia}" title="Editar">
                             <i class="bi bi-pencil"></i> Editar
                         </button>
                         <button class="ht-report-action-btn ht-report-action-btn--delete"
-                                data-id="${rep.idIncidencia}"
-                                title="Eliminar reporte">
+                                data-id="${rep.idIncidencia}" title="Eliminar">
                             <i class="bi bi-trash"></i>
                         </button>
                         <button class="ht-report-action-btn ht-report-action-btn--pdf"
-                                data-id="${rep.idIncidencia}"
-                                title="Descargar PDF">
+                                data-id="${rep.idIncidencia}" title="Descargar PDF">
                             <i class="bi bi-file-earmark-pdf-fill"></i>
                         </button>
                     </div>
@@ -641,156 +475,518 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="ht-report-card-desc">${rep.descripcion}</p>
                 <div class="ht-report-card-meta">
                     <span class="ht-badge-status-${rep.estado}">${rep.estado}</span>
-                    <span><i class="bi bi-calendar-event me-1"></i>${rep.fechaGeneracion}</span>
-                    ${rep.periodoEvaluado ? `<span><i class="bi bi-bookmark me-1"></i>${rep.periodoEvaluado}</span>` : ''}
+                    <span><i class="bi bi-calendar-event me-1"></i>${rep.fechaGeneracion || 'Hoy'}</span>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
 
-        contenedor.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
+        // Eventos de los botones del dropdown
+        container.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
-                const reporte = {
-                    idIncidencia:        btn.dataset.id,
-                    tipoIncidencia:      decodeURIComponent(btn.dataset.tipo),
-                    descripcionCompleta: decodeURIComponent(btn.dataset.desc),
-                    periodoEvaluado:     decodeURIComponent(btn.dataset.periodo),
-                };
-                document.activeElement?.blur();
-                setTimeout(() => abrirModalReporte(reporte), 150);
+                const inc = cacheIncidencias[btn.dataset.id];
+                if (inc) { document.activeElement?.blur(); setTimeout(() => abrirModalIncidencia(inc), 150); }
             });
         });
-
-        contenedor.querySelectorAll('.ht-report-action-btn--delete').forEach(btn => {
+        container.querySelectorAll('.ht-report-action-btn--delete').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
                 pendingDeleteId = btn.dataset.id;
                 document.activeElement?.blur();
-                setTimeout(() => {
-                    bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
-                }, 150);
+                setTimeout(() => bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show(), 150);
             });
         });
-
-        contenedor.querySelectorAll('.ht-report-action-btn--pdf').forEach(btn => {
-            btn.addEventListener('click', e => {
-                e.stopPropagation();
-                descargarPDF(btn.dataset.id);
-            });
+        container.querySelectorAll('.ht-report-action-btn--pdf').forEach(btn => {
+            btn.addEventListener('click', e => { e.stopPropagation(); descargarPDF(btn.dataset.id); });
         });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 8. MODAL ELIMINAR
-    // ═══════════════════════════════════════════════════════════════
+    // ─── Tabla en modal gestión ──────────────────────────────────
+    function renderizarTablaIncidencias(reportes) {
+        const tbody = document.getElementById('tableIncidenciasBody');
+        if (!tbody) return;
 
+        // Llenar cache completo
+        reportes.forEach(r => { cacheIncidencias[r.idIncidencia] = r; });
+
+        if (reportes.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
+                No se han encontrado incidencias.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = reportes.map(rep => `
+            <tr>
+                <td><strong>#${String(rep.idIncidencia).padStart(4, '0')}</strong></td>
+                <td><span class="ht-badge" style="background:rgba(212,146,58,.15);color:#D4923A;border-color:rgba(212,146,58,.3);">
+                    ${rep.tipoIncidencia}</span></td>
+                <td style="max-width:280px;">
+                    <span class="d-inline-block text-truncate" style="max-width:260px;">
+                        ${rep.descripcion}</span></td>
+                <td><span class="ht-badge-status-${rep.estado}">${rep.estado}</span></td>
+                <td><small style="color:var(--text-muted);">${rep.fechaGeneracion || 'Reciente'}</small></td>
+                <td class="text-end">
+                    <button class="ht-report-action-btn ht-report-action-btn--pdf me-1"
+                            data-id="${rep.idIncidencia}" title="Descargar PDF">
+                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                    </button>
+                    <button class="ht-report-action-btn ht-report-action-btn--edit me-1"
+                            data-id="${rep.idIncidencia}" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="ht-report-action-btn ht-report-action-btn--delete"
+                            data-id="${rep.idIncidencia}" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>`).join('');
+
+        tbody.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const inc = cacheIncidencias[btn.dataset.id];
+                if (!inc) return;
+                const mgmt = bootstrap.Modal.getInstance(document.getElementById('modalGestionIncidencias'));
+                if (mgmt) mgmt.hide();
+                setTimeout(() => abrirModalIncidencia(inc), 200);
+            });
+        });
+        tbody.querySelectorAll('.ht-report-action-btn--delete').forEach(btn => {
+            btn.addEventListener('click', () => {
+                pendingDeleteId = btn.dataset.id;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
+            });
+        });
+        tbody.querySelectorAll('.ht-report-action-btn--pdf').forEach(btn => {
+            btn.addEventListener('click', () => descargarPDF(btn.dataset.id));
+        });
+    }
+
+    // ─── Abrir modal crear/editar incidencia ─────────────────────
+    function abrirModalIncidencia(incidencia = null, tareaAsociada = null) {
+        const eyebrow    = document.getElementById('reportModalEyebrow');
+        const titulo     = document.getElementById('reportModalLabel');
+        const editIdEl   = document.getElementById('reportEditId');
+        const tipoEl     = document.getElementById('reportTipo');
+        const descEl     = document.getElementById('reportDesc');
+        const btnLabel   = document.getElementById('btnSaveReportLabel');
+        const refEl      = document.getElementById('reportTareaRef');
+        const refName    = document.getElementById('reportTareaName');
+
+        if (incidencia) {
+            // MODO EDICIÓN
+            eyebrow.textContent  = `Edición #${String(incidencia.idIncidencia).padStart(4, '0')}`;
+            titulo.textContent   = 'Editar Incidencia';
+            btnLabel.textContent = 'Guardar cambios';
+            editIdEl.value       = incidencia.idIncidencia;
+            tipoEl.value         = incidencia.tipoIncidencia || '';
+            descEl.value         = incidencia.descripcion || '';
+            refEl.style.display  = 'none';
+        } else {
+            // MODO NUEVA
+            eyebrow.textContent  = 'Nueva Incidencia';
+            titulo.textContent   = 'Generar Reporte';
+            btnLabel.textContent = 'Enviar reporte';
+            editIdEl.value       = '';
+            tipoEl.value         = '';
+            descEl.value         = tareaAsociada
+                ? `Incidencia durante la tarea: ${tareaAsociada.nombreTarea}. `
+                : '';
+            if (tareaAsociada) {
+                refEl.style.display = '';
+                refName.textContent = tareaAsociada.nombreTarea;
+            } else {
+                refEl.style.display = 'none';
+            }
+        }
+
+        document.getElementById('descCount').textContent   = descEl.value.length;
+        document.getElementById('err-tipo').textContent    = '';
+        document.getElementById('err-desc').textContent    = '';
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).show();
+    }
+
+    // ─── Formulario de incidencia ────────────────────────────────
+    function configurarFormularioIncidencia() {
+        const descEl = document.getElementById('reportDesc');
+        if (descEl) {
+            descEl.addEventListener('input', () => {
+                document.getElementById('descCount').textContent = descEl.value.length;
+            });
+        }
+
+        document.getElementById('btnSaveReport').addEventListener('click', async () => {
+            const editId      = document.getElementById('reportEditId').value;
+            const tipo        = document.getElementById('reportTipo').value.trim();
+            const descripcion = document.getElementById('reportDesc').value.trim();
+            const severidad   = document.getElementById('reportSeveridad')?.value || 'Media';
+
+            // Validación
+            let valido = true;
+            document.getElementById('err-tipo').textContent = '';
+            document.getElementById('err-desc').textContent = '';
+
+            if (!tipo) {
+                document.getElementById('err-tipo').textContent = 'Selecciona un tipo de incidencia.';
+                valido = false;
+            }
+            if (descripcion.length < 10) {
+                document.getElementById('err-desc').textContent = 'La descripción debe tener al menos 10 caracteres.';
+                valido = false;
+            }
+            if (!valido) return;
+
+            const endpoint = editId
+                ? ENDPOINTS.editarReporte(editId)
+                : ENDPOINTS.guardarReporte;
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken(),
+                    },
+                    body: JSON.stringify({ tipoIncidencia: tipo, descripcion, severidad }),
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Error al guardar');
+                }
+                mostrarToast(
+                    editId ? '✓ Incidencia actualizada' : '✓ Incidencia registrada — descargando PDF…',
+                    'ok'
+                );
+                bootstrap.Modal.getInstance(document.getElementById('reportModal')).hide();
+                await cargarHistorialReportes();
+
+                // Solo al crear (no al editar) se descarga el PDF automáticamente,
+                // igual que en la versión anterior del módulo.
+                if (!editId) {
+                    const data = await res.json();
+                    if (data.idIncidencia) descargarPDF(data.idIncidencia);
+                }
+            } catch (err) {
+                console.error(err);
+                mostrarToast(`❌ ${err.message}`, 'err');
+            }
+        });
+    }
+
+    // ─── Modal eliminar ──────────────────────────────────────────
     function configurarModalEliminar() {
-        const btnConfirm = document.getElementById('btnConfirmDelete');
-        if (!btnConfirm) return;
-
-        btnConfirm.addEventListener('click', async () => {
+        const btn = document.getElementById('btnConfirmDelete');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
             if (!pendingDeleteId) return;
             try {
-                btnConfirm.disabled = true;
-                const res  = await fetch(ENDPOINTS.eliminarReporte(pendingDeleteId), {
+                btn.disabled = true;
+                const res = await fetch(ENDPOINTS.eliminarReporte(pendingDeleteId), {
                     method: 'POST',
-                    headers: { 'X-CSRFToken': obtenerCsrfToken() },
+                    headers: { 'X-CSRFToken': csrfToken() },
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).hide();
-                obtenerHistorialReportes();
-                mostrarToast('🗑️ Reporte eliminado', 'ok');
+                bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                await cargarHistorialReportes();
+                mostrarToast('🗑️ Incidencia eliminada', 'ok');
             } catch (err) {
                 console.error(err);
-                mostrarToast('❌ No se pudo eliminar el reporte', 'err');
+                mostrarToast(`❌ ${err.message}`, 'err');
             } finally {
-                btnConfirm.disabled = false;
+                btn.disabled = false;
                 pendingDeleteId = null;
             }
         });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 9. BUSCADOR Y FILTRO
-    // ═══════════════════════════════════════════════════════════════
-
-    function configurarBuscadorYFiltro() {
-        const search = document.getElementById('searchInput');
-        const filter = document.getElementById('filterPrio');
-        if (search) search.addEventListener('input', aplicarFiltros);
-        if (filter) filter.addEventListener('change', aplicarFiltros);
-    }
-
-    function aplicarFiltros() {
-        const texto = (document.getElementById('searchInput')?.value || '').toLowerCase();
-        const prio  = document.getElementById('filterPrio')?.value || '';
-
-        document.querySelectorAll('.ht-card').forEach(card => {
-            const nombre     = card.querySelector('.ht-card-name')?.textContent.toLowerCase() || '';
-            const cardPrio   = card.getAttribute('data-prio') || '';
-            const cardEstado = card.getAttribute('data-estado') || '';
-
-            const coincideTexto = !texto || nombre.includes(texto);
-            const coincidePrio  = !prio  || cardPrio === prio;
-
-            const ocultaPorToggle = completadasOcultas && cardEstado === 'Completada';
-
-            card.style.display = (coincideTexto && coincidePrio && !ocultaPorToggle) ? '' : 'none';
+    // ─── Filtro de búsqueda en tabla de gestión ──────────────────
+    function configurarBusquedaTablaIncidencias() {
+        const input = document.getElementById('searchIncidenceModal');
+        if (!input) return;
+        input.addEventListener('input', () => {
+            const q = input.value.toLowerCase();
+            document.querySelectorAll('#tableIncidenciasBody tr').forEach(tr => {
+                tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
         });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 10. TOAST
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════
+    // 8. BOTONES EXTERIORES Y NAVEGACIÓN
+    // ═══════════════════════════════════════════════════════════
+
+    function configurarBotonesExteriores() {
+        // Generar incidencia rápida
+        document.getElementById('btnGenerateReport')
+            ?.addEventListener('click', () => abrirModalIncidencia());
+
+        // Abrir modal gestión desde campana
+        document.getElementById('btnOpenIncidenceModule')
+            ?.addEventListener('click', () => {
+                document.activeElement?.blur();
+                setTimeout(() => {
+                    bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById('modalGestionIncidencias')
+                    ).show();
+                }, 150);
+            });
+
+        // Abrir modal gestión desde menú de usuario
+        document.getElementById('btnOpenAllIncidences')
+            ?.addEventListener('click', () => {
+                document.activeElement?.blur();
+                setTimeout(() => {
+                    bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById('modalGestionIncidencias')
+                    ).show();
+                }, 150);
+            });
+
+        // Nueva incidencia desde dentro del modal gestión
+        document.getElementById('btnCreateIncidenceFromModule')
+            ?.addEventListener('click', () => {
+                bootstrap.Modal.getInstance(
+                    document.getElementById('modalGestionIncidencias')
+                ).hide();
+                setTimeout(() => abrirModalIncidencia(), 300);
+            });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 9. FILTROS Y BÚSQUEDA
+    // ═══════════════════════════════════════════════════════════
+
+    function configurarBuscadorYFiltros() {
+        document.getElementById('searchInput')
+            ?.addEventListener('input', aplicarFiltros);
+        document.getElementById('filterPrio')
+            ?.addEventListener('change', aplicarFiltros);
+        document.getElementById('filterProcess')
+            ?.addEventListener('change', aplicarFiltros);
+        document.getElementById('btnResetFilters')
+            ?.addEventListener('click', () => {
+                document.getElementById('searchInput').value   = '';
+                document.getElementById('filterPrio').value    = '';
+                document.getElementById('filterProcess').value = '';
+                aplicarFiltros();
+            });
+    }
+
+    function aplicarFiltros() {
+        const texto  = (document.getElementById('searchInput')?.value || '').toLowerCase();
+        const prio   = document.getElementById('filterPrio')?.value || '';
+        const proc   = document.getElementById('filterProcess')?.value || '';
+
+        document.querySelectorAll('.ht-card').forEach(card => {
+            const id     = card.getAttribute('data-id-asignacion');
+            const t      = cacheTareas[id];
+            if (!t) return;
+
+            const matchTexto = !texto || (t.nombreTarea || '').toLowerCase().includes(texto) || (t.proceso || '').toLowerCase().includes(texto);
+            const matchPrio  = !prio  || t.prioridad === prio;
+            const matchProc  = !proc  || t.proceso   === proc;
+
+            card.style.display = (matchTexto && matchPrio && matchProc) ? '' : 'none';
+        });
+
+        actualizarEmptyStates();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 10. HISTORIAL DE TAREAS COMPLETADAS (estilo "archivo" de Trello)
+    // ═══════════════════════════════════════════════════════════
+
+    function actualizarBadgeHistorial(tareas) {
+        const badge = document.getElementById('historialBadgeCount');
+        if (!badge) return;
+        badge.textContent = tareas.filter(t => t.estado === 'Completada').length;
+    }
+
+    function abrirHistorialTareas() {
+        const tbody = document.getElementById('tableHistorialBody');
+        if (!tbody) return;
+
+        const completadas = Object.values(cacheTareas)
+            .filter(t => t.estado === 'Completada')
+            .sort((a, b) => (b.fechaFinalizacion || '').localeCompare(a.fechaFinalizacion || ''));
+
+        if (completadas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4" style="color:var(--text-muted);">
+                Todavía no completaste ninguna tarea.</td></tr>`;
+        } else {
+            tbody.innerHTML = completadas.map(t => `
+                <tr>
+                    <td><strong>${t.nombreTarea}</strong></td>
+                    <td>${t.proceso || '—'}</td>
+                    <td>${t.tipoPrenda && t.cantidadPrendas ? `${t.cantidadPrendas} ${t.tipoPrenda}` : '—'}</td>
+                    <td>${t.fechaFinalizacion || '—'}</td>
+                    <td>${t.horasReales != null ? `${t.horasReales} h` : '—'}</td>
+                </tr>`).join('');
+        }
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalHistorialTareas')).show();
+    }
+
+    function configurarHistorialTareas() {
+        document.getElementById('btnVerHistorial')?.addEventListener('click', abrirHistorialTareas);
+        document.getElementById('linkVerHistorialDesdeColumna')?.addEventListener('click', abrirHistorialTareas);
+
+        const buscador = document.getElementById('searchHistorialModal');
+        buscador?.addEventListener('input', () => {
+            const q = buscador.value.toLowerCase();
+            document.querySelectorAll('#tableHistorialBody tr').forEach(tr => {
+                tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 11. COLAPSAR COLUMNA COMPLETADAS
+    // ═══════════════════════════════════════════════════════════
+
+    function configurarColapsarColumnaCompletada() {
+        const header = document.getElementById('headerCompletada');
+        if (!header) return;
+        header.addEventListener('click', () => {
+            const col = document.getElementById('col-Completada');
+            col?.classList.toggle('collapsed');
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 12. KPIs NAVBAR Y CONTADORES
+    // ═══════════════════════════════════════════════════════════
+
+    function actualizarContadores(tareas) {
+        const counts = { 'Pendiente': 0, 'En Progreso': 0, 'Completada': 0 };
+        tareas.forEach(t => { if (counts[t.estado] !== undefined) counts[t.estado]++; });
+
+        // La columna 'Completada' del tablero ya no aloja tarjetas (se archivan),
+        // así que su badge siempre muestra 0 para no confundir con el historial.
+        const countCompletadaEl = document.getElementById('count-Completada');
+        if (countCompletadaEl) countCompletadaEl.textContent = 0;
+
+        // Columnas activas
+        ['Pendiente', 'En Progreso'].forEach(e => {
+            const el = document.getElementById(`count-${e}`);
+            if (el) el.textContent = counts[e];
+        });
+
+        // Barra de stats
+        const sp = document.getElementById('statPendiente');
+        const sq = document.getElementById('statProceso');
+        const sd = document.getElementById('statFinalizado');
+        if (sp) sp.textContent = counts['Pendiente'];
+        if (sq) sq.textContent = counts['En Progreso'];
+        if (sd) sd.textContent = counts['Completada'];
+
+        // KPI chips navbar
+        const kp = document.getElementById('kpiCountPending');
+        const kq = document.getElementById('kpiCountProgress');
+        const kd = document.getElementById('kpiCountDone');
+        if (kp) kp.textContent = counts['Pendiente'];
+        if (kq) kq.textContent = counts['En Progreso'];
+        if (kd) kd.textContent = counts['Completada'];
+
+        // Pestañas móvil
+        const mp = document.getElementById('mobCountPending');
+        const mq = document.getElementById('mobCountProgress');
+        const md = document.getElementById('mobCountDone');
+        if (mp) mp.textContent = counts['Pendiente'];
+        if (mq) mq.textContent = counts['En Progreso'];
+        if (md) md.textContent = counts['Completada'];
+    }
+
+    function configurarKpisNavbar() {
+        const scrollA = (estado) => () => {
+            const col = document.getElementById(`col-${estado}`);
+            if (col) col.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+        document.getElementById('kpiPending')
+            ?.addEventListener('click', scrollA('Pendiente'));
+        document.getElementById('kpiProgress')
+            ?.addEventListener('click', scrollA('En Progreso'));
+        document.getElementById('kpiDone')
+            ?.addEventListener('click', scrollA('Completada'));
+        document.getElementById('kpiIncidence')
+            ?.addEventListener('click', () => {
+                bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById('modalGestionIncidencias')
+                ).show();
+            });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 13. PESTAÑAS MÓVIL
+    // ═══════════════════════════════════════════════════════════
+
+    function configurarPestañasMobile() {
+        const tabs = document.querySelectorAll('.ht-mobile-tab');
+        if (!tabs.length) return;
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.dataset.tab;
+                document.querySelectorAll('.ht-kanban-col').forEach(col => {
+                    col.classList.toggle('active-mobile-col', col.dataset.estado === target);
+                });
+            });
+        });
+
+        // Activar primera pestaña
+        tabs[0]?.click();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 14. EMPTY STATES
+    // ═══════════════════════════════════════════════════════════
+
+    function actualizarEmptyStates() {
+        ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
+            const zona    = zonas[estado];
+            const emptyEl = document.getElementById(`empty-${estado}`);
+            if (!zona || !emptyEl) return;
+            const visibles = zona.querySelectorAll('.ht-card:not([style*="display: none"])').length;
+            emptyEl.classList.toggle('hidden', visibles > 0);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 15. TOAST, PDF Y HELPERS
+    // ═══════════════════════════════════════════════════════════
 
     function mostrarToast(mensaje, tipo = 'ok') {
         const wrap = document.getElementById('toastWrap');
         if (!wrap) return;
         const toast = document.createElement('div');
         toast.className = `ht-toast ht-toast-${tipo}`;
-        toast.innerHTML = `<i class="bi bi-${tipo === 'ok' ? 'check-circle-fill' : 'x-circle-fill'}"></i><span>${mensaje}</span>`;
+        toast.innerHTML = `
+            <i class="bi bi-${tipo === 'ok' ? 'check-circle-fill' : 'x-circle-fill'}"></i>
+            <span>${mensaje}</span>`;
         wrap.appendChild(toast);
         setTimeout(() => toast.remove(), 3500);
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 11. HELPERS
-    // ═══════════════════════════════════════════════════════════════
-
-    function limpiarErroresFormulario() {
-        if (formReporte.errTipo)    formReporte.errTipo.textContent    = '';
-        if (formReporte.errDesc)    formReporte.errDesc.textContent    = '';
-        if (formReporte.errPeriodo) formReporte.errPeriodo.textContent = '';
-    }
-
-    function resetearFormularioReporte() {
-        if (formReporte.tipo)         formReporte.tipo.value         = '';
-        if (formReporte.descripcion)  formReporte.descripcion.value  = '';
-        if (formReporte.periodo)      formReporte.periodo.value      = '';
-        if (formReporte.editId)       formReporte.editId.value       = '';
-        if (formReporte.tipoCount)    formReporte.tipoCount.textContent    = '0';
-        if (formReporte.descCount)    formReporte.descCount.textContent    = '0';
-        if (formReporte.periodoCount) formReporte.periodoCount.textContent = '0';
-        limpiarErroresFormulario();
-    }
-
-    function obtenerCsrfToken() {
-        for (const cookie of document.cookie.split(';')) {
-            const c = cookie.trim();
-            if (c.startsWith('csrftoken=')) return decodeURIComponent(c.substring(10));
-        }
-        return '';
     }
 
     function descargarPDF(idIncidencia) {
         const link = document.createElement('a');
         link.href  = ENDPOINTS.pdfReporte(idIncidencia);
-        link.setAttribute('download', `HebraTech_Incidencia_${String(idIncidencia)}.pdf`);
+        link.setAttribute('download', `HebraTech_Incidencia_${String(idIncidencia).padStart(4, '0')}.pdf`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }
 
-    // ── Arrancar ─────────────────────────────────────────────────
+    function csrfToken() {
+        for (const c of document.cookie.split(';')) {
+            const pair = c.trim();
+            if (pair.startsWith('csrftoken=')) return decodeURIComponent(pair.substring(10));
+        }
+        return '';
+    }
+
+    // ─── Arrancar ────────────────────────────────────────────────
     init();
 });

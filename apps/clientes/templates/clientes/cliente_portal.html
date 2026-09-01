@@ -425,7 +425,7 @@
                 <select class="form-select" name="producto" id="modalProducto" required onchange="actualizarPrecio()">
                   <option value="" selected disabled>Seleccionar...</option>
                   {% for producto in productos %}
-                  <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio }}">
+                  <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio_js }}">
                     {{ producto.nombre }} — ${{ producto.precio|floatformat:0 }}
                   </option>
                   {% endfor %}
@@ -526,7 +526,7 @@
               <select class="form-select" name="producto" id="quotePrenda" required>
                 <option value="" disabled selected>Seleccionar...</option>
                 {% for producto in productos %}
-                <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio }}">{{ producto.nombre }}</option>
+                <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio_js }}">{{ producto.nombre }}</option>
                 {% endfor %}
               </select>
               <div class="invalid-feedback">Selecciona un producto.</div>
@@ -586,7 +586,7 @@
 
   <!-- ══ TU PROPIO ARCHIVO JAVASCRIPT LIMPIO ══ -->
 
-  <script src="{% static 'js/cliente.js' %}"></script>
+  <script src="{% static 'js/cliente.js' %}?v=2"></script>
 
   <!-- ✅ FASE 5: Polling para actualizar estado de órdenes en tiempo real -->
   <script>

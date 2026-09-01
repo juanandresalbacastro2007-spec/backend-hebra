@@ -81,6 +81,10 @@ function calcularCotizacion() {
 document.getElementById('quotePrenda')?.addEventListener('change', calcularCotizacion);
 document.getElementById('quoteCantidad')?.addEventListener('input', calcularCotizacion);
 
+// ── Modal Nueva Orden: sincronizar precio y subtotal ──────────
+document.getElementById('modalProducto')?.addEventListener('change', actualizarPrecio);
+document.getElementById('modalCantidad')?.addEventListener('input', actualizarSubtotalOrden);
+
 const formCotizacion = document.getElementById('formCotizacion');
 if (formCotizacion) {
   formCotizacion.addEventListener('submit', async function (e) {
@@ -154,16 +158,44 @@ if (formCotizacion) {
 ══════════════════════════════════════════════════════════════ */
 let precioModalOrden = 0;
 
+/**
+ * Parsea data-precio sea cual sea el formato que Django renderice:
+ *   "85000"      → 85000
+ *   "85000.00"   → 85000
+ *   "85.000"     → 85000  (punto como separador de miles)
+ *   "85.000,00"  → 85000  (es-CO)
+ *   "85000,00"   → 85000
+ */
+function parsearPrecio(raw) {
+  if (!raw) return 0;
+  var s = String(raw).trim();
+  if (s.includes('.') && s.includes(',')) {
+    // es-CO: punto=miles, coma=decimal
+    s = s.replace(/\./g, '').replace(',', '.');
+    return Math.round(parseFloat(s)) || 0;
+  }
+  if (s.includes(',')) {
+    // coma como decimal
+    s = s.replace(',', '.');
+    return Math.round(parseFloat(s)) || 0;
+  }
+  // Punto: detectar si es separador de miles (exactamente 3 dígitos al final)
+  if (/\.\d{3}$/.test(s)) {
+    return parseInt(s.replace('.', ''), 10) || 0;
+  }
+  return Math.round(parseFloat(s)) || 0;
+}
+
 function actualizarPrecio() {
   const sel = document.getElementById('modalProducto');
   const dispEl = document.getElementById('modalPrecioDisplay');
   if (!sel) return;
 
   const opcion = sel.options[sel.selectedIndex];
-  precioModalOrden = opcion?.value ? parseFloat(opcion.getAttribute('data-precio')) || 0 : 0;
+  precioModalOrden = opcion?.value ? parsearPrecio(opcion.getAttribute('data-precio')) : 0;
   if (dispEl) {
     dispEl.value = precioModalOrden > 0
-      ? precioModalOrden.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+      ? precioModalOrden.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
       : '';
   }
   actualizarSubtotalOrden();

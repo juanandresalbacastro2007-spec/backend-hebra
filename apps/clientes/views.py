@@ -144,9 +144,15 @@ def cliente_portal(request):
 
     # --------------------------------------------------------
     # PRODUCTOS DISPONIBLES
+    # Se convierte precio a int para que el template lo pase
+    # al JS como número entero limpio (ej: 95000) sin puntos,
+    # comas ni decimales, independiente de USE_L10N del proyecto.
     # --------------------------------------------------------
 
-    productos = Producto.objects.all()
+    productos_qs = Producto.objects.all()
+    for p in productos_qs:
+        p.precio_js = int(p.precio)
+    productos = productos_qs
 
     # --------------------------------------------------------
     # CONTADORES

@@ -176,7 +176,8 @@
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label">Mínimo Definido</label>
-                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" required>
+                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" 
+                required>
               </div>
             </div>
             <div class="row">
@@ -495,12 +496,14 @@
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Mínimo Definido</label>
-              <input type="number" name="minimoDefinido" id="minimoDefinidoInv" class="form-control" value="0" min="0" step="1" required>
+              <input type="number" name="minimoDefinido" id="minimoDefinidoInv" class="form-control" value="0" min="0" step="1" 
+              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
               <div class="invalid-feedback">El mínimo no puede ser negativo.</div>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Stock Actual (Disponible)</label>
-              <input type="number" name="cantidadDisponible" id="cantidadDisponibleInv" class="form-control" value="0" min="0" step="1" required>
+              <input type="number" name="cantidadDisponible" id="cantidadDisponibleInv" class="form-control" value="0" min="0" step="1" 
+              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
               <div class="invalid-feedback" id="feedbackDisponibleInv">El stock actual no puede ser negativo ni menor al mínimo definido.</div>
             </div>
           </div>

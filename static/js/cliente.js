@@ -30,14 +30,16 @@ setInterval(actualizarReloj, 1000);
    2. VALIDACIÓN — MODAL NUEVA ORDEN
 ══════════════════════════════════════════════════════════════ */
 document.querySelectorAll('.needs-validation').forEach(function (form) {
+  // formNuevaOrden y formCotizacion ya tienen su propio manejador de submit
+  // (secciones 3 y 9b más abajo). Si este listener genérico también actúa
+  // sobre ellos, cancela el submit incluso cuando el formulario es válido
+  // y el POST real nunca llega al servidor.
+  if (form.id === 'formNuevaOrden' || form.id === 'formCotizacion') return;
+
   form.addEventListener('submit', function (e) {
     if (!form.checkValidity()) {
       e.preventDefault();
       e.stopPropagation();
-    } else {
-      e.preventDefault();
-      const modal = document.getElementById('newOrderModal');
-      if (modal) bootstrap.Modal.getInstance(modal)?.hide();
     }
     form.classList.add('was-validated');
   });

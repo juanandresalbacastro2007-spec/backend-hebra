@@ -115,7 +115,7 @@ class AsignacionTarea(models.Model):
     )
     idOrden = models.ForeignKey(
         'Orden',
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         db_column='idOrden',
         null=True,
         blank=True,

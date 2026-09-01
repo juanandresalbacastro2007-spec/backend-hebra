@@ -43,6 +43,9 @@ class Proveedor(models.Model):
     class Meta:
         managed = False
         db_table = 'proveedores'
+        constraints = [
+            models.UniqueConstraint(fields=['nit'], name='unique_nit_proveedor'),
+        ]
 
     def __str__(self):
         return self.nombreEmpresa

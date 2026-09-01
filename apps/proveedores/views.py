@@ -34,7 +34,6 @@ def crear_proveedor(request):
 
         try:
             if not form.is_valid():
-                # Igual que en tareas: se arma un solo mensaje con todos los errores
                 errores = '; '.join(
                     f'{error}' for errors in form.errors.values() for error in errors
                 )
@@ -42,6 +41,31 @@ def crear_proveedor(request):
                 return redirect('admin_proveedores')
 
             proveedor = form.save(commit=False)
+
+            # ── Validar duplicados por nombre o NIT ──────────────
+            nombre_existente = Proveedor.objects.filter(
+                nombreEmpresa__iexact=proveedor.nombreEmpresa
+            ).exists()
+            nit_existente = Proveedor.objects.filter(nit=proveedor.nit).exists()
+
+            if nombre_existente and nit_existente:
+                messages.error(
+                    request,
+                    f'⚠️ Ya existe un proveedor registrado con el nombre "{proveedor.nombreEmpresa}" y el NIT {proveedor.nit}.'
+                )
+                return redirect('admin_proveedores')
+            elif nombre_existente:
+                messages.error(
+                    request,
+                    f'⚠️ Ya existe un proveedor registrado con el nombre "{proveedor.nombreEmpresa}".'
+                )
+                return redirect('admin_proveedores')
+            elif nit_existente:
+                messages.error(
+                    request,
+                    f'⚠️ Ya existe un proveedor registrado con el NIT {proveedor.nit}.'
+                )
+                return redirect('admin_proveedores')
 
             # ID del usuario logueado (sesión manual, no auth de Django)
             usuario_id = request.session.get('usuario_id')
@@ -56,7 +80,6 @@ def crear_proveedor(request):
             return redirect('admin_proveedores')
 
     return redirect('admin_proveedores')
-
 
 @admin_required
 def editar_proveedor(request, id):

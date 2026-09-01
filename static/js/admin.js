@@ -103,3 +103,51 @@ function formatearMiles(input) {
     input.setCustomValidity("El costo debe ser mayor a 0");
   }
 }
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar, aside, .app-sidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('open');
+  } else {
+    alert("Error: No se encontró ningún elemento de menú lateral en el HTML.");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const formPerfil = document.getElementById("formEditarPerfil");
+  const alertBox = document.getElementById("perfilAlert");
+
+  if (formPerfil) {
+    formPerfil.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      fetch(this.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': token
+        },
+        body: formData
+      })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Error al actualizar la información.");
+        }
+        return data;
+      })
+      .then(data => {
+        window.location.reload();
+      })
+      .catch(err => {
+        console.error("Detalle del error:", err);
+        if (alertBox) {
+          alertBox.classList.remove("d-none");
+          alertBox.innerText = err.message;
+        }
+      });
+    });
+  }
+});

@@ -1066,29 +1066,43 @@ def eliminar_inventario(request, pk):
 @admin_required
 @require_POST
 def editar_perfil(request):
-    try:
-        usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+    if request.method == 'POST':
+        try:
+            usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
 
-        nombre = request.POST.get('nombre', '').strip()
-        apellido = request.POST.get('apellido', '').strip()
-        correo = request.POST.get('email', '').strip()
-        telefono = request.POST.get('telefono', '').strip()
-        pass1 = request.POST.get('password1', '').strip()
+            nombre = request.POST.get('nombre', '').strip()
+            apellido = request.POST.get('apellido', '').strip()
+            correo = request.POST.get('email', '').strip()
+            telefono = request.POST.get('telefono', '').strip()
+            pass1 = request.POST.get('password1', '').strip()
+            foto = request.FILES.get('foto')
 
-        if nombre:
+            # Validar campos obligatorios
+            if not correo or not nombre:
+                return JsonResponse({'success': False, 'message': 'Nombre y Correo electrónico son obligatorios.'}, status=400)
+
+            # Actualizar datos
             usuario.nombre = nombre
-        if apellido:
             usuario.apellido = apellido
-        if correo:
             usuario.correoElectronico = correo
-        usuario.telefono = telefono or None
+            usuario.telefono = telefono or None
 
-        if pass1:
-            usuario.contrasena = make_password(pass1)
+            # Actualizar foto si la subieron
+            if foto:
+                usuario.foto = foto
 
-        usuario.save()
-        messages.success(request, "Perfil actualizado correctamente.")
-    except Exception as e:
-        messages.error(request, f"Error al actualizar el perfil: {str(e)}")
+            # Actualizar contraseña si la ingresaron
+            if pass1:
+                usuario.contrasena = make_password(pass1)
 
-    return redirect('admin_portal')
+            usuario.save()
+
+            # Actualizar datos de la sesión si guardas el nombre o correo ahí
+            request.session['usuario_nombre'] = usuario.nombre
+
+            return JsonResponse({'success': True, 'message': 'Perfil actualizado correctamente.'})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f"Error al actualizar: {str(e)}"}, status=500)
+
+    return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)

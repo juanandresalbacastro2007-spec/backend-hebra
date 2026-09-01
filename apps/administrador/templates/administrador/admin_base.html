@@ -100,102 +100,127 @@
     </header>
 
     <!-- Contenido Principal -->
+        <!-- Contenido Principal -->
     <div class="content-wrap">
+
+      <!-- 🔔 Mensajes flash de Django (visible en TODAS las páginas de admin) -->
+      {% if messages %}
+        <div class="messages-wrapper mb-3">
+          {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+              {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+              {% elif message.tags == 'error' or message.tags == 'danger' %}
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+              {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+              {% else %}  
+                <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+              {% endif %}
+              <div>{{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       {% block contenido %}{% endblock %}
     </div>
   </div>
 
-  <!-- ══ MODAL EDITAR PERFIL ══ -->
-  <div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content perfil-modal-content">
+ <!-- ══ MODAL EDITAR PERFIL ══ -->
+<div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content perfil-modal-content">
 
-        <!-- Cabecera del Modal -->
-        <div class="perfil-modal-header">
-          <button type="button" class="btn-close btn-close-white perfil-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-          
-          <!-- Contenedor del Avatar + Botón Flotante para Subir Imagen -->
-          <div class="perfil-avatar-wrapper">
-            <div class="perfil-avatar-grande" id="perfilAvatarPreview">
-              {% if usuario.foto %}
-                <img src="{{ usuario.foto.url }}" alt="Foto de perfil">
-              {% else %}
-                {{ usuario.nombre|first|upper }}
-              {% endif %}
-            </div>
-            <label for="perfilFoto" class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
-              <i class="bi bi-camera-fill"></i>
-            </label>
+      <!-- Cabecera del Modal -->
+      <div class="perfil-modal-header">
+        <button type="button" class="btn-close btn-close-white perfil-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        
+        <!-- Contenedor del Avatar + Botón Flotante para Subir Imagen -->
+        <div class="perfil-avatar-wrapper">
+          <div class="perfil-avatar-grande" id="perfilAvatarPreview">
+            {% if usuario.foto %}
+              <img src="{{ usuario.foto.url }}" alt="Foto de perfil">
+            {% else %}
+              {{ usuario.nombre|first|upper }}
+            {% endif %}
           </div>
-
-          <h5 class="perfil-modal-title">Editar perfil</h5>
-          <p class="perfil-modal-sub">Actualizá tu información personal</p>
+          <label for="perfilFoto" class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
+            <i class="bi bi-camera-fill"></i>
+          </label>
         </div>
 
-        <!-- Formulario (con multipart/form-data para enviar archivos) -->
-        <form id="formEditarPerfil" class="perfil-modal-body" novalidate enctype="multipart/form-data">
-          {% csrf_token %}
-
-          <!-- Input File Oculto -->
-          <input type="file" id="perfilFoto" name="foto" accept="image/png, image/jpeg, image/webp" class="d-none">
-
-          <!-- Caja de Alertas JS -->
-          <div class="perfil-alert" id="perfilAlert"></div>
-
-          <!-- Campos de Texto -->
-          <div class="perfil-field">
-            <label for="perfilNombre"><i class="bi bi-person-fill"></i> Nombre</label>
-            <input type="text" class="form-control" id="perfilNombre" name="nombre" value="{{ usuario.nombre }}" required>
-          </div>
-
-          <div class="perfil-field">
-            <label for="perfilApellido"><i class="bi bi-person-fill"></i> Apellido</label>
-            <input type="text" class="form-control" id="perfilApellido" name="apellido" value="{{ usuario.apellido }}" required>
-          </div>
-
-          <div class="perfil-field">
-            <label for="perfilEmail"><i class="bi bi-envelope-fill"></i> Correo electrónico</label>
-            <input type="email" class="form-control" id="perfilEmail" name="email" value="{{ usuario.email }}" required>
-          </div>
-
-          <div class="perfil-field">
-            <label for="perfilTelefono"><i class="bi bi-telephone-fill"></i> Teléfono</label>
-            <input type="text" class="form-control" id="perfilTelefono" name="telefono" value="{{ usuario.telefono|default:'' }}">
-          </div>
-
-          <!-- Cambio de Contraseña -->
-          <hr class="perfil-divider">
-          <p class="perfil-section-label"><i class="bi bi-shield-lock-fill"></i> Cambiar contraseña <span>(opcional)</span></p>
-
-          <div class="perfil-field">
-            <label for="perfilPassword1">Nueva contraseña</label>
-            <div class="perfil-input-icon">
-              <input type="password" class="form-control" id="perfilPassword1" name="password1" placeholder="Dejar en blanco para no cambiar">
-              <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword1"></i>
-            </div>
-          </div>
-
-          <div class="perfil-field">
-            <label for="perfilPassword2">Confirmar nueva contraseña</label>
-            <div class="perfil-input-icon">
-              <input type="password" class="form-control" id="perfilPassword2" name="password2" placeholder="Repetir contraseña">
-              <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword2"></i>
-            </div>
-          </div>
-
-          <!-- Botones de Acción -->
-          <div class="perfil-modal-footer">
-            <button type="button" class="btn btn-perfil-cancelar" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-perfil-guardar" id="btnGuardarPerfil">
-              <span class="btn-text">Guardar cambios</span>
-              <span class="spinner-border spinner-border-sm d-none" id="spinnerGuardar"></span>
-            </button>
-          </div>
-        </form>
-
+        <h5 class="perfil-modal-title">Editar perfil</h5>
+        <p class="perfil-modal-sub">Actualiza tu información personal</p>
       </div>
+
+      <!-- Formulario corregido con action y method -->
+      <form id="formEditarPerfil" action="{% url 'editar_perfil' %}" method="POST" class="perfil-modal-body" novalidate enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Input File Oculto -->
+        <input type="file" id="perfilFoto" name="foto" accept="image/png, image/jpeg, image/webp" class="d-none">
+
+        <!-- Caja de Alertas JS -->
+        <div class="perfil-alert d-none" id="perfilAlert"></div>
+
+        <!-- Campos de Texto -->
+        <div class="perfil-field">
+          <label for="perfilNombre"><i class="bi bi-person-fill"></i> Nombre</label>
+          <input type="text" class="form-control" id="perfilNombre" name="nombre" value="{{ usuario.nombre }}" required>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilApellido"><i class="bi bi-person-fill"></i> Apellido</label>
+          <input type="text" class="form-control" id="perfilApellido" name="apellido" value="{{ usuario.apellido }}" required>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilEmail"><i class="bi bi-envelope-fill"></i> Correo electrónico</label>
+          <input type="email" class="form-control" id="perfilEmail" name="email" value="{{ usuario.correoElectronico|default:'' }}" required>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilTelefono"><i class="bi bi-telephone-fill"></i> Teléfono</label>
+          <input type="text" class="form-control" id="perfilTelefono" name="telefono" value="{{ usuario.telefono|default:'' }}">
+        </div>
+
+        <!-- Cambio de Contraseña -->
+        <hr class="perfil-divider">
+        <p class="perfil-section-label"><i class="bi bi-shield-lock-fill"></i> Cambiar contraseña <span>(opcional)</span></p>
+
+        <div class="perfil-field">
+          <label for="perfilPassword1">Nueva contraseña</label>
+          <div class="perfil-input-icon">
+            <input type="password" class="form-control" id="perfilPassword1" name="password1" placeholder="Dejar en blanco para no cambiar">
+            <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword1"></i>
+          </div>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilPassword2">Confirmar nueva contraseña</label>
+          <div class="perfil-input-icon">
+            <input type="password" class="form-control" id="perfilPassword2" name="password2" placeholder="Repetir contraseña">
+            <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword2"></i>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="perfil-modal-footer">
+          <button type="button" class="btn btn-perfil-cancelar" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-perfil-guardar" id="btnGuardarPerfil">
+            <span class="btn-text">Guardar cambios</span>
+            <span class="spinner-border spinner-border-sm d-none" id="spinnerGuardar"></span>
+          </button>
+        </div>
+      </form>
+
     </div>
   </div>
+</div>
+
+
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -215,14 +240,36 @@ function toggleSidebar() {
   }
 }
 
-document.addEventListener('click', function(event) {
-  const sidebar = document.querySelector('.sidebar');
-  const toggleBtn = document.querySelector('.sidebar-toggle');
-  
-  if (sidebar && sidebar.classList.contains('open')) {
-    if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
-      sidebar.classList.remove('open');
-    }
+// static/js/perfil.js
+
+document.addEventListener("DOMContentLoaded", function () {
+  const formPerfil = document.querySelector("#modalEditarPerfil form");
+
+  if (formPerfil) {
+    formPerfil.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      fetch(this.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': token
+        },
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Error en el servidor");
+        return res.json();
+      })
+      .then(data => {
+        window.location.reload();
+      })
+      .catch(err => {
+        console.error("Detalle del error:", err);
+      });
+    });
   }
 });
 </script>

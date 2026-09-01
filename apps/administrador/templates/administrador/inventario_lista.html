@@ -100,8 +100,17 @@
           </td>
           <td class="text-center">{{ item.minimoDefinido }}</td>
           <td class="text-center">
-            <span class="badge-ht {% if item.cantidadDisponible <= item.minimoDefinido %}badge-warning{% else %}badge-info{% endif %}">
-              {{ item.nivelStock|default:"Normal" }}
+            <span class="badge-ht
+              {% if item.nivelStock == 3 %}badge-success
+              {% elif item.nivelStock == 2 %}badge-info
+              {% elif item.nivelStock == 1 %}badge-warning
+              {% elif item.nivelStock == 0 %}badge-danger
+              {% else %}badge-info{% endif %}">
+              {% if item.nivelStock == 3 %}Alto
+              {% elif item.nivelStock == 2 %}Normal
+              {% elif item.nivelStock == 1 %}Bajo
+              {% elif item.nivelStock == 0 %}Crítico
+              {% else %}Sin definir{% endif %}
             </span>
           </td>
           <td class="text-center">{{ item.unidades }}</td>
@@ -175,10 +184,10 @@
                 <label class="form-label">Nivel de Stock</label>
                 <select name="nivelStock" class="form-select">
                   <option value="">-- Seleccionar --</option>
-                  <option value="Alto" {% if item.nivelStock == "Alto" %}selected{% endif %}>Alto</option>
-                  <option value="Normal" {% if item.nivelStock == "Normal" %}selected{% endif %}>Normal</option>
-                  <option value="Bajo" {% if item.nivelStock == "Bajo" %}selected{% endif %}>Bajo</option>
-                  <option value="Crítico" {% if item.nivelStock == "Crítico" %}selected{% endif %}>Crítico</option>
+                  <option value="3" {% if item.nivelStock == 3 %}selected{% endif %}>Alto</option>
+                  <option value="2" {% if item.nivelStock == 2 %}selected{% endif %}>Normal</option>
+                  <option value="1" {% if item.nivelStock == 1 %}selected{% endif %}>Bajo</option>
+                  <option value="0" {% if item.nivelStock == 0 %}selected{% endif %}>Crítico</option>
                 </select>
               </div>
               <div class="col-6 mb-3">
@@ -196,17 +205,21 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Ubicación</label>
-              <select name="ubicacion" class="form-select">
+              <select name="ubicacion" class="form-select ubicacion-select" data-target="ubicacionOtroWrap{{ item.idInventario }}">
                 <option value="">-- Seleccionar --</option>
                 <option value="Bodega Principal" {% if item.ubicacion == "Bodega Principal" %}selected{% endif %}>Bodega Principal</option>
                 <option value="Bodega Secundaria" {% if item.ubicacion == "Bodega Secundaria" %}selected{% endif %}>Bodega Secundaria</option>
                 <option value="Bodega Formal" {% if item.ubicacion == "Bodega Formal" %}selected{% endif %}>Bodega Formal</option>
                 <option value="Área de Producción" {% if item.ubicacion == "Área de Producción" %}selected{% endif %}>Área de Producción</option>
                 <option value="Área de Despacho" {% if item.ubicacion == "Área de Despacho" %}selected{% endif %}>Área de Despacho</option>
+                <option value="otro" {% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}selected{% endif %}>Otro (especificar)</option>
               </select>
-
-
-
+            </div>
+            <div class="mb-3 {% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}{% else %}d-none{% endif %}" id="ubicacionOtroWrap{{ item.idInventario }}">
+              <label class="form-label">Especifica la ubicación</label>
+              <input type="text" name="ubicacion_personalizada" class="form-control"
+                     placeholder="Ej: Bodega Norte"
+                     value="{% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}{{ item.ubicacion }}{% endif %}">
             </div>
 
             <!-- INGRESADO / EGRESADO: no se muestran al editar, se definen solo al crear el registro -->
@@ -497,10 +510,10 @@
               <label class="form-label">Nivel de Stock</label>
               <select name="nivelStock" class="form-select">
                 <option value="">-- Seleccionar --</option>
-                <option value="Alto">Alto</option>
-                <option value="Normal" selected>Normal</option>
-                <option value="Bajo">Bajo</option>
-                <option value="Crítico">Crítico</option>
+                <option value="3">Alto</option>
+                <option value="2" selected>Normal</option>
+                <option value="1">Bajo</option>
+                <option value="0">Crítico</option>
               </select>
             </div>
             <div class="col-6 mb-3">
@@ -517,14 +530,19 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Ubicación</label>
-            <select name="ubicacion" class="form-select">
+            <select name="ubicacion" class="form-select ubicacion-select" data-target="ubicacionOtroWrapCrear">
               <option value="">-- Seleccionar --</option>
               <option value="Bodega Principal">Bodega Principal</option>
               <option value="Bodega Secundaria">Bodega Secundaria</option>
               <option value="Bodega Formal">Bodega Formal</option>
               <option value="Área de Producción">Área de Producción</option>
               <option value="Área de Despacho">Área de Despacho</option>
+              <option value="otro">Otro (especificar)</option>
             </select>
+          </div>
+          <div class="mb-3 d-none" id="ubicacionOtroWrapCrear">
+            <label class="form-label">Especifica la ubicación</label>
+            <input type="text" name="ubicacion_personalizada" class="form-control" placeholder="Ej: Bodega Norte">
           </div>
 
           <div class="mb-3">
@@ -652,6 +670,30 @@
 
     bloquearFechasPasadas();
     document.body.addEventListener('shown.bs.modal', bloquearFechasPasadas);
+
+    // --- MOSTRAR/OCULTAR CAMPO "OTRO" EN UBICACIÓN ---
+    function togglaUbicacionOtro(select) {
+      const wrap = document.getElementById(select.dataset.target);
+      if (!wrap) return;
+      const input = wrap.querySelector('input[name="ubicacion_personalizada"]');
+      if (select.value === 'otro') {
+        wrap.classList.remove('d-none');
+        if (input) input.setAttribute('required', 'required');
+      } else {
+        wrap.classList.add('d-none');
+        if (input) {
+          input.removeAttribute('required');
+          input.value = '';
+        }
+      }
+    }
+
+    document.querySelectorAll('.ubicacion-select').forEach(function (select) {
+      togglaUbicacionOtro(select); // estado inicial (útil al editar un registro con ubicación personalizada)
+      select.addEventListener('change', function () {
+        togglaUbicacionOtro(select);
+      });
+    });
 
     // --- VALIDACIÓN ESPECÍFICA: FORMULARIO CREAR INVENTARIO ---
     const formCrearInventario = document.getElementById('formCrearInventario');

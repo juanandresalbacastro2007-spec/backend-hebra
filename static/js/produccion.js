@@ -1,5 +1,6 @@
 // ── CONFIGURACIÓN Y VARIABLES GLOBALES ────────────
 const BASE = '/produccion';
+const HOY_ISO = new Date().toISOString().slice(0, 10); // fecha de hoy en formato YYYY-MM-DD, piso para los date pickers
 let allProductos = [];
 let allOrdenes = [];
 let allOperariosAvance = [];
@@ -18,6 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarProductos();
   cargarOrdenes();
   cargarAvanceOperarios();
+
+  // Fechas de la orden: por defecto (modal recién cargado / "Nueva Orden") no se puede
+  // seleccionar nada anterior a hoy.
+  const inputInicioInit = document.getElementById('o-fecha-inicio');
+  const inputFinInit = document.getElementById('o-fecha-fin');
+  if (inputInicioInit) inputInicioInit.min = HOY_ISO;
+  if (inputFinInit) inputFinInit.min = HOY_ISO;
 
   // Cerrar modales haciendo click fuera de la caja
   const modalProducto = document.getElementById('modal-producto');
@@ -146,7 +154,23 @@ function actualizarMinFechaFin() {
   const inicio = document.getElementById('o-fecha-inicio');
   const fin = document.getElementById('o-fecha-fin');
   if (!inicio || !fin) return;
-  if (inicio.value) fin.min = inicio.value;
+  // El mínimo de "fin" nunca puede quedar por debajo de hoy, aunque el usuario
+  // intente forzar una fecha de inicio anterior manipulando el DOM.
+  const piso = inicio.value && inicio.value > HOY_ISO ? inicio.value : HOY_ISO;
+  fin.min = piso;
+  if (fin.value && fin.value < piso) fin.value = piso;
+}
+
+// Ajusta los mínimos de "Fecha Inicio" y "Fecha Fin" al abrir el modal, tanto para
+// crear como para editar: el mínimo siempre es HOY, sin excepciones (aunque la
+// orden ya tuviera una fecha pasada registrada).
+function ajustarMinFechasOrden(fechaInicioExistente, fechaFinExistente) {
+  const inicio = document.getElementById('o-fecha-inicio');
+  const fin = document.getElementById('o-fecha-fin');
+  if (!inicio || !fin) return;
+
+  inicio.min = HOY_ISO;
+  fin.min = (fechaInicioExistente && fechaInicioExistente > HOY_ISO) ? fechaInicioExistente : HOY_ISO;
 }
 
 // ── Contador de caracteres (se inyecta debajo del textarea, no requiere tocar el HTML) ──
@@ -713,6 +737,13 @@ function cerrarModalOrden() {
   document.getElementById('modal-orden').classList.remove('open');
   document.getElementById('modal-orden').style.display = 'none';
   modalOrdenDirty = false;
+
+  // Restablece los mínimos de fecha a "hoy" para la próxima vez que se abra el
+  // modal para una orden nueva (si venían ajustados por edición de una orden histórica).
+  const inicio = document.getElementById('o-fecha-inicio');
+  const fin = document.getElementById('o-fecha-fin');
+  if (inicio) inicio.min = HOY_ISO;
+  if (fin) fin.min = HOY_ISO;
 }
 
 function editarOrden(id) {
@@ -732,7 +763,7 @@ function editarOrden(id) {
   document.getElementById('modal-orden').classList.add('open');
   document.getElementById('modal-orden').style.display = 'flex';
   modalOrdenDirty = false;
-  actualizarMinFechaFin();
+  ajustarMinFechasOrden(o.fechaInicio, o.fechaEstimadaFin);
   enfocarPrimerCampo('o-producto');
 }
 
@@ -771,7 +802,19 @@ async function guardarOrden() {
     if (err) err.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
   }
 
-  if (!okProducto || !okCantidad || !okInicio || !okFin || !okEstado || !okRangoFechas) {
+  // Validación adicional: ninguna de las dos fechas puede quedar en el pasado
+  // respecto a hoy, ya sea creando o editando una orden.
+  let okFechasFuturas = true;
+  if (okInicio && data.fechaInicio < HOY_ISO) {
+    okFechasFuturas = validarCampo('o-fecha-inicio', false);
+    const err = document.getElementById('err-o-fecha-inicio');
+    if (err) err.textContent = 'La fecha de inicio no puede ser anterior a hoy.';
+  }
+  if (okFin && data.fechaEstimadaFin < HOY_ISO) {
+    okFechasFuturas = validarCampo('o-fecha-fin', false) && okFechasFuturas;
+  }
+
+  if (!okProducto || !okCantidad || !okInicio || !okFin || !okEstado || !okRangoFechas || !okFechasFuturas) {
     showToast('Por favor, completa los campos obligatorios (*)', 'error');
     return;
   }

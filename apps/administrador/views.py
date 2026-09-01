@@ -29,6 +29,19 @@ from apps.core.decorators import login_required_rol
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 
 
+# ── Ubicaciones predefinidas del inventario ─────────────────
+# Usadas tanto para validar/generar el <select> como para detectar,
+# en la plantilla, cuándo una ubicación guardada es "personalizada"
+# (es decir, no está en esta lista) y así preseleccionar "Otro".
+UBICACIONES_PREDEFINIDAS = [
+    'Bodega Principal',
+    'Bodega Secundaria',
+    'Bodega Formal',
+    'Área de Producción',
+    'Área de Despacho',
+]
+
+
 # ── Portal principal ─────────────────────────────────────────
 @admin_required
 def admin_portal(request):
@@ -774,6 +787,9 @@ def inventario_lista(request):
         'total_materiales': materiales_list.count(),
         'productos_list': productos_list,
         'buscar_filtro': buscar,  # Necesario para mantener el texto en el input
+        # Necesario en la plantilla para detectar si item.ubicacion es
+        # "personalizada" (no está en esta lista) y así preseleccionar "Otro".
+        'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
     }
     return render(request, 'administrador/inventario_lista.html', context)
 
@@ -828,6 +844,19 @@ def eliminar_material(request, pk):
     return redirect('admin_inventario')
 
 
+# ── Helper: resolver ubicación (predefinida u "Otro") ────────
+def _resolver_ubicacion(request):
+    """
+    Si el <select name="ubicacion"> viene con value="otro", usa el texto libre
+    escrito en el input "ubicacion_personalizada". En cualquier otro caso,
+    devuelve tal cual el valor seleccionado (o None si viene vacío).
+    """
+    ubicacion = request.POST.get('ubicacion')
+    if ubicacion == 'otro':
+        ubicacion = (request.POST.get('ubicacion_personalizada') or '').strip() or None
+    return ubicacion or None
+
+
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
 
 @admin_required
@@ -880,7 +909,9 @@ def crear_inventario(request):
             nivel_stock = cant_disponible - min_definido
 
         unidades = request.POST.get('unidades') or 'Unidades'
-        ubicacion = request.POST.get('ubicacion')
+        # Ubicación: puede venir predefinida o, si se eligió "Otro", del
+        # campo de texto libre "ubicacion_personalizada".
+        ubicacion = _resolver_ubicacion(request)
         # Se fuerza a 0: un registro nuevo no debería nacer con egresos
         cant_egresada = 0
         fecha_ingreso = request.POST.get('fechaIngreso') or timezone.now().date()
@@ -966,7 +997,9 @@ def editar_inventario(request, pk):
             item.nivelStock = cant_disponible - min_definido
 
         item.unidades = request.POST.get('unidades')
-        item.ubicacion = request.POST.get('ubicacion')
+        # Ubicación: puede venir predefinida o, si se eligió "Otro", del
+        # campo de texto libre "ubicacion_personalizada".
+        item.ubicacion = _resolver_ubicacion(request)
         item.cantidadIngresada = cant_ingresada
         item.cantidadEgresada = cant_egresada
 

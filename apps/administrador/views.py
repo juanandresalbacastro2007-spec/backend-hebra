@@ -279,6 +279,10 @@ def tarea_asignar(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
     tareas = Tarea.objects.all()
+    # Solo mostramos órdenes que aún tiene sentido producir
+    ordenes = Orden.objects.exclude(estado__in=['Cancelada', 'Entregada']) \
+        .select_related('idCliente') \
+        .order_by('-fechaCreacion')
 
     if request.method == 'POST':
         id_tarea = request.POST.get('tarea')
@@ -286,6 +290,7 @@ def tarea_asignar(request):
         proceso_personalizado = request.POST.get('proceso_personalizado', '').strip()
         # ── Antes: request.POST.get('operario') → ahora: lista de operarios ──
         ids_operarios = request.POST.getlist('operarios')
+        id_orden = request.POST.get('orden')  # 👈 nuevo
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
         fecha_limite = request.POST.get('fechaLimite')
@@ -353,6 +358,15 @@ def tarea_asignar(request):
                 )
                 return redirect('admin_tarea_asignar')
 
+            # ── Resolver orden asociada (opcional) ────────────────
+            orden = None
+            if id_orden:
+                try:
+                    orden = Orden.objects.get(idOrden=id_orden)
+                except Orden.DoesNotExist:
+                    messages.error(request, 'La orden seleccionada no existe.')
+                    return redirect('admin_tarea_asignar')
+
             # ── Convertir cantidad a entero si existe ─────────────
             cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
 
@@ -388,6 +402,7 @@ def tarea_asignar(request):
                 asignacion = AsignacionTarea.objects.create(
                     idTarea=tarea,
                     idOperario=operario,
+                    idOrden=orden,  # 👈 nuevo
                     descripcion=descripcion,
                     fechaInicio=fecha_inicio_dt,
                     fechaLimite=fecha_limite_dt,
@@ -417,6 +432,7 @@ def tarea_asignar(request):
         'usuario': usuario,
         'operarios': operarios,
         'tareas': tareas,
+        'ordenes': ordenes,
         'tiempos_estandar': TIEMPOS_ESTANDAR_MINUTOS,
     })
 
@@ -425,7 +441,7 @@ def tarea_asignar(request):
 def tareas_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     asignaciones = AsignacionTarea.objects.select_related(
-        'idTarea', 'idOperario__idUsuario'
+        'idTarea', 'idOperario__idUsuario', 'idOrden'
     ).order_by('-fechaAsignacion')
 
     buscar_filtro = request.GET.get('buscar', '')
@@ -440,11 +456,17 @@ def tareas_lista(request):
     if estado_filtro:
         asignaciones = asignaciones.filter(estado=estado_filtro)
 
+    # Para poder corregir la orden vinculada desde el modal de editar
+    ordenes = Orden.objects.exclude(estado__in=['Cancelada', 'Entregada']) \
+        .select_related('idCliente') \
+        .order_by('-fechaCreacion')
+
     return render(request, 'administrador/tareas_lista.html', {
         'usuario': usuario,
         'asignaciones': asignaciones,
         'buscar_filtro': buscar_filtro,
         'estado_filtro': estado_filtro,
+        'ordenes': ordenes,
     })
 
 
@@ -461,6 +483,7 @@ def tarea_editar(request, idAsignacion):
         tipo_prenda = request.POST.get('tipoPrenda')
         cantidad_prendas = request.POST.get('cantidadPrendas')
         horas_estimadas = request.POST.get('horas_estimadas')
+        id_orden = request.POST.get('orden')  # 👈 nuevo
 
         try:
             if descripcion is not None:
@@ -485,6 +508,16 @@ def tarea_editar(request, idAsignacion):
             if horas_estimadas and horas_estimadas.strip():
                 asignacion.horasEstimadas = float(horas_estimadas)
             # fechaFinalizacion y horasReales no vienen en este modal: no se tocan.
+
+            # ── Actualizar orden vinculada (opcional) ─────────────
+            if id_orden:
+                try:
+                    asignacion.idOrden = Orden.objects.get(idOrden=id_orden)
+                except Orden.DoesNotExist:
+                    messages.error(request, 'La orden seleccionada no existe.')
+                    return redirect('admin_tareas')
+            else:
+                asignacion.idOrden = None
 
             asignacion.save()
             messages.success(request, f'Asignación #{idAsignacion} actualizada correctamente.')

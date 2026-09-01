@@ -64,6 +64,7 @@
         <tr>
           <th>#</th>
           <th>Tarea</th>
+          <th>Orden</th>
           <th>Operario</th>
           <th>Descripción</th>
           <th>Fecha inicio</th>
@@ -81,6 +82,13 @@
         <tr>
           <td><strong>#{{ asig.idAsignacion }}</strong></td>
           <td><span class="fw-medium">{{ asig.idTarea.nombreTarea }}</span></td>
+          <td>
+            {% if asig.idOrden %}
+              <span class="badge-ht badge-info">#{{ asig.idOrden.idOrden }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="admin-avatar" style="width:26px;height:26px;font-size:0.72rem;">
@@ -185,6 +193,19 @@
                   <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
                     <i class="bi bi-info-circle-fill me-2 fs-6 flex-shrink-0"></i>
                     <span>Modifica el avance o carga laboral. Los cambios se actualizarán en el panel del operario.</span>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-medium small">Orden relacionada <span class="text-muted">(opcional)</span></label>
+                    <select name="orden" class="form-select">
+                      <option value="">Sin orden asociada</option>
+                      {% for orden in ordenes %}
+                      <option value="{{ orden.idOrden }}" {% if asig.idOrden.idOrden == orden.idOrden %}selected{% endif %}>
+                        #{{ orden.idOrden }} — {{ orden.idCliente }} — {{ orden.nombreProducto|default:"Sin producto" }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text small">Corrige la orden vinculada a esta tarea si es necesario.</div>
                   </div>
 
                   <div class="mb-3">

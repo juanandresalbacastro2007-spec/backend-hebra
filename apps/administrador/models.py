@@ -113,6 +113,14 @@ class AsignacionTarea(models.Model):
         on_delete=models.CASCADE,
         db_column='idOperario'
     )
+    idOrden = models.ForeignKey(
+        'Orden',
+        on_delete=models.SET_NULL,
+        db_column='idOrden',
+        null=True,
+        blank=True,
+        related_name='asignaciones'
+    )
     descripcion = models.TextField()
     fechaAsignacion = models.DateField(auto_now_add=True)
     fechaInicio = models.DateField()

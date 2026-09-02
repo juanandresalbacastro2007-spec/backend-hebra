@@ -57,7 +57,6 @@
   <div class="section-card-header d-flex justify-content-between align-items-center">
     <h6 class="mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Registros de Inventario (Productos)</h6>
     <div>
-      <span class="badge-ht badge-info me-2">Total: {{ total_items|default:inventario_list|length }}</span>
       <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
         <i class="bi bi-plus-lg me-1"></i>Nuevo Registro
       </button>
@@ -269,7 +268,6 @@
   <div class="section-card-header d-flex justify-content-between align-items-center">
     <h6 class="mb-0"><i class="bi bi-scissors me-2 text-primary"></i>Control de Materiales (Materias Primas)</h6>
     <div>
-      <span class="badge-ht badge-info me-2">Total: {{ total_materiales|default:materiales_list|length }}</span>
       <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
         <i class="bi bi-plus-lg me-1"></i>Nuevo Material
       </button>

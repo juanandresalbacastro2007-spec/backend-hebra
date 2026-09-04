@@ -30,29 +30,13 @@
           </div>
         </a>
 
-      <!-- KPIs interactivos (solo desktop) -->
-      <div class="ht-kpis-row d-none d-lg-flex">
-        <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ir a Pendientes">
-          <span class="ht-kpi-dot"></span>
-          <span class="ht-kpi-label">Pendientes</span>
-          <strong class="ht-kpi-count" id="kpiCountPending">0</strong>
-        </button>
-        <button class="ht-kpi-chip ht-kpi-chip--progress" id="kpiProgress" title="Ir a En Proceso">
-          <span class="ht-kpi-dot"></span>
-          <span class="ht-kpi-label">En Proceso</span>
-          <strong class="ht-kpi-count" id="kpiCountProgress">0</strong>
-        </button>
-        <button class="ht-kpi-chip ht-kpi-chip--done" id="kpiDone" title="Ir a Completadas">
-          <span class="ht-kpi-dot"></span>
-          <span class="ht-kpi-label">Completadas</span>
-          <strong class="ht-kpi-count" id="kpiCountDone">0</strong>
-        </button>
-        <button class="ht-kpi-chip ht-kpi-chip--incidence" id="kpiIncidence" title="Abrir gestión de incidencias">
-          <span class="ht-kpi-dot"></span>
-          <span class="ht-kpi-label">Incidencias</span>
-          <strong class="ht-kpi-count" id="kpiCountIncidence">0</strong>
-        </button>
-      </div>
+        <div class="ms-auto d-flex align-items-end gap-3 p-3 ">
+          <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm text-muted fw-semibold font-family-200 d-flex align-items-center gap-2">
+            <i class="bi bi-clock text-primary"></i>
+            <span id="clockText">--:--:--</span>
+          </div>
+        </div>
+        
 
       <!-- Acciones -->
       <div class="ht-nav-actions">
@@ -145,6 +129,31 @@
   <div class="ht-controls-bar">
     <div class="ht-controls-inner">
       <!-- Controles derechos -->
+       
+      <!-- KPIs interactivos (solo desktop) -->
+      <div class="ht-kpis-row d-none d-lg-flex">
+        <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ir a Pendientes">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">Pendientes</span>
+          <strong class="ht-kpi-count" id="kpiCountPending">0</strong>
+        </button>
+        <button class="ht-kpi-chip ht-kpi-chip--progress" id="kpiProgress" title="Ir a En Proceso">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">En Proceso</span>
+          <strong class="ht-kpi-count" id="kpiCountProgress">0</strong>
+        </button>
+        <button class="ht-kpi-chip ht-kpi-chip--done" id="kpiDone" title="Ir a Completadas">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">Completadas</span>
+          <strong class="ht-kpi-count" id="kpiCountDone">0</strong>
+        </button>
+        <button class="ht-kpi-chip ht-kpi-chip--incidence" id="kpiIncidence" title="Abrir gestión de incidencias">
+          <span class="ht-kpi-dot"></span>
+          <span class="ht-kpi-label">Incidencias</span>
+          <strong class="ht-kpi-count" id="kpiCountIncidence">0</strong>
+        </button>
+      </div>
+
       <div class="ht-controls-right">
         <button class="ht-btn-toggle" id="btnVerHistorial" title="Ver historial de tareas completadas">
           <i class="bi bi-archive"></i>
@@ -637,5 +646,26 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'js/operario.js' %}"></script>
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Reloj digital en tiempo real para el topbar
+    function updateClock() {
+      const clockElement = document.getElementById('clockText');
+      if (!clockElement) return;
+
+      const now = new Date();
+      const options = { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit', 
+        hour12: true 
+      };
+      clockElement.textContent = now.toLocaleTimeString('es-CO', options);
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  });
+</script>
 </body>
 </html>

@@ -20,12 +20,15 @@
     <div class="ht-navbar-inner">
 
       <!-- Logo -->
-      <a href="{% url 'operarios:tablero' %}" class="ht-brand">
-        <div class="brand-icon">
-          <img src="{% static 'img/logo.png' %}" alt="HebraTech">
-        </div>
-        <span class="ht-brand-name">HebraTech</span>
-      </a>
+        <a href="{% url 'operarios:tablero' %}" class="ht-brand">
+          <div class="brand-icon">
+            <img src="{% static 'img/logo.png' %}" alt="HebraTech">
+          </div>
+          <div class="d-flex flex-column">
+            <span class="brand-title">HebraTech</span>
+            <span class="brand-sub">Operario</span>
+          </div>
+        </a>
 
       <!-- KPIs interactivos (solo desktop) -->
       <div class="ht-kpis-row d-none d-lg-flex">
@@ -121,13 +124,6 @@
                 <span>Editar Perfil</span>
               </a>
             </li>
-            <li>
-              <button class="dropdown-item py-2 px-3 d-flex align-items-center gap-2"
-                      id="btnOpenAllIncidences">
-                <i class="bi bi-shield-exclamation text-muted"></i>
-                <span>Gestión de Incidencias</span>
-              </button>
-            </li>
             <li><hr class="dropdown-divider my-1" style="border-color:var(--border);"></li>
             <li>
               <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-danger"
@@ -174,9 +170,7 @@
           <option value="Terminado">Terminado</option>
           <option value="Planchado">Planchado</option>
         </select>
-        <button class="ht-btn-toggle" id="btnResetFilters" title="Limpiar filtros">
-          <i class="bi bi-funnel-fill"></i>
-        </button>
+        
       </div>
     </div>
   </div>

@@ -5,6 +5,8 @@ from django.shortcuts import render
 import json
 import unicodedata
 from .models import Producto, Produccion
+from .models import Producto, Produccion
+from apps.administrador.models import Orden  
 
 from apps.core.decorators import login_required_rol, login_required_api
 from apps.administrador.models import Usuario
@@ -48,9 +50,18 @@ def producto_to_dict(p):
     }
 
 def produccion_to_dict(o):
+    cliente_nombre = None
+    if o.idOrden:
+        try:
+            orden_comercial = Orden.objects.select_related('idCliente').get(pk=o.idOrden)
+            cliente_nombre = orden_comercial.idCliente.empresa or orden_comercial.idCliente.nombre or None
+        except Orden.DoesNotExist:
+            cliente_nombre = None
+
     return {
         'idProduccion':      o.idProduccion,
         'idOrden':           o.idOrden,
+        'cliente':           cliente_nombre,
         'idProducto':        o.idProducto_id,
         'producto':          o.idProducto.nombre,
         'descripcion':       o.descripcion,
@@ -60,7 +71,6 @@ def produccion_to_dict(o):
         'fechaRealFin':      str(o.fechaRealFin) if o.fechaRealFin else None,
         'estado':            o.estado,
     }
-
 
 # ── PRODUCTOS ────────────────────────────────────────
 @admin_required_api
@@ -142,37 +152,29 @@ def producto_detalle(request, id):
 @admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
+@csrf_exempt # o con el decorador que estés usando
 def ordenes(request):
     if request.method == 'GET':
+        # QUITAR 'idOrden__idCliente' de select_related, solo dejamos 'idProducto'
         lista = Produccion.objects.select_related('idProducto').all()
-        return JsonResponse([produccion_to_dict(o) for o in lista], safe=False)
+        data = [produccion_to_dict(o) for o in lista]
+        return JsonResponse(data, safe=False)
 
-    data = json.loads(request.body)
-
-    activo = Produccion.objects.filter(
-        idProducto_id=data['idProducto'],
-        estado__in=['Pendiente', 'En Progreso']
-    ).exists()
-    if activo:
-        try:
-            nombre_prod = Producto.objects.get(pk=data['idProducto']).nombre
-        except Producto.DoesNotExist:
-            nombre_prod = 'Este producto'
-        return JsonResponse(
-            {'error': f'"{nombre_prod}" ya tiene otra tarea/orden activa. No se puede asignar otra hasta completarla.'},
-            status=400
+    elif request.method == 'POST':
+        data = json.loads(request.body)
+        
+        # idOrden se pasa tal cual como entero (sin _id)
+        o = Produccion.objects.create(
+            idOrden           = data.get('idOrden'),
+            idProducto_id     = data.get('idProducto'),
+            descripcion       = data.get('descripcion', ''),
+            cantidadRequerida = data.get('cantidadRequerida', 0),
+            fechaInicio       = data.get('fechaInicio'),
+            fechaEstimadaFin  = data.get('fechaEstimadaFin'),
+            costoEstimado     = data.get('costoEstimado'),
+            estado            = data.get('estado', 'Pendiente')
         )
-
-    o = Produccion.objects.create(
-        idOrden           = data.get('idOrden'),
-        idProducto_id     = data['idProducto'],
-        descripcion       = data['descripcion'],
-        cantidadRequerida = data['cantidadRequerida'],
-        fechaInicio       = data['fechaInicio'],
-        fechaEstimadaFin  = data['fechaEstimadaFin'],
-        estado            = data.get('estado', 'Pendiente'),
-    )
-    return JsonResponse(produccion_to_dict(o), status=201)
+        return JsonResponse(produccion_to_dict(o), status=201)
 
 
 @admin_required_api
@@ -180,6 +182,7 @@ def ordenes(request):
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def orden_detalle(request, id):
     try:
+        # Se elimina 'idOrden__idCliente' de select_related porque idOrden es un IntegerField y no una ForeignKey
         o = Produccion.objects.select_related('idProducto').get(pk=id)
     except Produccion.DoesNotExist:
         return JsonResponse({'error': 'Producción no encontrada'}, status=404)
@@ -202,8 +205,12 @@ def orden_detalle(request, id):
                     status=400
                 )
 
-        for campo in ['idOrden', 'descripcion', 'cantidadRequerida',
-                      'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin', 'estado']:
+        # Se asigna idOrden directamente como entero (sin _id)
+        if 'idOrden' in data:
+            o.idOrden = data['idOrden']
+
+        for campo in ['descripcion', 'cantidadRequerida',
+                    'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin', 'estado']:
             if campo in data:
                 setattr(o, campo, data[campo])
         o.save()

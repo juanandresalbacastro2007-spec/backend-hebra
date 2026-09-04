@@ -411,13 +411,12 @@ async function cargarOrdenes() {
     console.error('Error cargando órdenes:', e);
   }
 }
-
 function renderOrdenes(lista) {
   const tb = document.getElementById('tbody-ordenes');
   if (!tb) return;
 
   if (!lista.length) {
-    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px">No hay órdenes registradas</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px">No hay órdenes registradas</td></tr>`;
     return;
   }
 
@@ -426,6 +425,7 @@ function renderOrdenes(lista) {
     return `
       <tr>
         <td><strong>${o.idProduccion}</strong></td>
+        <td>${o.cliente || '—'}</td>
         <td>${o.producto || 'Sin producto'}</td>
         <td>${o.descripcion || '—'}</td>
         <td style="text-align:center">${o.cantidadRequerida}</td>
@@ -440,7 +440,6 @@ function renderOrdenes(lista) {
       </tr>`;
   }).join('');
 }
-
 function filtrarOrdenes() {
   const q = document.getElementById('search-ordenes').value.toLowerCase();
   const st = document.getElementById('filter-estado-ord').value;

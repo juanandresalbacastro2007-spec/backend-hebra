@@ -1,4 +1,6 @@
 from django.db import models
+from django_fsm import FSMField, transition
+from simple_history.models import HistoricalRecords
 
 
 class Producto(models.Model):
@@ -34,21 +36,33 @@ class Produccion(models.Model):
 
     idProduccion      = models.AutoField(primary_key=True)
     idOrden           = models.IntegerField(null=True, blank=True, db_column='idOrden')
-    idProducto        = models.ForeignKey(
-        Producto,
-        on_delete=models.CASCADE,
-        db_column='idProducto',
-    )
+    idProducto        = models.ForeignKey(Producto, on_delete=models.CASCADE, db_column='idProducto')
     descripcion       = models.CharField(max_length=255)
     cantidadRequerida = models.IntegerField()
     fechaInicio       = models.DateField()
     fechaEstimadaFin  = models.DateField()
     fechaRealFin      = models.DateField(null=True, blank=True)
-    estado            = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
+    estado            = FSMField(default='Pendiente', choices=ESTADO_CHOICES)
+
+    history = HistoricalRecords()   # tabla nueva propia, no toca 'produccion'
 
     class Meta:
         db_table = 'produccion'
         managed  = False
 
-    def __str__(self):
-        return f'Orden #{self.idProduccion} — {self.idProducto.nombre}'
+    # ── Transiciones válidas ──────────────────────────
+    @transition(field=estado, source='Pendiente', target='En Progreso')
+    def iniciar(self):
+        pass
+
+    @transition(field=estado, source='En Progreso', target='Completado')
+    def completar(self):
+        pass
+
+    @transition(field=estado, source=['Pendiente', 'En Progreso'], target='Detenido')
+    def detener(self):
+        pass
+
+    @transition(field=estado, source='Detenido', target='En Progreso')
+    def reanudar(self):
+        pass

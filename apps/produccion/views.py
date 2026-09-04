@@ -1,45 +1,42 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.shortcuts import render
 import json
 import unicodedata
-from .models import Producto, Produccion
-from .models import Producto, Produccion
-from apps.administrador.models import Orden  
 
-from apps.core.decorators import login_required_rol, login_required_api
-from apps.administrador.models import Usuario
-from apps.operarios.models import Operario, AsignacionTarea
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django_fsm import TransitionNotAllowed, can_proceed
 
-# ── Decoradores de protección (solo administrador) ──────────────────
+from apps.administrador.models import Orden, Usuario
+from apps.core.decorators import login_required_api, login_required_rol
+from apps.operarios.models import AsignacionTarea, Operario
+
+from .models import Producto, Produccion
+from .services import sincronizar_estado_cliente
+
+# ── DECORADORES DE PROTECCIÓN ─────────────────────────────────────────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
 
+# ── MAPA DE TRANSICIONES FSM ──────────────────────────────────────────
+TRANSICIONES = {
+    'En Progreso': 'iniciar',
+    'Completado':  'completar',
+    'Detenido':    'detener',
+}
 
+
+# ── UTILIDADES DE NORMALIZACIÓN Y SERIALIZACIÓN ──────────────────────
 def _normalizar(texto):
     """
     Normaliza un texto para comparar nombres de forma robusta:
     quita espacios extra, pasa a minúsculas y elimina tildes/acentos.
-    Así "Camiseta Básica" y "camiseta basica" se detectan como el mismo nombre.
     """
     texto = (texto or '').strip().lower()
     texto = unicodedata.normalize('NFKD', texto)
-    texto = ''.join(c for c in texto if not unicodedata.combining(c))
-    return texto
+    return ''.join(c for c in texto if not unicodedata.combining(c))
 
 
-# ── PORTAL (Template HTML) ───────────────────────────
-@admin_required
-def produccion_portal(request):
-    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    return render(request, 'produccion/produccion_portal.html', {
-        'usuario': usuario,
-        'seccion_activa': 'produccion',
-    })
-
-
-# ── UTILIDADES ───────────────────────────────────────
 def producto_to_dict(p):
     return {
         'idProducto':  p.idProducto,
@@ -48,6 +45,7 @@ def producto_to_dict(p):
         'precio':      float(p.precio),
         'categoria':   p.categoria,
     }
+
 
 def produccion_to_dict(o):
     cliente_nombre = None
@@ -59,20 +57,31 @@ def produccion_to_dict(o):
             cliente_nombre = None
 
     return {
-        'idProduccion':      o.idProduccion,
-        'idOrden':           o.idOrden,
-        'cliente':           cliente_nombre,
-        'idProducto':        o.idProducto_id,
-        'producto':          o.idProducto.nombre,
-        'descripcion':       o.descripcion,
+        'idProduccion':     o.idProduccion,
+        'idOrden':          o.idOrden,
+        'cliente':          cliente_nombre,
+        'idProducto':       o.idProducto_id,
+        'producto':         o.idProducto.nombre,
+        'descripcion':      o.descripcion,
         'cantidadRequerida': o.cantidadRequerida,
-        'fechaInicio':       str(o.fechaInicio),
-        'fechaEstimadaFin':  str(o.fechaEstimadaFin),
-        'fechaRealFin':      str(o.fechaRealFin) if o.fechaRealFin else None,
-        'estado':            o.estado,
+        'fechaInicio':      str(o.fechaInicio),
+        'fechaEstimadaFin': str(o.fechaEstimadaFin),
+        'fechaRealFin':     str(o.fechaRealFin) if o.fechaRealFin else None,
+        'estado':           o.estado,
     }
 
-# ── PRODUCTOS ────────────────────────────────────────
+
+# ── PORTAL (Vistas HTML) ──────────────────────────────────────────────
+@admin_required
+def produccion_portal(request):
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+    return render(request, 'produccion/produccion_portal.html', {
+        'usuario': usuario,
+        'seccion_activa': 'produccion',
+    })
+
+
+# ── ENDPOINTS DE PRODUCTOS ────────────────────────────────────────────
 @admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
@@ -81,9 +90,12 @@ def productos(request):
         lista = list(Producto.objects.all())
         return JsonResponse([producto_to_dict(p) for p in lista], safe=False)
 
-    data = json.loads(request.body)
-    nombre = (data.get('nombre') or '').strip()
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
 
+    nombre = (data.get('nombre') or '').strip()
     if not nombre:
         return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
 
@@ -99,10 +111,10 @@ def productos(request):
         )
 
     p = Producto.objects.create(
-        nombre      = nombre,
-        descripcion = data.get('descripcion', ''),
-        precio      = data.get('precio', 0),
-        categoria   = data['categoria'],
+        nombre=nombre,
+        descripcion=data.get('descripcion', ''),
+        precio=data.get('precio', 0),
+        categoria=data.get('categoria', ''),
     )
     return JsonResponse(producto_to_dict(p), status=201)
 
@@ -120,12 +132,16 @@ def producto_detalle(request, id):
         return JsonResponse(producto_to_dict(p))
 
     if request.method == 'PUT':
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
 
         if 'nombre' in data:
             nuevo_nombre = (data['nombre'] or '').strip()
             if not nuevo_nombre:
                 return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
+
             nuevo_normalizado = _normalizar(nuevo_nombre)
             duplicado = any(
                 _normalizar(otro_nombre) == nuevo_normalizado
@@ -144,37 +160,37 @@ def producto_detalle(request, id):
         p.save()
         return JsonResponse(producto_to_dict(p))
 
-    p.delete()
-    return JsonResponse({'mensaje': 'Producto eliminado'})
+    if request.method == 'DELETE':
+        p.delete()
+        return JsonResponse({'mensaje': 'Producto eliminado'})
 
 
-# ── PRODUCCIÓN ────────────────────────────────────────
+# ── ENDPOINTS DE PRODUCCIÓN ───────────────────────────────────────────
 @admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
-@csrf_exempt # o con el decorador que estés usando
 def ordenes(request):
     if request.method == 'GET':
-        # QUITAR 'idOrden__idCliente' de select_related, solo dejamos 'idProducto'
         lista = Produccion.objects.select_related('idProducto').all()
         data = [produccion_to_dict(o) for o in lista]
         return JsonResponse(data, safe=False)
 
-    elif request.method == 'POST':
+    try:
         data = json.loads(request.body)
-        
-        # idOrden se pasa tal cual como entero (sin _id)
-        o = Produccion.objects.create(
-            idOrden           = data.get('idOrden'),
-            idProducto_id     = data.get('idProducto'),
-            descripcion       = data.get('descripcion', ''),
-            cantidadRequerida = data.get('cantidadRequerida', 0),
-            fechaInicio       = data.get('fechaInicio'),
-            fechaEstimadaFin  = data.get('fechaEstimadaFin'),
-            costoEstimado     = data.get('costoEstimado'),
-            estado            = data.get('estado', 'Pendiente')
-        )
-        return JsonResponse(produccion_to_dict(o), status=201)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
+
+    o = Produccion.objects.create(
+        idOrden=data.get('idOrden'),
+        idProducto_id=data.get('idProducto'),
+        descripcion=data.get('descripcion', ''),
+        cantidadRequerida=data.get('cantidadRequerida', 0),
+        fechaInicio=data.get('fechaInicio'),
+        fechaEstimadaFin=data.get('fechaEstimadaFin'),
+        costoEstimado=data.get('costoEstimado'),
+        estado=data.get('estado', 'Pendiente')
+    )
+    return JsonResponse(produccion_to_dict(o), status=201)
 
 
 @admin_required_api
@@ -182,7 +198,6 @@ def ordenes(request):
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def orden_detalle(request, id):
     try:
-        # Se elimina 'idOrden__idCliente' de select_related porque idOrden es un IntegerField y no una ForeignKey
         o = Produccion.objects.select_related('idProducto').get(pk=id)
     except Produccion.DoesNotExist:
         return JsonResponse({'error': 'Producción no encontrada'}, status=404)
@@ -191,44 +206,42 @@ def orden_detalle(request, id):
         return JsonResponse(produccion_to_dict(o))
 
     if request.method == 'PUT':
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
 
-        nuevo_estado = data.get('estado', o.estado)
-        if nuevo_estado in ['Pendiente', 'En Progreso'] and o.estado not in ['Pendiente', 'En Progreso']:
-            otro_activo = Produccion.objects.filter(
-                idProducto=o.idProducto,
-                estado__in=['Pendiente', 'En Progreso']
-            ).exclude(pk=o.pk).exists()
-            if otro_activo:
-                return JsonResponse(
-                    {'error': f'"{o.idProducto.nombre}" ya tiene otro proceso activo.'},
-                    status=400
-                )
+        # Transición de estados utilizando django-fsm
+        if 'estado' in data and data['estado'] != o.estado:
+            metodo = TRANSICIONES.get(data['estado'])
+            if not metodo:
+                return JsonResponse({'error': f'Transición a "{data["estado"]}" no permitida.'}, status=400)
+            
+            fn = getattr(o, metodo, None)
+            if fn and can_proceed(fn):
+                try:
+                    fn()
+                except TransitionNotAllowed:
+                    return JsonResponse({'error': f'No se puede pasar de "{o.estado}" a "{data["estado"]}".'}, status=400)
+            else:
+                return JsonResponse({'error': f'No se puede pasar de "{o.estado}" a "{data["estado"]}".'}, status=400)
 
-        # Se asigna idOrden directamente como entero (sin _id)
-        if 'idOrden' in data:
-            o.idOrden = data['idOrden']
-
-        for campo in ['descripcion', 'cantidadRequerida',
-                    'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin', 'estado']:
+        for campo in ['idOrden', 'descripcion', 'cantidadRequerida', 'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin']:
             if campo in data:
                 setattr(o, campo, data[campo])
+        
         o.save()
+        sincronizar_estado_cliente(o)
         return JsonResponse(produccion_to_dict(o))
 
-    o.delete()
-    return JsonResponse({'mensaje': 'Registro eliminado'})
+    if request.method == 'DELETE':
+        o.delete()
+        return JsonResponse({'mensaje': 'Registro eliminado'})
 
 
-# ── AVANCE DE OPERARIOS (proceso de confección) ───────
+# ── AVANCE DE OPERARIOS ───────────────────────────────────────────────
 @admin_required_api
 def avance_operarios(request):
-    """
-    GET /produccion/operarios-avance/
-    Devuelve, por cada operario activo, el estado de sus tareas de
-    confección (asignaciones) para que Producción vea el proceso
-    completo de forma organizada.
-    """
     operarios = (
         Operario.objects
         .select_related('idUsuario')
@@ -263,10 +276,10 @@ def avance_operarios(request):
             'especialidad': op.especialidad,
             'estado':       op.estado,
             'contadores': {
-                'pendiente':   pendientes,
-                'enProgreso':  en_progreso,
-                'completada':  completadas,
-                'cancelada':   canceladas,
+                'pendiente':  pendientes,
+                'enProgreso': en_progreso,
+                'completada': completadas,
+                'cancelada':  canceladas,
             },
             'avancePct': avance_pct,
             'tareas': [
@@ -290,16 +303,17 @@ def avance_operarios(request):
     return JsonResponse({'operarios': resultado})
 
 
-# ── KPIs ─────────────────────────────────────────────
+# ── KPIS Y DASHBOARD ──────────────────────────────────────────────────
 @admin_required_api
 def kpis(request):
     total_productos = Producto.objects.count()
     en_progreso     = Produccion.objects.filter(estado='En Progreso').count()
     pendientes      = Produccion.objects.filter(estado='Pendiente').count()
     completados     = Produccion.objects.filter(estado='Completado').count()
+    
     return JsonResponse({
-        'totalProductos':    total_productos,
-        'ordenesEnProceso':  en_progreso,
-        'ordenesPendientes': pendientes,
+        'totalProductos':     total_productos,
+        'ordenesEnProceso':   en_progreso,
+        'ordenesPendientes':  pendientes,
         'ordenesCompletadas': completados,
     })

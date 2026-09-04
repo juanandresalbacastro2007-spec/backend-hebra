@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'django_fsm',
+    'simple_history',
 
     # Tus aplicaciones
     'apps.usuarios',
@@ -51,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # Requerido por allauth
+    'simple_history.middleware.HistoryRequestMiddleware',  # para guardar el usuario que hizo el cambio
 ]
 
 # --- BACKENDS DE AUTENTICACIÓN ---

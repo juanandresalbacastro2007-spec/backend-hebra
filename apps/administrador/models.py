@@ -1,9 +1,9 @@
+# apps/administrador/models.py
+
 from django.db import models
+from django_fsm import FSMField, transition
+from simple_history.models import HistoricalRecords
 
-
-# ==========================================
-# DICCIONARIOS Y OPCIONES CONSTANTES
-# ==========================================
 
 TIEMPOS_ESTANDAR_MINUTOS = {
     'Camisas': 5,
@@ -15,10 +15,6 @@ TIEMPOS_ESTANDAR_MINUTOS = {
 
 TIPO_PRENDA_CHOICES = [(k, k) for k in TIEMPOS_ESTANDAR_MINUTOS.keys()]
 
-
-# ==========================================
-# MODELOS DE USUARIOS Y ROLES
-# ==========================================
 
 class Usuario(models.Model):
     ROL_CHOICES = [
@@ -71,29 +67,6 @@ class Operario(models.Model):
         return f'{self.idUsuario.nombre} — {self.especialidad}'
 
 
-class Cliente(models.Model):
-    idCliente = models.AutoField(primary_key=True)
-    idUsuario = models.ForeignKey(
-        Usuario,
-        on_delete=models.CASCADE,
-        db_column='idUsuario'
-    )
-    empresa = models.CharField(max_length=150, null=True, blank=True)
-    nombre = models.CharField(max_length=150, null=True, blank=True)
-    estado = models.CharField(max_length=20, default='activo')
-
-    class Meta:
-        db_table = 'clientes'
-        managed = False
-
-    def __str__(self):
-        return self.empresa or self.nombre or f'Cliente #{self.idCliente}'
-
-
-# ==========================================
-# MODELOS DE TAREAS Y ORDENES
-# ==========================================
-
 class Tarea(models.Model):
     COMPLEJIDAD_CHOICES = [
         ('baja', 'Baja'),
@@ -114,27 +87,6 @@ class Tarea(models.Model):
 
     def __str__(self):
         return self.nombreTarea
-
-
-class Orden(models.Model):
-    idOrden = models.AutoField(primary_key=True)
-    idCliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.CASCADE,
-        db_column='idCliente'
-    )
-    nombreProducto = models.CharField(max_length=150, null=True, blank=True, db_column='nombreProducto')
-    fechaCreacion = models.DateField(auto_now_add=True)
-    fechaEntregaEstimada = models.DateField(null=True, blank=True)
-    instrucciones = models.CharField(max_length=1000)
-    cantidad = models.IntegerField(null=True, blank=True)
-    precioUnitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    prioridad = models.CharField(max_length=10, default='Normal')
-    estado = models.CharField(max_length=20, default='Pendiente')
-
-    class Meta:
-        db_table = 'ordenes'
-        managed = False
 
 
 class AsignacionTarea(models.Model):
@@ -164,7 +116,7 @@ class AsignacionTarea(models.Model):
         db_column='idOperario'
     )
     idOrden = models.ForeignKey(
-        Orden,
+        'Orden',
         on_delete=models.CASCADE,
         db_column='idOrden',
         null=True,
@@ -191,15 +143,143 @@ class AsignacionTarea(models.Model):
         return f'Asignación #{self.idAsignacion}'
 
 
-# ==========================================
-# MODELOS DE INVENTARIOS Y PRODUCTOS
-# ==========================================
+class Orden(models.Model):
+    ESTADO_CHOICES = [
+        ('Pendiente',     'Pendiente'),
+        ('En producción', 'En producción'),
+        ('Enviado',       'Enviado'),
+        ('Entregado',     'Entregado'),
+    ]
+
+    idOrden = models.AutoField(primary_key=True)
+    idCliente = models.ForeignKey(
+        'Cliente',
+        on_delete=models.CASCADE,
+        db_column='idCliente'
+    )
+    nombreProducto = models.CharField(max_length=150, null=True, blank=True, db_column='nombreProducto')
+    fechaCreacion = models.DateField(auto_now_add=True)
+    fechaEntregaEstimada = models.DateField(null=True, blank=True)
+    instrucciones = models.CharField(max_length=1000)
+    cantidad = models.IntegerField(null=True, blank=True)
+    precioUnitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    prioridad = models.CharField(max_length=10, default='Normal')
+    estado = FSMField(default='Pendiente', choices=ESTADO_CHOICES)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        db_table = 'ordenes'
+        managed = False
+
+    def __str__(self):
+        return f'Orden #{self.idOrden} — {self.nombreProducto or ""}'
+
+    # ── Transiciones válidas de cara al cliente ──────────────
+    @transition(field=estado, source='Pendiente', target='En producción')
+    def marcar_en_produccion(self):
+        pass
+
+    @transition(field=estado, source='En producción', target='Enviado')
+    def marcar_enviado(self):
+        pass
+
+    @transition(field=estado, source='Enviado', target='Entregado')
+    def marcar_entregado(self):
+        pass
+
+    # Transición de corrección explícita, no libre (ver nota más abajo)
+    @transition(field=estado, source='Enviado', target='En producción')
+    def revertir_a_produccion(self):
+        pass
+
+
+class Cliente(models.Model):
+    idCliente = models.AutoField(primary_key=True)
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario'
+    )
+    empresa = models.CharField(max_length=150, null=True, blank=True)
+    nombre = models.CharField(max_length=150, null=True, blank=True)
+    estado = models.CharField(max_length=20, default='activo')
+
+    class Meta:
+        db_table = 'clientes'
+        managed = False
+
+    def __str__(self):
+        return self.empresa or self.nombre or f'Cliente #{self.idCliente}'
+
+
+class Incidencia(models.Model):
+    ESTADO_CHOICES = [
+        ('Generado', 'Generado'),
+        ('Revisado', 'Revisado'),
+        ('Pendiente', 'Pendiente'),
+    ]
+
+    idIncidencia = models.AutoField(primary_key=True)
+    idOperario = models.ForeignKey(
+        Operario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario'   # 👈 la columna real en MySQL es idUsuario, no idOperario
+    )
+    tipoIncidencia = models.CharField(max_length=50)
+    descripcion = models.TextField()
+    estado = models.CharField(max_length=30, choices=ESTADO_CHOICES, default='Generado')
+    fechaGeneracion = models.DateField(auto_now_add=True)
+    fechaRevision = models.DateField(null=True, blank=True)
+
+    periodoEvaluado = models.CharField(max_length=50, null=True, blank=True)
+    respuesta = models.TextField(null=True, blank=True)
+    respuestaLeida = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'incidencias'
+        managed = False
+
+    def __str__(self):
+        return f'Incidencia #{self.idIncidencia} — {self.tipoIncidencia}'
+
+
+class Factura(models.Model):
+    ESTADO_CHOICES = [
+        ('Pendiente de pago', 'Pendiente de pago'),
+        ('Pagada', 'Pagada'),
+    ]
+
+    idFactura = models.AutoField(primary_key=True)
+    idOrden = models.ForeignKey(
+        Orden,
+        on_delete=models.CASCADE,
+        db_column='idOrden'
+    )
+    idCliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        db_column='idCliente'
+    )
+    numeroFactura = models.CharField(max_length=30, unique=True)
+    fechaEmision = models.DateTimeField(auto_now_add=True)
+    fechaPago = models.DateTimeField(null=True, blank=True)
+    rutaPDF = models.CharField(max_length=255)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente de pago')
+
+    class Meta:
+        db_table = 'facturas'
+        managed = False
+
+    def __str__(self):
+        return f'Factura {self.numeroFactura}'
+
 
 class Producto(models.Model):
     idProducto = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150, db_column='nombre')
     descripcion = models.TextField(null=True, blank=True)
-    estado = models.CharField(max_length=20, default='activo')  # 👈 CORREGIDO: Campo estado agregado
 
     class Meta:
         db_table = 'productos'
@@ -253,69 +333,3 @@ class Material(models.Model):
 
     def __str__(self):
         return self.nombreMaterial
-
-
-# ==========================================
-# MODELOS DE INCIDENCIAS Y FACTURACIÓN
-# ==========================================
-
-class Incidencia(models.Model):
-    ESTADO_CHOICES = [
-        ('Generado', 'Generado'),
-        ('Revisado', 'Revisado'),
-        ('Pendiente', 'Pendiente'),
-    ]
-
-    idIncidencia = models.AutoField(primary_key=True)
-    idOperario = models.ForeignKey(
-        Operario,
-        on_delete=models.CASCADE,
-        db_column='idUsuario'
-    )
-    tipoIncidencia = models.CharField(max_length=50)
-    descripcion = models.TextField()
-    estado = models.CharField(max_length=30, choices=ESTADO_CHOICES, default='Generado')
-    fechaGeneracion = models.DateField(auto_now_add=True)
-    fechaRevision = models.DateField(null=True, blank=True)
-    periodoEvaluado = models.CharField(max_length=50, null=True, blank=True)
-    respuesta = models.TextField(null=True, blank=True)
-    respuestaLeida = models.BooleanField(default=True)
-
-    class Meta:
-        db_table = 'incidencias'
-        managed = False
-
-    def __str__(self):
-        return f'Incidencia #{self.idIncidencia} — {self.tipoIncidencia}'
-
-
-class Factura(models.Model):
-    ESTADO_CHOICES = [
-        ('Pendiente de pago', 'Pendiente de pago'),
-        ('Pagada', 'Pagada'),
-    ]
-
-    idFactura = models.AutoField(primary_key=True)
-    idOrden = models.ForeignKey(
-        Orden,
-        on_delete=models.CASCADE,
-        db_column='idOrden'
-    )
-    idCliente = models.ForeignKey(
-        Cliente,
-        on_delete=models.CASCADE,
-        db_column='idCliente'
-    )
-    numeroFactura = models.CharField(max_length=30, unique=True)
-    fechaEmision = models.DateTimeField(auto_now_add=True)
-    fechaPago = models.DateTimeField(null=True, blank=True)
-    rutaPDF = models.CharField(max_length=255)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente de pago')
-
-    class Meta:
-        db_table = 'facturas'
-        managed = False
-
-    def __str__(self):
-        return f'Factura {self.numeroFactura}'

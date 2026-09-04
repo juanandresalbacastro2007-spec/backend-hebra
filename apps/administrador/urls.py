@@ -1,11 +1,10 @@
-# apps/administrador/urls.py
-
 from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    # General / Portal
     path('', views.admin_portal, name='admin_portal'),
-    path('administrador/editar-perfil/', views.editar_perfil, name='editar_perfil'),
+    path('editar-perfil/', views.editar_perfil, name='editar_perfil'),
 
     # Usuarios
     path('usuarios/', views.usuarios_lista, name='admin_usuarios'),
@@ -13,12 +12,12 @@ urlpatterns = [
     path('usuarios/<int:idUsuario>/editar/', views.usuario_editar, name='admin_usuario_editar'),
     path('usuarios/<int:idUsuario>/eliminar/', views.usuario_eliminar, name='admin_usuario_eliminar'),
 
-    # Órdenes
+    # Órdenes (las rutas estáticas de exportación van antes que las dinámicas <int:idOrden>)
     path('ordenes/', views.ordenes_lista, name='admin_ordenes'),
-    path('ordenes/<int:idOrden>/editar/', views.orden_editar, name='admin_editar_orden'),
-    path('ordenes/<int:idOrden>/eliminar/', views.orden_eliminar, name='admin_eliminar_orden'),
     path('ordenes/exportar/excel/', views.exportar_ordenes_excel, name='exportar_ordenes_excel'),
     path('ordenes/exportar/pdf/', views.exportar_ordenes_pdf, name='exportar_ordenes_pdf'),
+    path('ordenes/<int:idOrden>/editar/', views.orden_editar, name='admin_editar_orden'),
+    path('ordenes/<int:idOrden>/eliminar/', views.orden_eliminar, name='admin_eliminar_orden'),
 
     # Tareas
     path('tareas/', views.tareas_lista, name='admin_tareas'),
@@ -38,16 +37,14 @@ urlpatterns = [
 
     # Inventario & Materiales
     path('inventario/', views.inventario_lista, name='admin_inventario'),
-
-    # CRUD Materiales
-    path('materiales/crear/', views.crear_material, name='crear_material'),
-    path('materiales/editar/<int:pk>/', views.editar_material, name='editar_material'),
-    path('materiales/eliminar/<int:pk>/', views.eliminar_material, name='eliminar_material'),
-
-    # CRUD Inventario (Productos)
     path('inventario/crear/', views.crear_inventario, name='crear_inventario'),
     path('inventario/editar/<int:pk>/', views.editar_inventario, name='editar_inventario'),
     path('inventario/eliminar/<int:pk>/', views.eliminar_inventario, name='eliminar_inventario'),
+
+    # Materiales
+    path('materiales/crear/', views.crear_material, name='crear_material'),
+    path('materiales/editar/<int:pk>/', views.editar_material, name='editar_material'),
+    path('materiales/eliminar/<int:pk>/', views.eliminar_material, name='eliminar_material'),
 
     # Módulos externos
     path('produccion/', views.produccion_placeholder, name='admin_produccion'),

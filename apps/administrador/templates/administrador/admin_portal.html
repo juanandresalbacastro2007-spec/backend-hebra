@@ -384,7 +384,6 @@
 </div>
 
 {% endblock %}
-
 {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -406,7 +405,7 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ── Alertas del sistema (vienen del contexto de la vista, ya calculadas en el backend) ──
+    // Alertas del sistema
     const alertasSistema = {{ alertas|default:"[]"|safe }};
     renderNotifDropdown(alertasSistema);
     alertasSistema.forEach((a, i) => {
@@ -414,7 +413,26 @@
     });
   });
 
-  // ── Notificaciones (dropdown de la campana) ──
+  // Mapeo auxiliar para asegurar URLs válidas
+  function resolverUrlModulo(modulo) {
+    if (!modulo) return '#';
+    // Si la cadena ya viene como URL completa o empieza con '/'
+    if (modulo.startsWith('/')) return modulo;
+    
+    // Mapeo de nombres de módulos/rutas a URLs reales
+    const mapaRutas = {
+      'admin_ordenes': '/administrador/ordenes/',
+      'ordenes': '/administrador/ordenes/',
+      'admin_usuarios': '/administrador/usuarios/',
+      'admin_tareas': '/administrador/tareas/',
+      'admin_incidencias': '/administrador/incidencias/',
+      'admin_inventario': '/administrador/inventario/'
+    };
+
+    return mapaRutas[modulo] || `/administrador/${modulo}/`;
+  }
+
+  // Notificaciones (dropdown de la campana)
   function renderNotifDropdown(alertas) {
     const badge = document.getElementById('notifBadge');
     const cont = document.getElementById('notifListContainer');
@@ -429,26 +447,30 @@
     badge.style.display = 'flex';
     badge.textContent = alertas.length;
 
-    cont.innerHTML = alertas.map(a => `
+    cont.innerHTML = alertas.map(a => {
+      const urlDestino = resolverUrlModulo(a.modulo);
+      return `
       <li class="notif-item-ht px-2 py-2">
         <div class="d-flex align-items-start gap-2">
           <span class="notif-item-icon">${a.icono}</span>
           <div class="flex-grow-1 small">
             <div>${a.texto}</div>
-            ${a.modulo ? `<a href="/administrador/${a.modulo}/" class="notif-item-link">Ver →</a>` : ''}
+            ${a.modulo ? `<a href="${urlDestino}" class="notif-item-link">Ver →</a>` : ''}
           </div>
         </div>
-      </li>`).join('');
+      </li>`;
+    }).join('');
   }
 
-  // ── Toasts flotantes ──
+  // Toasts flotantes
   function mostrarToast(notif, delay = 0) {
     setTimeout(() => {
       const id = 'toast-' + Date.now() + Math.random().toString(36).slice(2);
       const duracion = 6000;
+      const urlDestino = resolverUrlModulo(notif.modulo);
 
       const accionHtml = notif.modulo
-        ? `<button class="ht-toast-action" onclick="window.location.href='/administrador/${notif.modulo}/'">Ver →</button>`
+        ? `<button class="ht-toast-action" onclick="window.location.href='${urlDestino}'">Ver →</button>`
         : '';
 
       const titulo = notif.tipo === 'danger' ? 'Atención requerida'

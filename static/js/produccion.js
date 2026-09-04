@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(actualizarFechaHora, 60000);
 
   cargarKPIs();
-  cargarVistaGeneral();
   cargarProductos();
   cargarOrdenes();
   cargarAvanceOperarios();
@@ -98,8 +97,6 @@ function actualizarFechaHora() {
 }
 
 // ── VALIDACIÓN GENÉRICA DE CAMPOS OBLIGATORIOS ────
-// Marca (o desmarca) un input/select/textarea como inválido y muestra/oculta
-// su mensaje de error asociado (id="err-<inputId>"), igual al estilo de la imagen de referencia.
 function validarCampo(inputId, esValido) {
   const input = document.getElementById(inputId);
   const err = document.getElementById('err-' + inputId);
@@ -108,7 +105,7 @@ function validarCampo(inputId, esValido) {
   if (!esValido) {
     input.classList.add('campo-invalido');
     if (err) err.classList.add('show');
-    if (err) err.setAttribute('aria-live', 'polite'); // accesibilidad: se anuncia al aparecer
+    if (err) err.setAttribute('aria-live', 'polite');
   } else {
     input.classList.remove('campo-invalido');
     if (err) err.classList.remove('show');
@@ -125,9 +122,7 @@ function limpiarValidacion(ids) {
   });
 }
 
-// ── VALIDACIÓN EN VIVO (al salir del campo, sin esperar a "Guardar") ──
-// Reutiliza las mismas reglas obligatorias que guardarProducto()/guardarOrden(),
-// pero solo sobre el campo que el usuario acaba de tocar.
+// ── VALIDACIÓN EN VIVO ──
 const REGLAS_CAMPOS_OBLIGATORIOS = {
   'prod-nombre':     v => !!v.trim(),
   'prod-categoria':  v => !!v,
@@ -144,26 +139,18 @@ function validarCampoEnVivo(el) {
   if (!regla) return;
   validarCampo(el.id, regla(el.value));
 
-  // Además, si es la fecha de inicio, actualiza el mínimo permitido en fecha fin
   if (el.id === 'o-fecha-inicio') actualizarMinFechaFin();
 }
 
-// La fecha de fin de una orden no puede ser anterior a la fecha de inicio:
-// en vez de solo avisar después de guardar, se restringe directamente en el input.
 function actualizarMinFechaFin() {
   const inicio = document.getElementById('o-fecha-inicio');
   const fin = document.getElementById('o-fecha-fin');
   if (!inicio || !fin) return;
-  // El mínimo de "fin" nunca puede quedar por debajo de hoy, aunque el usuario
-  // intente forzar una fecha de inicio anterior manipulando el DOM.
   const piso = inicio.value && inicio.value > HOY_ISO ? inicio.value : HOY_ISO;
   fin.min = piso;
   if (fin.value && fin.value < piso) fin.value = piso;
 }
 
-// Ajusta los mínimos de "Fecha Inicio" y "Fecha Fin" al abrir el modal, tanto para
-// crear como para editar: el mínimo siempre es HOY, sin excepciones (aunque la
-// orden ya tuviera una fecha pasada registrada).
 function ajustarMinFechasOrden(fechaInicioExistente, fechaFinExistente) {
   const inicio = document.getElementById('o-fecha-inicio');
   const fin = document.getElementById('o-fecha-fin');
@@ -173,7 +160,7 @@ function ajustarMinFechasOrden(fechaInicioExistente, fechaFinExistente) {
   fin.min = (fechaInicioExistente && fechaInicioExistente > HOY_ISO) ? fechaInicioExistente : HOY_ISO;
 }
 
-// ── Contador de caracteres (se inyecta debajo del textarea, no requiere tocar el HTML) ──
+// ── Contador de caracteres ──
 function agregarContadorCaracteres(textareaId, limite) {
   const textarea = document.getElementById(textareaId);
   if (!textarea || textarea.dataset.contadorListo) return;
@@ -200,13 +187,11 @@ function marcarModalSucio(el) {
   if (el.closest('#modal-orden')) modalOrdenDirty = true;
 }
 
-// Pide confirmación solo si el usuario alcanzó a escribir algo; si no hay cambios, cierra directo.
 function confirmarCierre(dirty) {
   if (!dirty) return true;
   return confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?');
 }
 
-// Pone/quita el estado visual de "guardando..." en un botón sin cambiar su HTML
 function setBotonCargando(boton, cargando) {
   if (!boton) return;
   boton.classList.toggle('btn-loading', cargando);
@@ -263,187 +248,6 @@ function irAOrdenesFiltradas(estado) {
 
   const card = document.getElementById('tab-ordenes');
   if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-// ── VISTA GENERAL DEL SISTEMA (panorama cross-módulo) ─
-const ICONOS_KPI_GENERAL = {
-  usuarios:            { icono: '👥', label: 'Usuarios Registrados' },
-  usuariosPendientes:  { icono: '🕓', label: 'Usuarios por Aprobar' },
-  clientes:            { icono: '🤝', label: 'Clientes' },
-  operariosActivos:    { icono: '🧑‍🏭', label: 'Operarios Activos' },
-  ordenesTotales:      { icono: '🧾', label: 'Órdenes Totales' },
-  ordenesPendientes:   { icono: '📋', label: 'Órdenes Pendientes' },
-  ordenesUrgentes:     { icono: '🔥', label: 'Órdenes Urgentes' },
-  tareasPendientes:    { icono: '📌', label: 'Tareas Pendientes' },
-  tareasEnProgreso:    { icono: '🧵', label: 'Tareas en Progreso' },
-  incidenciasAbiertas: { icono: '⚠️', label: 'Incidencias Abiertas' },
-  productos:           { icono: '👕', label: 'Productos Catálogo' },
-  produccionActiva:    { icono: '⚙️', label: 'Producción Activa' },
-  proveedores:         { icono: '🚚', label: 'Proveedores' },
-};
-
-async function cargarVistaGeneral() {
-  try {
-    const r = await fetch(`${BASE}/vista-general/`);
-    if (!r.ok) throw new Error('Error al cargar la vista general');
-    const data = await r.json();
-
-    renderOverviewKPIs(data.kpis || {});
-    renderOverviewAlertas(data.alertas || []);
-    renderOverviewActividad(data.actividad || []);
-    actualizarQuickNav(data.kpis || {});
-  } catch (e) {
-    console.error('Error cargando vista general:', e);
-    const grid = document.getElementById('overview-kpi-grid');
-    if (grid) grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>No se pudo cargar la vista general del sistema</p></div>`;
-  }
-}
-
-function renderOverviewKPIs(kpis) {
-  const grid = document.getElementById('overview-kpi-grid');
-  if (!grid) return;
-
-  const claves = Object.keys(ICONOS_KPI_GENERAL).filter(k => kpis[k] !== null && kpis[k] !== undefined);
-
-  if (!claves.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Sin datos disponibles</p></div>`;
-    return;
-  }
-
-  grid.innerHTML = claves.map(k => {
-    const meta = ICONOS_KPI_GENERAL[k];
-    return `
-      <div class="overview-kpi-card">
-        <div class="overview-kpi-top">
-          <div class="overview-kpi-icon">${meta.icono}</div>
-          <div class="overview-kpi-val">${kpis[k]}</div>
-        </div>
-        <div class="overview-kpi-lbl">${meta.label}</div>
-      </div>`;
-  }).join('');
-}
-
-// ── TOAST — sistema de notificaciones flotantes (portado de cliente.js) ──
-function mostrarToast(notif, delay = 0) {
-  setTimeout(() => {
-    const id       = 'toast-' + Date.now() + Math.random().toString(36).slice(2);
-    const duracion = 6000;
-
-    const accionHtml = notif.accion
-      ? `<button class="ht-toast-action" onclick="${notif.accion.onclick}">${notif.accion.texto} →</button>`
-      : '';
-
-    const el = document.createElement('div');
-    el.className = 'ht-toast';
-    el.id = id;
-    el.innerHTML = `
-      <div class="ht-toast-icon ${notif.tipo}">${notif.icono}</div>
-      <div class="ht-toast-body">
-        <div class="ht-toast-title">${notif.titulo}</div>
-        <div class="ht-toast-msg">${notif.mensaje}</div>
-        ${accionHtml}
-      </div>
-      <button class="ht-toast-close" onclick="cerrarToast('${id}')"><i class="bi bi-x"></i></button>
-      <div class="ht-toast-progress" id="prog-${id}" style="width:100%;"></div>
-    `;
-
-    document.getElementById('toastContainer')?.appendChild(el);
-
-    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
-
-    const prog = document.getElementById('prog-' + id);
-    if (prog) {
-      prog.style.transition = `width ${duracion}ms linear`;
-      setTimeout(() => { prog.style.width = '0%'; }, 50);
-    }
-    setTimeout(() => cerrarToast(id), duracion);
-  }, delay);
-}
-
-function cerrarToast(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.replace('show', 'hide');
-  setTimeout(() => el.remove(), 400);
-}
-
-function renderNotifDropdown(alertas) {
-  const badge = document.getElementById('notifBadge');
-  const cont  = document.getElementById('notifListContainer');
-  if (!badge || !cont) return;
-
-  if (!alertas.length) {
-    badge.style.display = 'none';
-    cont.innerHTML = `<li class="px-2 py-3 text-center text-muted small">Sin notificaciones nuevas</li>`;
-    return;
-  }
-
-  badge.style.display = 'flex';
-  badge.textContent = alertas.length;
-
-  cont.innerHTML = alertas.map(a => `
-    <li class="notif-item-ht px-2 py-2">
-      <div class="d-flex align-items-start gap-2">
-        <span class="notif-item-icon">${a.icono}</span>
-        <div class="flex-grow-1 small">
-          <div>${a.texto}</div>
-          ${a.modulo ? `<a href="/administrador/${a.modulo}/" class="notif-item-link">Ver →</a>` : ''}
-        </div>
-      </div>
-    </li>`).join('');
-}
-
-function renderOverviewAlertas(alertas) {
-  renderNotifDropdown(alertas);
-
-  if (!alertas.length) return;
-
-  const RUTA_MODULO = {
-    ordenes: 'admin_ordenes',
-    usuarios: 'admin_usuarios',
-    incidencias: 'admin_incidencias',
-  };
-
-  alertas.forEach((a, i) => {
-    mostrarToast({
-      tipo: a.tipo,
-      icono: a.icono,
-      titulo: a.tipo === 'danger' ? 'Atención requerida' : (a.tipo === 'warning' ? 'Aviso' : 'Información'),
-      mensaje: a.texto,
-      accion: a.modulo ? { texto: 'Ver', onclick: `window.location.href='/administrador/${a.modulo}/'` } : null,
-    }, i * 350);
-  });
-}
-
-function renderOverviewActividad(actividad) {
-  const cont = document.getElementById('overview-actividad');
-  if (!cont) return;
-
-  if (!actividad.length) {
-    cont.innerHTML = `<div class="empty-state"><p>No hay actividad reciente registrada</p></div>`;
-    return;
-  }
-
-  cont.innerHTML = actividad.map(a => `
-    <div class="activity-item">
-      <div class="activity-icon">${a.icono || '•'}</div>
-      <div class="activity-body">
-        <div class="activity-title">${a.titulo || ''}</div>
-        <div class="activity-detail">${a.detalle || ''}</div>
-        <div class="activity-meta">
-          ${a.estado ? `<span class="estado-badge estado-ord-${(a.estado || '').replace(/\s+/g, '-')}">${a.estado}</span>` : ''}
-          <span class="activity-fecha">${a.fecha || ''}</span>
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-function actualizarQuickNav(kpis) {
-  document.querySelectorAll('[data-qn]').forEach(el => {
-    const clave = el.getAttribute('data-qn');
-    const valor = kpis[clave];
-    el.textContent = (valor === null || valor === undefined) ? 'Ver módulo' : `${valor} registro(s)`;
-  });
 }
 
 // ── PRODUCTOS ──────────────────────────────────────
@@ -545,7 +349,6 @@ async function guardarProducto() {
     descripcion: document.getElementById('prod-descripcion').value.trim()
   };
 
-  // ── Validación obligatoria por campo (borde rojo + mensaje) ──
   const okNombre = validarCampo('prod-nombre', !!data.nombre);
   const okCategoria = validarCampo('prod-categoria', !!data.categoria);
   const okDescripcion = validarCampo('prod-descripcion', !!data.descripcion);
@@ -738,8 +541,6 @@ function cerrarModalOrden() {
   document.getElementById('modal-orden').style.display = 'none';
   modalOrdenDirty = false;
 
-  // Restablece los mínimos de fecha a "hoy" para la próxima vez que se abra el
-  // modal para una orden nueva (si venían ajustados por edición de una orden histórica).
   const inicio = document.getElementById('o-fecha-inicio');
   const fin = document.getElementById('o-fecha-fin');
   if (inicio) inicio.min = HOY_ISO;
@@ -787,14 +588,12 @@ async function guardarOrden() {
     estado: estadoVal
   };
 
-  // ── Validación obligatoria por campo (borde rojo + mensaje) ──
   const okProducto = validarCampo('o-producto', !!data.idProducto);
   const okCantidad = validarCampo('o-cantidad', data.cantidadRequerida > 0);
   const okInicio = validarCampo('o-fecha-inicio', !!data.fechaInicio);
   const okFin = validarCampo('o-fecha-fin', !!data.fechaEstimadaFin);
   const okEstado = validarCampo('o-estado', !!data.estado);
 
-  // Validación cruzada: la fecha fin no puede ser anterior a la fecha inicio
   let okRangoFechas = true;
   if (okInicio && okFin && data.fechaEstimadaFin < data.fechaInicio) {
     okRangoFechas = validarCampo('o-fecha-fin', false);
@@ -802,8 +601,6 @@ async function guardarOrden() {
     if (err) err.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
   }
 
-  // Validación adicional: ninguna de las dos fechas puede quedar en el pasado
-  // respecto a hoy, ya sea creando o editando una orden.
   let okFechasFuturas = true;
   if (okInicio && data.fechaInicio < HOY_ISO) {
     okFechasFuturas = validarCampo('o-fecha-inicio', false);

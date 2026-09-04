@@ -2,26 +2,8 @@
 {% load static %}
 
 {% block titulo %}Producción{% endblock %}
-{% block topbar_titulo %}Producción · Vista General del Sistema{% endblock %}
-{% block topbar_sub %}Panorama completo de HebraTech: usuarios, órdenes, tareas, incidencias e inventario en tiempo real{% endblock %}
-
-{% block topbar_extra %}
-<div class="ms-auto">
-  <div class="dropdown">
-    <button class="btn-notif-ht" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Notificaciones">
-      <i class="bi bi-bell-fill"></i>
-      <span class="notif-badge-ht" id="notifBadge" style="display:none;">0</span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end p-2 notif-dropdown-ht" aria-labelledby="notifDropdownBtn">
-      <li class="dropdown-header">Notificaciones</li>
-      <li><hr class="dropdown-divider"></li>
-      <div id="notifListContainer">
-        <li class="px-2 py-3 text-center text-muted small">Sin notificaciones nuevas</li>
-      </div>
-    </ul>
-  </div>
-</div>
-{% endblock %}
+{% block topbar_titulo %}Producción{% endblock %}
+{% block topbar_sub %}Gestión de productos, órdenes y avance de operarios{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}?v={% now 'U' %}" />
@@ -31,115 +13,13 @@
 <div class="produccion-page">
 
   <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-
-  <div class="kpi-grid" id="kpi-grid-clickable">
-    <div class="kpi-card kpi-clickable" onclick="irAProductos()">
-      <div class="kpi-icon teal">👕</div>
-      <div class="kpi-body">
-        <div class="kpi-val" id="kpi-productos">—</div>
-        <div class="kpi-lbl">Tipos de Producto</div>
-      </div>
-      <div class="kpi-arrow">→</div>
-    </div>
-    <div class="kpi-card kpi-clickable" onclick="irAOrdenesFiltradas('Completado')">
-      <div class="kpi-icon green">✅</div>
-      <div class="kpi-body">
-        <div class="kpi-val" id="kpi-completadas">—</div>
-        <div class="kpi-lbl">Órdenes Completadas</div>
-        <div class="kpi-progress"><div class="kpi-progress-fill green" id="kpi-bar-completadas" style="width:0%"></div></div>
-      </div>
-      <div class="kpi-arrow">→</div>
-    </div>
-    <div class="kpi-card kpi-clickable" onclick="irAOrdenesFiltradas('En Progreso')">
-      <div class="kpi-icon orange">⏳</div>
-      <div class="kpi-body">
-        <div class="kpi-val" id="kpi-proceso">—</div>
-        <div class="kpi-lbl">En Progreso</div>
-        <div class="kpi-progress"><div class="kpi-progress-fill orange" id="kpi-bar-proceso" style="width:0%"></div></div>
-      </div>
-      <div class="kpi-arrow">→</div>
-    </div>
-    <div class="kpi-card kpi-clickable" onclick="irAOrdenesFiltradas('Pendiente')">
-      <div class="kpi-icon red">🔖</div>
-      <div class="kpi-body">
-        <div class="kpi-val" id="kpi-pendientes">—</div>
-        <div class="kpi-lbl">Pendientes</div>
-        <div class="kpi-progress"><div class="kpi-progress-fill red" id="kpi-bar-pendientes" style="width:0%"></div></div>
-      </div>
-      <div class="kpi-arrow">→</div>
-    </div>
-  </div>
-
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('general', this)">🧭 Vista General</div>
-    <div class="tab" onclick="switchTab('productos', this)">👕 Catálogo de Productos</div>
+    <div class="tab active" onclick="switchTab('productos', this)">👕 Producción</div>
     <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
     <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance de Operarios</div>
   </div>
 
-  <div id="tab-general" class="tab-content active">
-
-    <div class="overview-kpi-grid" id="overview-kpi-grid">
-      <div class="empty-state" style="grid-column:1/-1"><span class="spinner"></span></div>
-    </div>
-
-    <div class="overview-columns">
-      <div class="table-card">
-        <div class="table-toolbar">
-          <h3>🔔 Actividad Reciente del Sistema</h3>
-        </div>
-        <div id="overview-actividad" class="activity-feed">
-          <div class="empty-state"><span class="spinner"></span></div>
-        </div>
-      </div>
-
-      <div class="table-card">
-        <div class="table-toolbar">
-          <h3>🧭 Accesos Rápidos</h3>
-        </div>
-        <div class="quick-nav-grid" id="overview-quicknav">
-          <a class="quick-nav-card" href="/administrador/portal/">
-            <div class="quick-nav-icon">📊</div>
-            <div class="quick-nav-label">Dashboard</div>
-            <div class="quick-nav-sub">Panorama general</div>
-          </a>
-          <a class="quick-nav-card" href="/administrador/usuarios/">
-            <div class="quick-nav-icon">👥</div>
-            <div class="quick-nav-label">Usuarios</div>
-            <div class="quick-nav-sub" data-qn="usuarios">—</div>
-          </a>
-          <a class="quick-nav-card" href="/administrador/ordenes/">
-            <div class="quick-nav-icon">🧾</div>
-            <div class="quick-nav-label">Órdenes</div>
-            <div class="quick-nav-sub" data-qn="ordenesTotales">—</div>
-          </a>
-          <a class="quick-nav-card" href="/administrador/tareas/">
-            <div class="quick-nav-icon">📋</div>
-            <div class="quick-nav-label">Tareas</div>
-            <div class="quick-nav-sub" data-qn="tareasPendientes">—</div>
-          </a>
-          <a class="quick-nav-card" href="/administrador/incidencias/">
-            <div class="quick-nav-icon">⚠️</div>
-            <div class="quick-nav-label">Incidencias</div>
-            <div class="quick-nav-sub" data-qn="incidenciasAbiertas">—</div>
-          </a>
-          <a class="quick-nav-card" href="/administrador/inventario/">
-            <div class="quick-nav-icon">📦</div>
-            <div class="quick-nav-label">Inventario</div>
-            <div class="quick-nav-sub">Ver stock</div>
-          </a>
-          <a class="quick-nav-card" href="/proveedores/">
-            <div class="quick-nav-icon">🚚</div>
-            <div class="quick-nav-label">Proveedores</div>
-            <div class="quick-nav-sub" data-qn="proveedores">—</div>
-          </a>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <div id="tab-productos" class="tab-content">
+  <div id="tab-productos" class="tab-content active">
     <div class="table-card">
       <div class="table-toolbar">
         <h3>Productos Registrados</h3>

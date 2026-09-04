@@ -481,14 +481,9 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Producto</label>
-            <select name="producto" class="form-select" required>
-              <option value="">-- Seleccionar Producto --</option>
-              {% for prod in productos_list %}
-                <option value="{{ prod.idProducto }}">{{ prod.nombre }}</option>
-              {% endfor %}
-            </select>
-            <div class="invalid-feedback">Selecciona un producto.</div>
+            <label class="form-label">Nombre del Producto</label>
+            <input type="text" name="nombre_producto" class="form-control" placeholder="Escribe el nombre del producto..." required>
+            <div class="invalid-feedback">Ingresa el nombre del producto.</div>
           </div>
 
           <div class="row">

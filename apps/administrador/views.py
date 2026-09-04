@@ -891,20 +891,32 @@ def _resolver_ubicacion(request):
 
 
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
+# Reemplaza la función crear_inventario en apps/administrador/views.py
 
 @admin_required
 def crear_inventario(request):
     if request.method == 'POST':
-        producto_id = request.POST.get('producto')
-        producto = get_object_or_404(Producto, pk=producto_id)
+        # Captura el nombre escrito libremente
+        nombre_producto = request.POST.get('nombre_producto', '').strip()
 
-        # ── Validar que no exista ya un inventario para este producto ──
-        # (evita el IntegrityError por la restricción única uq_inv_producto)
-        if Inventario.objects.filter(producto=producto).exists():
+        if not nombre_producto:
+            messages.error(request, "Debes ingresar el nombre del producto.")
+            return redirect('admin_inventario')
+
+        # Busca si el producto ya existe o créalo automáticamente
+        producto, creado = Producto.objects.get_or_create(
+            nombre=nombre_producto,
+            defaults={
+                'descripcion': f'Producto registrado desde inventario ({nombre_producto})',
+                'estado': 'activo'
+            }
+        )
+
+        # Verificar si este producto ya cuenta con un registro en el inventario
+        if not creado and Inventario.objects.filter(producto=producto).exists():
             messages.error(
                 request,
-                f"Ya existe un registro de inventario para el producto "
-                f"'{producto.nombre}'. Edítalo en lugar de crear uno nuevo."
+                f"Ya existe un registro de inventario para el producto '{producto.nombre}'. Edítalo en lugar de crear uno nuevo."
             )
             return redirect('admin_inventario')
 
@@ -915,7 +927,6 @@ def crear_inventario(request):
             messages.error(request, "La cantidad disponible y el mínimo definido deben ser números enteros.")
             return redirect('admin_inventario')
 
-        # ── Validaciones de negocio (respaldo del lado servidor) ──
         if cant_disponible < 0 or min_definido < 0:
             messages.error(request, "Los valores de stock no pueden ser negativos.")
             return redirect('admin_inventario')
@@ -934,7 +945,6 @@ def crear_inventario(request):
             messages.error(request, "La cantidad ingresada no puede ser negativa.")
             return redirect('admin_inventario')
 
-        # Parseo seguro a entero para nivelStock
         nivel_stock_input = request.POST.get('nivelStock')
         try:
             nivel_stock = int(nivel_stock_input)
@@ -942,10 +952,7 @@ def crear_inventario(request):
             nivel_stock = cant_disponible - min_definido
 
         unidades = request.POST.get('unidades') or 'Unidades'
-        # Ubicación: puede venir predefinida o, si se eligió "Otro", del
-        # campo de texto libre "ubicacion_personalizada".
         ubicacion = _resolver_ubicacion(request)
-        # Se fuerza a 0: un registro nuevo no debería nacer con egresos
         cant_egresada = 0
         fecha_ingreso = request.POST.get('fechaIngreso') or timezone.now().date()
         fecha_salida = request.POST.get('fechaSalida') or None
@@ -963,16 +970,15 @@ def crear_inventario(request):
                 fechaIngreso=fecha_ingreso,
                 fechaSalida=fecha_salida if fecha_salida else None
             )
-            messages.success(request, "Registro de inventario creado exitosamente.")
+            messages.success(request, f"Registro de inventario para '{producto.nombre}' creado exitosamente.")
         except IntegrityError:
-            # Red de seguridad ante una condición de carrera
-            # (dos peticiones casi simultáneas para el mismo producto)
             messages.error(
                 request,
                 f"Ya existe un registro de inventario para el producto '{producto.nombre}'."
             )
 
     return redirect('admin_inventario')
+
 
 
 @admin_required

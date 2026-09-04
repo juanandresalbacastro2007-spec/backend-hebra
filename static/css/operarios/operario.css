@@ -74,20 +74,36 @@ html, body {
   margin: 0 auto;
 }
 
-/* Brand */
+/* Flexbox para alinear logo y texto horizontalmente sin subrayado */
 .ht-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  font-family: 'Fredoka', sans-serif;
-  font-weight: 600;
-  font-size: 1.25rem;
-  letter-spacing: .01em;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  text-decoration: none !important; /* Quita el subrayado azul */
+  color: inherit !important;
 }
 
-.ht-brand-name {
-  color: var(--primary);
+.ht-brand:hover {
+  text-decoration: none !important;
+}
+
+/* Título */
+.ht-brand .brand-title {
+  font-family: var(--ff-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b !important; /* Color oscuro */
+  line-height: 1.1;
+  display: block;
+}
+
+/* Subtítulo */
+.ht-brand .brand-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b !important; /* Gris secundario */
+  font-weight: 500;
+  line-height: 1.1;
 }
 
 .brand-icon {
@@ -1226,20 +1242,20 @@ html, body {
   background: var(--surface2);
   border: 1px solid var(--border-md);
   border-radius: 30px;
-  padding: 5px 14px;
+  padding: 9px 14px;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: .8rem;
-  font-weight: 600;
+  font-size: .9rem;
+  font-weight: 800;
   color: var(--text-muted);
   cursor: pointer;
   transition: transform .15s, border-color .15s, color .15s;
 }
 
 .ht-kpi-chip .ht-kpi-dot {
-  width: 8px;
-  height: 8px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   flex-shrink: 0;
   background: var(--text-muted);
@@ -1252,7 +1268,7 @@ html, body {
   border-radius: 12px;
   background: var(--primary);
   color: #fff;
-  min-width: 20px;
+  min-width: 30px;
   text-align: center;
 }
 
@@ -1398,3 +1414,4 @@ html, body {
   .ht-kanban-col { display: none; }
   .ht-kanban-col.active-mobile-col { display: flex; }
 }
+

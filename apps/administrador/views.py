@@ -11,6 +11,7 @@ from .models import (
     AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto, Factura,
     TIEMPOS_ESTANDAR_MINUTOS,
 )
+import json
 import openpyxl
 from datetime import datetime, date
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
@@ -42,6 +43,22 @@ UBICACIONES_PREDEFINIDAS = [
 ]
 
 
+# ── Helpers para KPIs cross-módulo (antes vivían en produccion/views.py) ──
+def _count(modelo, **filtros):
+    try:
+        return modelo.objects.filter(**filtros).count() if filtros else modelo.objects.count()
+    except Exception:
+        return 0
+
+
+def _safe_import(ruta_modulo, nombre_modelo):
+    try:
+        modulo = __import__(ruta_modulo, fromlist=[nombre_modelo])
+        return getattr(modulo, nombre_modelo)
+    except Exception:
+        return None
+
+
 # ── Portal principal ─────────────────────────────────────────
 @admin_required
 def admin_portal(request):
@@ -58,6 +75,106 @@ def admin_portal(request):
     ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
     ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
 
+    # ── KPIs exclusivos que venían de "Producción · Vista General" ──
+    Produccion = _safe_import('apps.produccion.models', 'Produccion')
+    Proveedor = _safe_import('apps.proveedores.models', 'Proveedor')
+
+    ordenes_urgentes = Orden.objects.filter(prioridad='Urgente').count()
+    incidencias_abiertas = (
+        Incidencia.objects.filter(estado='Pendiente').count()
+        + Incidencia.objects.filter(estado='En Progreso').count()
+    )
+    productos_catalogo = Producto.objects.count()
+    produccion_activa = (
+        _count(Produccion, estado='En Progreso') + _count(Produccion, estado='Pendiente')
+        if Produccion else 0
+    )
+    total_proveedores = _count(Proveedor) if Proveedor else None
+
+    # ── Actividad reciente unificada (Órdenes + Producción + Incidencias) ──
+    actividad = []
+
+    for o in Orden.objects.select_related('idCliente').order_by('-fechaCreacion')[:5]:
+        cliente_nombre = '—'
+        try:
+            cliente_nombre = o.idCliente.empresa or o.idCliente.nombre or '—'
+        except Exception:
+            pass
+        actividad.append({
+            'icono': '🧾',
+            'titulo': f'Orden #{o.idOrden} · {cliente_nombre}',
+            'detalle': f'Estado: {o.estado} · Prioridad: {o.prioridad}',
+            'fecha': str(o.fechaCreacion) if o.fechaCreacion else None,
+            'estado': o.estado,
+            'modulo': 'admin_ordenes',
+        })
+
+    if Produccion:
+        try:
+            for p in Produccion.objects.select_related('idProducto').order_by('-fechaInicio')[:5]:
+                actividad.append({
+                    'icono': '🧵',
+                    'titulo': f'Producción: {p.idProducto.nombre}',
+                    'detalle': f'{p.cantidadRequerida} unidades',
+                    'fecha': str(p.fechaInicio) if p.fechaInicio else None,
+                    'estado': p.estado,
+                    'modulo': 'produccion_portal',
+                })
+        except Exception:
+            pass
+
+    try:
+        for i in Incidencia.objects.order_by('-idIncidencia')[:5]:
+            actividad.append({
+                'icono': '⚠️',
+                'titulo': getattr(i, 'tipoIncidencia', None) or (getattr(i, 'descripcion', '') or 'Incidencia')[:60],
+                'detalle': f'Estado: {getattr(i, "estado", "—")}',
+                'fecha': str(getattr(i, 'fechaGeneracion', '') or ''),
+                'estado': getattr(i, 'estado', None),
+                'modulo': 'admin_incidencias',
+            })
+    except Exception:
+        pass
+
+    actividad = [a for a in actividad if a['fecha']]
+    actividad.sort(key=lambda a: a['fecha'], reverse=True)
+    actividad_reciente = actividad[:10]
+
+    # ── Alertas operativas ──
+    alertas = []
+    hoy = date.today()
+
+    ordenes_retrasadas = Orden.objects.filter(
+        fechaEntregaEstimada__lt=hoy
+    ).exclude(estado='Completada').count()
+    if ordenes_retrasadas:
+        alertas.append({
+            'tipo': 'danger', 'icono': '⏰',
+            'texto': f'{ordenes_retrasadas} orden(es) con entrega vencida',
+            'modulo': 'admin_ordenes',
+        })
+
+    if ordenes_urgentes:
+        alertas.append({
+            'tipo': 'warning', 'icono': '🔥',
+            'texto': f'{ordenes_urgentes} orden(es) marcadas como urgentes',
+            'modulo': 'admin_ordenes',
+        })
+
+    if usuarios_pendientes:
+        alertas.append({
+            'tipo': 'info', 'icono': '👤',
+            'texto': f'{usuarios_pendientes} usuario(s) esperando aprobación de rol',
+            'modulo': 'admin_usuarios',
+        })
+
+    if incidencias_abiertas:
+        alertas.append({
+            'tipo': 'warning', 'icono': '⚠️',
+            'texto': f'{incidencias_abiertas} incidencia(s) sin resolver',
+            'modulo': 'admin_incidencias',
+        })
+
     return render(request, 'administrador/admin_portal.html', {
         'usuario': usuario,
         'total_usuarios': total_usuarios,
@@ -69,6 +186,15 @@ def admin_portal(request):
         'usuarios_pendientes': usuarios_pendientes,
         'ultimas_ordenes': ultimas_ordenes,
         'ultimas_asignaciones': ultimas_asignaciones,
+
+        # ── Nuevos: exclusivos de producción trasladados al dashboard ──
+        'ordenes_urgentes': ordenes_urgentes,
+        'incidencias_abiertas': incidencias_abiertas,
+        'productos_catalogo': productos_catalogo,
+        'produccion_activa': produccion_activa,
+        'total_proveedores': total_proveedores,
+        'actividad_reciente': actividad_reciente,
+        'alertas': json.dumps(alertas),
     })
 
 
@@ -225,11 +351,18 @@ def ordenes_lista(request):
     if estado_filtro:
         ordenes = ordenes.filter(estado=estado_filtro)
 
+    # Soporta también el filtro por prioridad que ahora enlazan las
+    # tarjetas KPI de "Órdenes Urgentes" del dashboard.
+    prioridad_filtro = request.GET.get('prioridad', '')
+    if prioridad_filtro:
+        ordenes = ordenes.filter(prioridad=prioridad_filtro)
+
     return render(request, 'administrador/ordenes_lista.html', {
         'usuario': usuario,
         'ordenes': ordenes,
         'estado_filtro': estado_filtro,
         'buscar_filtro': buscar_filtro,
+        'prioridad_filtro': prioridad_filtro,
     })
 
 
